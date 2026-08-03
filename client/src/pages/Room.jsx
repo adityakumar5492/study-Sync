@@ -1,5 +1,8 @@
-import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useEffect } from "react";
+import { Link, useParams } from "react-router-dom";
+
+import { useAppDispatch, useAppSelector } from "../redux/hooks";
+import { getRoomThunk } from "../redux/room/roomThunk";
 
 import RoomHeader from "../components/room/RoomHeader";
 import PdfViewer from "../components/room/PdfViewer";
@@ -7,61 +10,108 @@ import Participants from "../components/room/Participants";
 import ChatPanel from "../components/room/ChatPanel";
 
 const Room = () => {
-  const { id } = useParams();
+    const { id } = useParams();
 
-  // Temporary room state
-  const [room, setRoom] = useState({
-    _id: id,
-    title: "Operating System Revision",
-    subject: "Operating System",
-    pdf: null,
-    participants: [],
-    messages: [],
-  });
+    const dispatch = useAppDispatch();
 
-  useEffect(() => {
-    // Backend API will come here
-    // Example:
-    // const fetchRoom = async () => {
-    //   const data = await getRoom(id);
-    //   setRoom(data);
-    // };
-    //
-    // fetchRoom();
+    const {
+        currentRoom: room,
+        loading,
+        error,
+    } = useAppSelector((state) => state.room);
 
-    setRoom((prev) => ({
-      ...prev,
-      _id: id,
-    }));
-  }, [id]);
+    const { user } = useAppSelector((state) => state.auth);
 
-  return (
-    <div className="min-h-screen bg-slate-950 text-white flex flex-col">
-      {/* Header */}
-      <RoomHeader roomId={room._id} />
+    useEffect(() => {
+        if (id) {
+            dispatch(getRoomThunk(id));
+        }
+    }, [dispatch, id]);
 
-      {/* Main Content */}
-      <div className="flex flex-1 overflow-hidden">
-        {/* PDF */}
-        <div className="flex-[3] p-6 overflow-y-auto">
-          <PdfViewer roomId={room._id} />
+    if (loading && !room) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-slate-950 text-white">
+                Loading room...
+            </div>
+        );
+    }
+
+    // Clean error state — no join logic, no redirects, just a clear message
+    if (error && !room) {
+        return (
+            <div className="min-h-screen flex flex-col items-center justify-center bg-slate-950 text-white">
+                <h1 className="mb-3 text-2xl font-bold">Room Unavailable</h1>
+                <p className="mb-8 max-w-md text-center text-slate-400">
+                    {error}
+                </p>
+                <Link
+                    to="/rooms"
+                    className="rounded-xl bg-green-500 px-6 py-3 font-medium text-white transition hover:bg-green-600"
+                >
+                    Back to Rooms
+                </Link>
+            </div>
+        );
+    }
+
+    if (!room) {
+        return (
+            <div className="min-h-screen flex flex-col items-center justify-center bg-slate-950 text-white">
+                <h1 className="mb-3 text-2xl font-bold">Room Not Found</h1>
+                <p className="mb-8 text-slate-400">
+                    This room does not exist or is no longer active.
+                </p>
+                <Link
+                    to="/rooms"
+                    className="rounded-xl bg-green-500 px-6 py-3 font-medium text-white transition hover:bg-green-600"
+                >
+                    Back to Rooms
+                </Link>
+            </div>
+        );
+    }
+
+    return (
+        <div className="min-h-screen bg-slate-950 text-white flex flex-col">
+
+            <RoomHeader
+                room={room}
+                currentUser={user}
+            />
+
+            <div className="flex flex-1 overflow-hidden">
+
+                <div className="flex-[3] p-6 overflow-y-auto">
+
+                    {room._id && (
+                        <PdfViewer
+                            roomId={room._id}
+                            room={room}
+                            currentUser={user}
+                        />
+                    )}
+
+                </div>
+
+                <div className="w-96 border-l border-slate-800 bg-slate-900 flex flex-col">
+
+                    <Participants
+                        room={room}
+                        roomId={room._id}
+                        participants={room.members || []}
+                    />
+
+                    <ChatPanel
+                        roomId={room._id}
+                        initialMessages={[]}
+                    />
+
+                </div>
+
+            </div>
+
         </div>
-
-        {/* Sidebar */}
-        <div className="w-96 border-l border-slate-800 bg-slate-900 flex flex-col">
-          <Participants
-            roomId={room._id}
-            participants={room.participants}
-          />
-
-          <ChatPanel
-            roomId={room._id}
-            initialMessages={room.messages}
-          />
-        </div>
-      </div>
-    </div>
-  );
+    );
 };
 
 export default Room;

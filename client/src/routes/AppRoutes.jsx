@@ -7,22 +7,45 @@ import Dashboard from "../pages/Dashboard";
 import Rooms from "../pages/Rooms";
 import Room from "../pages/Room";
 
+import ProtectedRoute from "../components/auth/ProtectedRoute";
+
 const AppRoutes = () => {
-  return (
-    <Routes>
-      <Route path="/" element={<Landing />} />
+    return (
+        <Routes>
+            {/* Public Routes */}
+            <Route path="/" element={<Landing />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
 
-      <Route path="/login" element={<Login />} />
+            {/* Protected Routes */}
+            <Route
+                path="/dashboard"
+                element={
+                    <ProtectedRoute>
+                        <Dashboard />
+                    </ProtectedRoute>
+                }
+            />
 
-      <Route path="/register" element={<Register />} />
+            <Route
+                path="/rooms"
+                element={
+                    <ProtectedRoute>
+                        <Rooms />
+                    </ProtectedRoute>
+                }
+            />
 
-      <Route path="/dashboard" element={<Dashboard />} />
-
-      <Route path="/rooms" element={<Rooms />} />
-
-      <Route path="/room/:id" element={<Room />} />
-    </Routes>
-  );
+            <Route
+                path="/room/:id"
+                element={
+                    <ProtectedRoute>
+                        <Room />
+                    </ProtectedRoute>
+                }
+            />
+        </Routes>
+    );
 };
 
 export default AppRoutes;

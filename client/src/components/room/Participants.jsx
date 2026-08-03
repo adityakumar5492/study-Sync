@@ -1,106 +1,138 @@
+import { useEffect, useState } from "react";
 import { FaUserCircle, FaCrown } from "react-icons/fa";
+import toast from "react-hot-toast";
 
-const demoParticipants = [
-  {
-    id: 1,
-    name: "You",
-    role: "Host",
-    isHost: true,
-    online: true,
-  },
-  {
-    id: 2,
-    name: "Alice Johnson",
-    role: "Member",
-    online: true,
-  },
-  {
-    id: 3,
-    name: "Bob Smith",
-    role: "Member",
-    online: true,
-  },
-  {
-    id: 4,
-    name: "Charlie Brown",
-    role: "Member",
-    online: true,
-  },
-  {
-    id: 5,
-    name: "Diana Prince",
-    role: "Member",
-    online: false,
-  },
-  {
-    id: 6,
-    name: "Eve Wilson",
-    role: "Member",
-    online: true,
-  },
-];
+import { useAppSelector } from "../../redux/hooks";
+import socket from "../../socket/socket";
 
-const Participants = ({ roomId, participants = demoParticipants }) => {
-  const onlineCount = participants.filter((user) => user.online).length;
+const Participants = ({ room, roomId, participants = [] }) => {
+    const { user } = useAppSelector((state) => state.auth);
 
-  return (
-    <div className="border-b border-slate-800 p-4">
-      <div className="flex items-center justify-between mb-4">
-        <div>
-          <h3 className="font-semibold text-white text-lg">
-            Participants
-          </h3>
+    const [onlineUsers, setOnlineUsers] = useState([]);
 
-          <p className="text-xs text-slate-500">
-            Room ID: {roomId}
-          </p>
-        </div>
+    useEffect(() => {
+        if (!roomId || !user) return;
 
-        <span className="text-sm text-green-400 bg-green-500/10 px-3 py-1 rounded-full">
-          {onlineCount} Online
-        </span>
-      </div>
+        if (!socket.connected) {
+            socket.connect();
+        }
 
-      <div className="space-y-2 max-h-60 overflow-y-auto">
-        {participants.map((participant) => (
-          <div
-            key={participant.id}
-            className="flex items-center gap-3 p-2 rounded-lg hover:bg-slate-800 transition"
-          >
-            <div className="relative">
-              <FaUserCircle className="text-3xl text-slate-500" />
+        socket.emit("room:join", {
+            roomId,
+            user,
+        });
 
-              <span
-                className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-slate-900 ${
-                  participant.online
-                    ? "bg-green-500"
-                    : "bg-slate-600"
-                }`}
-              />
+        const handleOnlineUsers = ({ users }) => {
+            setOnlineUsers(users || []);
+        };
+
+        const handleSocketError = (message) => {
+            toast.error(message || "Socket connection error.");
+        };
+
+        socket.on("room:online-users", handleOnlineUsers);
+        socket.on("room:error", handleSocketError);
+
+        return () => {
+            socket.emit("room:leave", {
+                roomId,
+                user,
+            });
+
+            socket.off("room:online-users", handleOnlineUsers);
+            socket.off("room:error", handleSocketError);
+        };
+    }, [roomId, user]);
+
+    const isOnline = (participantId) =>
+        onlineUsers.some((u) => u._id === participantId);
+
+    return (
+        <div className="border-b border-slate-800 p-4">
+
+            <div className="mb-4 flex items-center justify-between">
+
+                <div>
+                    <h3 className="text-lg font-semibold text-white">
+                        Participants
+                    </h3>
+
+                    <p className="text-xs text-slate-500">
+                        Room ID: {roomId}
+                    </p>
+                </div>
+
+                <span className="rounded-full bg-green-500/10 px-3 py-1 text-sm text-green-400">
+                    {onlineUsers.length} Online
+                </span>
+
             </div>
 
-            <div className="flex-1">
-              <p className="text-sm text-white font-medium flex items-center gap-2">
-                {participant.name}
+            <div className="max-h-60 space-y-2 overflow-y-auto">
 
-                {participant.isHost && (
-                  <FaCrown className="text-yellow-500 text-xs" />
+                {participants.length === 0 ? (
+                    <div className="py-6 text-center text-sm text-slate-400">
+                        No participants found.
+                    </div>
+                ) : (
+                    participants.map((participant) => {
+                        const online = isOnline(participant._id);
+
+                        return (
+                            <div
+                                key={participant._id}
+                                className="flex items-center gap-3 rounded-lg p-2 transition hover:bg-slate-800"
+                            >
+                                <div className="relative">
+
+                                    <FaUserCircle className="text-3xl text-slate-500" />
+
+                                    <span
+                                        className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-slate-900 ${
+                                            online
+                                                ? "bg-green-500"
+                                                : "bg-slate-600"
+                                        }`}
+                                    />
+
+                                </div>
+
+                                <div className="flex-1">
+
+                                    <p className="flex items-center gap-2 text-sm font-medium text-white">
+
+                                        {participant.name}
+
+                                        {participant._id === room?.host?._id && (
+                                            <FaCrown className="text-xs text-yellow-500" />
+                                        )}
+
+                                        {participant._id === user?._id && (
+                                            <span className="text-xs text-green-400">
+                                                (You)
+                                            </span>
+                                        )}
+
+                                    </p>
+
+                                    <p className="text-xs text-slate-400">
+                                        {online ? "Online" : "Offline"}
+                                    </p>
+
+                                </div>
+
+                                {online && (
+                                    <span className="h-2 w-2 rounded-full bg-green-500" />
+                                )}
+                            </div>
+                        );
+                    })
                 )}
-              </p>
 
-              <p className="text-xs text-slate-400">
-                {participant.role}
-              </p>
             </div>
 
-            {participant.online && (
-              <span className="w-2 h-2 rounded-full bg-green-500" />
-            )}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
+        </div>
+    );
 };
 
 export default Participants;

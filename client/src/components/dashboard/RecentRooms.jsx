@@ -1,27 +1,24 @@
+import { useEffect } from "react";
+import { Link } from "react-router-dom";
+
+import { useAppDispatch, useAppSelector } from "../../redux/hooks";
+import { getRoomsThunk } from "../../redux/room/roomThunk";
+
 import RoomCard from "./RoomCard";
 
-const rooms = [
-  {
-    title: "Operating System Revision",
-    subject: "OS",
-    members: 6,
-    status: "Active",
-  },
-  {
-    title: "DBMS Study Group",
-    subject: "Database Management",
-    members: 4,
-    status: "Active",
-  },
-  {
-    title: "DSA Practice",
-    subject: "Data Structures",
-    members: 8,
-    status: "Starting Soon",
-  },
-];
-
 const RecentRooms = () => {
+  const dispatch = useAppDispatch();
+
+  const { rooms, loading } = useAppSelector((state) => state.room);
+
+  useEffect(() => {
+    if (!rooms.length) {
+      dispatch(getRoomsThunk());
+    }
+  }, [dispatch]);
+
+  const recentRooms = rooms.slice(0, 5);
+
   return (
     <section>
 
@@ -31,25 +28,49 @@ const RecentRooms = () => {
           Recent Study Rooms
         </h2>
 
-        <button className="text-green-400 hover:text-green-300">
+        <Link
+          to="/rooms"
+          className="text-green-400 hover:text-green-300 font-medium"
+        >
           View All
-        </button>
+        </Link>
 
       </div>
 
-      <div className="space-y-5">
+      {loading ? (
 
-        {rooms.map((room, index) => (
-          <RoomCard
-            key={index}
-            title={room.title}
-            subject={room.subject}
-            members={room.members}
-            status={room.status}
-          />
-        ))}
+        <p className="text-slate-400">
+          Loading rooms...
+        </p>
 
-      </div>
+      ) : recentRooms.length === 0 ? (
+
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 text-center">
+
+          <h3 className="text-xl font-semibold mb-2">
+            No Study Rooms Yet
+          </h3>
+
+          <p className="text-slate-400">
+            Create your first study room and start collaborating.
+          </p>
+
+        </div>
+
+      ) : (
+
+        <div className="space-y-5">
+
+          {recentRooms.map((room) => (
+            <RoomCard
+              key={room._id}
+              room={room}
+            />
+          ))}
+
+        </div>
+
+      )}
 
     </section>
   );

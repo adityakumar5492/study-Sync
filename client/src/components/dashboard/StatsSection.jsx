@@ -5,9 +5,20 @@ import {
   FaFire,
 } from "react-icons/fa";
 
+import { useAppSelector } from "../../redux/hooks";
 import StatCard from "./StatCard";
 
 const StatsSection = () => {
+  const { rooms } = useAppSelector((state) => state.room);
+
+  // Temporary calculations (replace with backend values later)
+  const stats = {
+    roomsJoined: rooms?.length || 0,
+    studyHours: 58,
+    pdfsShared: 24,
+    streak: 14,
+  };
+
   return (
     <section className="mb-10">
 
@@ -19,25 +30,25 @@ const StatsSection = () => {
 
         <StatCard
           title="Rooms Joined"
-          value="12"
+          value={stats.roomsJoined}
           icon={<FaUsers className="text-green-500" />}
         />
 
         <StatCard
           title="Study Hours"
-          value="58"
+          value={`${stats.studyHours} hrs`}
           icon={<FaClock className="text-blue-500" />}
         />
 
         <StatCard
           title="PDFs Shared"
-          value="24"
+          value={stats.pdfsShared}
           icon={<FaFilePdf className="text-red-500" />}
         />
 
         <StatCard
           title="Current Streak"
-          value="14 Days"
+          value={`${stats.streak} Days`}
           icon={<FaFire className="text-orange-500" />}
         />
 

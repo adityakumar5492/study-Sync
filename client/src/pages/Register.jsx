@@ -1,105 +1,199 @@
-import { Link } from "react-router-dom";
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { FcGoogle } from "react-icons/fc";
+import toast from "react-hot-toast";
 
 import AuthLayout from "../components/auth/AuthLayout";
 
+import { useAppDispatch } from "../redux/hooks";
+import { registerThunk } from "../redux/auth/authThunk";
+
 const Register = () => {
-  return (
-    <AuthLayout>
+    const dispatch = useAppDispatch();
+    const navigate = useNavigate();
 
-      <div className="w-full max-w-lg bg-slate-900 border border-slate-800 rounded-3xl p-8 shadow-2xl">
+    const [formData, setFormData] = useState({
+        name: "",
+        email: "",
+        password: "",
+        confirmPassword: "",
+    });
 
-        <h2 className="text-3xl font-bold text-center text-white">
-          Create Account 🚀
-        </h2>
+    const [loading, setLoading] = useState(false);
 
-        <p className="text-slate-400 text-center mt-3 mb-8">
-          Join thousands of students learning together.
-        </p>
+    const handleChange = (e) => {
+        setFormData((prev) => ({
+            ...prev,
+            [e.target.name]: e.target.value,
+        }));
+    };
 
-        <div className="grid md:grid-cols-2 gap-4">
+    const handleSubmit = async (e) => {
+        e.preventDefault();
 
-          <div>
-            <label className="text-slate-300 text-sm">
-              Full Name
-            </label>
+        const { name, email, password, confirmPassword } = formData;
 
-            <input
-              className="mt-2 w-full bg-slate-800 rounded-xl px-4 py-3 border border-slate-700 focus:border-green-500 outline-none text-white"
-              placeholder="John Doe"
-            />
-          </div>
+        if (!name || !email || !password || !confirmPassword) {
+            return toast.error("All fields are required.");
+        }
 
-          <div>
-            <label className="text-slate-300 text-sm">
-              Email
-            </label>
+        if (password.length < 6) {
+            return toast.error("Password must be at least 6 characters.");
+        }
 
-            <input
-              className="mt-2 w-full bg-slate-800 rounded-xl px-4 py-3 border border-slate-700 focus:border-green-500 outline-none text-white"
-              placeholder="john@gmail.com"
-            />
-          </div>
+        if (password !== confirmPassword) {
+            return toast.error("Passwords do not match.");
+        }
 
-          <div>
-            <label className="text-slate-300 text-sm">
-              Password
-            </label>
+        try {
+            setLoading(true);
 
-            <input
-              type="password"
-              className="mt-2 w-full bg-slate-800 rounded-xl px-4 py-3 border border-slate-700 focus:border-green-500 outline-none text-white"
-              placeholder="********"
-            />
-          </div>
+            await dispatch(
+                registerThunk({
+                    name,
+                    email,
+                    password,
+                })
+            ).unwrap();
 
-          <div>
-            <label className="text-slate-300 text-sm">
-              Confirm Password
-            </label>
+            toast.success("Account created successfully!");
 
-            <input
-              type="password"
-              className="mt-2 w-full bg-slate-800 rounded-xl px-4 py-3 border border-slate-700 focus:border-green-500 outline-none text-white"
-              placeholder="********"
-            />
-          </div>
+            navigate("/dashboard");
+        } catch (err) {
+            toast.error(
+                err?.message ||
+                "Registration failed."
+            );
+        } finally {
+            setLoading(false);
+        }
+    };
 
-        </div>
+    return (
+        <AuthLayout>
+            <div className="w-full max-w-lg rounded-3xl border border-slate-800 bg-slate-900 p-8 shadow-2xl">
 
-        <button className="w-full mt-7 bg-green-500 hover:bg-green-600 py-3 rounded-xl font-semibold text-white transition">
-          Create Account
-        </button>
+                <h2 className="text-center text-3xl font-bold text-white">
+                    Create Account 🚀
+                </h2>
 
-        <div className="flex items-center gap-4 my-7">
-          <div className="flex-1 h-px bg-slate-700"></div>
+                <p className="mb-8 mt-3 text-center text-slate-400">
+                    Join thousands of students learning together.
+                </p>
 
-          <span className="text-slate-500 text-sm">
-            OR
-          </span>
+                <form
+                    onSubmit={handleSubmit}
+                    className="space-y-5"
+                >
 
-          <div className="flex-1 h-px bg-slate-700"></div>
-        </div>
+                    <div className="grid gap-4 md:grid-cols-2">
 
-        <button className="w-full border border-slate-700 hover:border-green-500 rounded-xl py-3 text-white flex justify-center items-center gap-3 transition">
-          <FcGoogle size={24} />
-          Continue with Google
-        </button>
+                        <div>
+                            <label className="text-sm text-slate-300">
+                                Full Name
+                            </label>
 
-        <p className="text-center text-slate-400 mt-8">
-          Already have an account?{" "}
-          <Link
-            to="/login"
-            className="text-green-400 hover:text-green-300"
-          >
-            Login
-          </Link>
-        </p>
+                            <input
+                                type="text"
+                                name="name"
+                                value={formData.name}
+                                onChange={handleChange}
+                                placeholder="John Doe"
+                                className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-800 px-4 py-3 text-white outline-none focus:border-green-500"
+                            />
+                        </div>
 
-      </div>
+                        <div>
+                            <label className="text-sm text-slate-300">
+                                Email
+                            </label>
 
-    </AuthLayout>
-  );
+                            <input
+                                type="email"
+                                name="email"
+                                value={formData.email}
+                                onChange={handleChange}
+                                placeholder="john@gmail.com"
+                                className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-800 px-4 py-3 text-white outline-none focus:border-green-500"
+                            />
+                        </div>
+
+                        <div>
+                            <label className="text-sm text-slate-300">
+                                Password
+                            </label>
+
+                            <input
+                                type="password"
+                                name="password"
+                                value={formData.password}
+                                onChange={handleChange}
+                                placeholder="********"
+                                className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-800 px-4 py-3 text-white outline-none focus:border-green-500"
+                            />
+                        </div>
+
+                        <div>
+                            <label className="text-sm text-slate-300">
+                                Confirm Password
+                            </label>
+
+                            <input
+                                type="password"
+                                name="confirmPassword"
+                                value={formData.confirmPassword}
+                                onChange={handleChange}
+                                placeholder="********"
+                                className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-800 px-4 py-3 text-white outline-none focus:border-green-500"
+                            />
+                        </div>
+
+                    </div>
+
+                    <button
+                        type="submit"
+                        disabled={loading}
+                        className="w-full rounded-xl bg-green-500 py-3 font-semibold text-white transition hover:bg-green-600 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                        {loading
+                            ? "Creating Account..."
+                            : "Create Account"}
+                    </button>
+
+                </form>
+
+                <div className="my-7 flex items-center gap-4">
+
+                    <div className="h-px flex-1 bg-slate-700"></div>
+
+                    <span className="text-sm text-slate-500">
+                        OR
+                    </span>
+
+                    <div className="h-px flex-1 bg-slate-700"></div>
+
+                </div>
+
+                <button
+                    className="flex w-full items-center justify-center gap-3 rounded-xl border border-slate-700 py-3 text-white transition hover:border-green-500"
+                >
+                    <FcGoogle size={24} />
+                    Continue with Google
+                </button>
+
+                <p className="mt-8 text-center text-slate-400">
+                    Already have an account?{" "}
+                    <Link
+                        to="/login"
+                        className="text-green-400 hover:text-green-300"
+                    >
+                        Login
+                    </Link>
+                </p>
+
+            </div>
+        </AuthLayout>
+    );
 };
 
 export default Register;

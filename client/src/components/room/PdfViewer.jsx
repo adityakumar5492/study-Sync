@@ -1,141 +1,276 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import toast from "react-hot-toast";
+
+import { useAppDispatch, useAppSelector } from "../../redux/hooks";
+import { uploadRoomPdfThunk } from "../../redux/room/roomThunk";
+
 import {
-  FaFilePdf,
-  FaUpload,
-  FaSearchPlus,
-  FaSearchMinus,
-  FaUndo,
+    FaFilePdf,
+    FaUpload,
+    FaSearchPlus,
+    FaSearchMinus,
+    FaUndo,
+    FaChevronLeft,
+    FaChevronRight,
 } from "react-icons/fa";
 
-const PdfViewer = ({ roomId }) => {
-  const fileInputRef = useRef(null);
+import { Document, Page, pdfjs } from "react-pdf";
 
-  const [pdfLoaded, setPdfLoaded] = useState(false);
-  const [pdfName, setPdfName] = useState("");
-  const [pdfFile, setPdfFile] = useState(null);
-  const [zoom, setZoom] = useState(100);
+import "react-pdf/dist/Page/AnnotationLayer.css";
+import "react-pdf/dist/Page/TextLayer.css";
 
-  const handleUploadClick = () => {
-    fileInputRef.current.click();
-  };
+pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+    "pdfjs-dist/build/pdf.worker.min.mjs",
+    import.meta.url
+).toString();
 
-  const handlePdfChange = (e) => {
-    const file = e.target.files[0];
+const PdfViewer = ({ roomId, room, currentUser }) => {
+    const dispatch = useAppDispatch();
 
-    if (!file) return;
+    const { currentRoom, loading } = useAppSelector(
+        (state) => state.room
+    );
 
-    if (file.type !== "application/pdf") {
-      alert("Please upload a PDF file.");
-      return;
+    // Determine host status the same way RoomHeader/RoomItem do,
+    // so the upload control matches what the backend will actually allow.
+    const hostId =
+        typeof room?.host === "object"
+            ? room.host?._id?.toString()
+            : room?.host?.toString();
+
+    const currentUserId = currentUser?._id?.toString();
+
+    const isHost = hostId === currentUserId;
+
+    const fileInputRef = useRef(null);
+
+    const [pdfUrl, setPdfUrl] = useState("");
+    const [pdfName, setPdfName] = useState("");
+
+    const [numPages, setNumPages] = useState(0);
+    const [pageNumber, setPageNumber] = useState(1);
+
+    const [zoom, setZoom] = useState(1);
+
+    // Load PDF from backend whenever currentRoom changes
+ useEffect(() => {
+    console.log("========== PDF EFFECT ==========");
+    console.log("currentRoom:", currentRoom);
+    console.log("pdfUrl from DB:", currentRoom?.pdfUrl);
+
+    if (currentRoom?.pdfUrl) {
+        const url = `http://localhost:5000${currentRoom.pdfUrl}`;
+
+        console.log("Final URL:", url);
+
+        setPdfUrl(url);
+        setPdfName(currentRoom.pdfUrl.split("/").pop());
+        setPageNumber(1);
+    } else {
+        setPdfUrl("");
+        setPdfName("");
+        setPageNumber(1);
+        setNumPages(0);
     }
+}, [currentRoom]);
 
-    setPdfFile(file);
-    setPdfName(file.name);
-    setPdfLoaded(true);
+    const handleUploadClick = () => {
+        fileInputRef.current?.click();
+    };
 
-    // Later:
-    // uploadPdf(roomId, file);
-  };
+    const handlePdfChange = async (e) => {
+        const file = e.target.files?.[0];
 
-  return (
-    <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden h-full flex flex-col">
-      {/* Hidden Input */}
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept=".pdf"
-        className="hidden"
-        onChange={handlePdfChange}
-      />
+        if (!file) return;
 
-      {/* Toolbar */}
-      <div className="flex items-center justify-between bg-slate-800 px-4 py-3 border-b border-slate-700">
-        <div className="flex items-center gap-2 text-slate-400">
-          <FaFilePdf className="text-red-500" />
+        if (!isHost) {
+            toast.error("Only the host can upload study material.");
+            return;
+        }
 
-          <span className="text-sm text-white font-medium">
-            {pdfLoaded ? pdfName : "No PDF Loaded"}
-          </span>
+        if (!roomId) {
+            toast.error("Room not found.");
+            return;
+        }
+
+        if (file.type !== "application/pdf") {
+            toast.error("Please upload a PDF file.");
+            return;
+        }
+
+        try {
+            const formData = new FormData();
+            formData.append("pdf", file);
+
+            await dispatch(
+                uploadRoomPdfThunk({
+                    roomId,
+                    formData,
+                })
+            ).unwrap();
+
+            toast.success("PDF uploaded successfully.");
+
+            // Clear input so same file can be selected again
+            if (fileInputRef.current) {
+                fileInputRef.current.value = "";
+            }
+        } catch (err) {
+    console.log(err);
+    console.log(err.response);
+
+    toast.error(
+        err?.response?.data?.message ||
+        err?.message ||
+        "Failed to upload PDF."
+    );
+}
+    };
+
+    const onDocumentLoadSuccess = ({ numPages }) => {
+        setNumPages(numPages);
+    };
+
+    return (
+        <div className="flex h-full flex-col overflow-hidden rounded-2xl border border-slate-800 bg-slate-900">
+
+            <input
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf"
+                hidden
+                onChange={handlePdfChange}
+            />
+
+            {/* Toolbar */}
+
+            <div className="flex items-center justify-between border-b border-slate-700 bg-slate-800 px-4 py-3">
+
+                <div className="flex items-center gap-2">
+
+                    <FaFilePdf className="text-red-500 text-lg" />
+
+                    <span className="text-sm font-medium text-white">
+                        {pdfUrl ? pdfName : "No PDF Loaded"}
+                    </span>
+
+                </div>
+
+                {pdfUrl && (
+                    <div className="flex items-center gap-3">
+
+                        <button
+                            onClick={() =>
+                                setPageNumber((p) => Math.max(1, p - 1))
+                            }
+                            disabled={pageNumber === 1}
+                            className="disabled:opacity-40"
+                        >
+                            <FaChevronLeft />
+                        </button>
+
+                        <span className="text-sm">
+                            {pageNumber} / {numPages}
+                        </span>
+
+                        <button
+                            onClick={() =>
+                                setPageNumber((p) =>
+                                    Math.min(numPages, p + 1)
+                                )
+                            }
+                            disabled={pageNumber === numPages}
+                            className="disabled:opacity-40"
+                        >
+                            <FaChevronRight />
+                        </button>
+
+                        <button
+                            onClick={() =>
+                                setZoom((z) =>
+                                    Math.max(0.5, z - 0.1)
+                                )
+                            }
+                        >
+                            <FaSearchMinus />
+                        </button>
+
+                        <span>{Math.round(zoom * 100)}%</span>
+
+                        <button
+                            onClick={() =>
+                                setZoom((z) =>
+                                    Math.min(3, z + 0.1)
+                                )
+                            }
+                        >
+                            <FaSearchPlus />
+                        </button>
+
+                        <button onClick={() => setZoom(1)}>
+                            <FaUndo />
+                        </button>
+
+                    </div>
+                )}
+
+            </div>
+
+            {/* Body */}
+
+            <div className="flex flex-1 items-center justify-center overflow-auto bg-slate-950 p-6">
+
+                {pdfUrl ? (
+                    <Document
+                        file={pdfUrl}
+                        onLoadSuccess={onDocumentLoadSuccess}
+                        loading="Loading PDF..."
+                        error="Failed to load PDF."
+                    >
+                        <Page
+                            pageNumber={pageNumber}
+                            scale={zoom}
+                        />
+                    </Document>
+                ) : (
+                    <div className="text-center">
+
+                        <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-slate-800">
+                            <FaFilePdf className="text-4xl text-red-500" />
+                        </div>
+
+                        <h2 className="mb-3 text-2xl font-bold">
+                            No PDF Loaded
+                        </h2>
+
+                        <p className="mb-8 max-w-md text-slate-400">
+                            Upload a PDF to study collaboratively with your team.
+                        </p>
+
+                        {isHost ? (
+                            <button
+                                disabled={loading}
+                                onClick={handleUploadClick}
+                                className="inline-flex items-center gap-3 rounded-xl bg-green-500 px-6 py-3 font-semibold transition hover:bg-green-600 disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                                <FaUpload />
+                                {loading
+                                    ? "Uploading..."
+                                    : "Upload PDF"}
+                            </button>
+                        ) : (
+                            <p className="text-sm text-slate-500">
+                                Waiting for the host to upload study material.
+                            </p>
+                        )}
+
+                    </div>
+                )}
+
+            </div>
+
         </div>
-
-        {pdfLoaded && (
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setZoom((prev) => Math.max(50, prev - 10))}
-              className="text-slate-400 hover:text-white"
-            >
-              <FaSearchMinus />
-            </button>
-
-            <span className="text-sm">{zoom}%</span>
-
-            <button
-              onClick={() => setZoom((prev) => Math.min(200, prev + 10))}
-              className="text-slate-400 hover:text-white"
-            >
-              <FaSearchPlus />
-            </button>
-
-            <button
-              onClick={() => setZoom(100)}
-              className="text-slate-400 hover:text-white"
-            >
-              <FaUndo />
-            </button>
-          </div>
-        )}
-      </div>
-
-      {/* Body */}
-      <div className="flex-1 flex items-center justify-center p-8">
-        {pdfLoaded ? (
-          <div className="w-full h-full bg-slate-800 rounded-xl flex items-center justify-center">
-            <div className="text-center">
-              <FaFilePdf className="text-red-500 text-7xl mx-auto mb-4" />
-
-              <h2 className="text-xl font-semibold mb-2">
-                {pdfName}
-              </h2>
-
-              <p className="text-slate-400">
-                Room: {roomId}
-              </p>
-
-              <p className="text-slate-400">
-                Zoom: {zoom}%
-              </p>
-
-              <p className="mt-6 text-slate-500 text-sm">
-                PDF preview will be rendered here using React-PDF.
-              </p>
-            </div>
-          </div>
-        ) : (
-          <div className="text-center">
-            <div className="w-20 h-20 rounded-full bg-slate-800 flex items-center justify-center mx-auto mb-6">
-              <FaFilePdf className="text-red-500 text-4xl" />
-            </div>
-
-            <h2 className="text-2xl font-bold mb-3">
-              No PDF Loaded
-            </h2>
-
-            <p className="text-slate-400 max-w-md mb-8">
-              Upload a PDF to study collaboratively with your team.
-            </p>
-
-            <button
-              onClick={handleUploadClick}
-              className="inline-flex items-center gap-3 bg-green-500 hover:bg-green-600 px-6 py-3 rounded-xl font-semibold transition"
-            >
-              <FaUpload />
-              Upload PDF
-            </button>
-          </div>
-        )}
-      </div>
-    </div>
-  );
+    );
 };
 
 export default PdfViewer;

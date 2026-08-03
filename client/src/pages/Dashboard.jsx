@@ -1,3 +1,5 @@
+import { useNavigate } from "react-router-dom";
+
 import Sidebar from "../components/dashboard/Sidebar";
 import Topbar from "../components/dashboard/Topbar";
 import QuickActions from "../components/dashboard/QuickActions";
@@ -5,25 +7,31 @@ import StatsSection from "../components/dashboard/StatsSection";
 import RecentRooms from "../components/dashboard/RecentRooms";
 
 const Dashboard = () => {
-  return (
-    <div className="min-h-screen bg-slate-950 text-white flex">
+    const navigate = useNavigate();
 
-      <Sidebar />
+    return (
+        <div className="min-h-screen bg-slate-950 text-white flex">
 
-      <main className="flex-1 p-8 overflow-y-auto">
+            <Sidebar />
 
-        <Topbar />
+            <main className="flex-1 p-8 overflow-y-auto">
 
-        <QuickActions />
+                <Topbar />
 
-        <StatsSection />
+                <QuickActions
+                    onCreateRoom={() => navigate("/rooms")}
+                    onJoinRoom={() => navigate("/rooms")}
+                    onUploadMaterial={() => navigate("/rooms")}
+                />
 
-        <RecentRooms />
+                <StatsSection />
 
-      </main>
+                <RecentRooms />
 
-    </div>
-  );
+            </main>
+
+        </div>
+    );
 };
 
 export default Dashboard;
