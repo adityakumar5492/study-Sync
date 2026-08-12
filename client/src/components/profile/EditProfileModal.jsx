@@ -1,50 +1,445 @@
-const EditProfileModal = ({ open, onClose }) => {
-  if (!open) return null;
+import {
+    useEffect,
+    useRef,
+    useState,
+} from "react";
 
-  return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+import {
+    FaCamera,
+    FaUserCircle,
+} from "react-icons/fa";
 
-      <div className="bg-slate-900 rounded-2xl p-8 w-full max-w-md">
+import toast from "react-hot-toast";
 
-        <h2 className="text-2xl font-bold mb-6">
-          Edit Profile
-        </h2>
+import {
+    useAppDispatch,
+    useAppSelector,
+} from "../../redux/hooks";
 
-        <div className="space-y-5">
+import {
+    updateUser,
+} from "../../redux/auth/authSlice";
 
-          <input
-            type="text"
-            placeholder="Full Name"
-            className="w-full bg-slate-800 rounded-xl p-3 outline-none"
-          />
+import api from "../../api/axios";
 
-          <textarea
-            rows="4"
-            placeholder="Bio"
-            className="w-full bg-slate-800 rounded-xl p-3 outline-none resize-none"
-          />
+const API_URL = "http://localhost:5000";
 
+const EditProfileModal = ({
+    open,
+    onClose,
+}) => {
+    const { user } = useAppSelector(
+        (state) => state.auth
+    );
+
+    const dispatch = useAppDispatch();
+
+    const fileInputRef = useRef(null);
+
+    const [name, setName] = useState("");
+    const [bio, setBio] = useState("");
+
+    const [selectedFile, setSelectedFile] =
+        useState(null);
+
+    const [previewUrl, setPreviewUrl] =
+        useState(null);
+
+    const [saving, setSaving] =
+        useState(false);
+
+    // ===========================
+    // Load user data
+    // ===========================
+
+    useEffect(() => {
+        if (!open || !user) return;
+
+        setName(user.name || "");
+        setBio(user.bio || "");
+
+        setSelectedFile(null);
+        setPreviewUrl(null);
+    }, [open, user]);
+
+    // ===========================
+    // Cleanup preview URL
+    // ===========================
+
+    useEffect(() => {
+        return () => {
+            if (previewUrl) {
+                URL.revokeObjectURL(
+                    previewUrl
+                );
+            }
+        };
+    }, [previewUrl]);
+
+    // ===========================
+    // Select photo
+    // ===========================
+
+    const handlePhotoChange = (event) => {
+        const file =
+            event.target.files?.[0];
+
+        if (!file) return;
+
+        if (!file.type.startsWith("image/")) {
+            toast.error(
+                "Please select an image file."
+            );
+
+            event.target.value = "";
+            return;
+        }
+
+        if (file.size > 5 * 1024 * 1024) {
+            toast.error(
+                "Photo must be smaller than 5 MB."
+            );
+
+            event.target.value = "";
+            return;
+        }
+
+        if (previewUrl) {
+            URL.revokeObjectURL(
+                previewUrl
+            );
+        }
+
+        const newPreview =
+            URL.createObjectURL(file);
+
+        setSelectedFile(file);
+        setPreviewUrl(newPreview);
+
+        event.target.value = "";
+    };
+
+    // ===========================
+    // Save profile
+    // ===========================
+
+    const handleSubmit = async (event) => {
+        event.preventDefault();
+
+        const trimmedName =
+            name.trim();
+
+        const trimmedBio =
+            bio.trim();
+
+        if (!trimmedName) {
+            toast.error(
+                "Name is required."
+            );
+            return;
+        }
+
+        if (trimmedName.length < 2) {
+            toast.error(
+                "Name must be at least 2 characters."
+            );
+            return;
+        }
+
+        if (trimmedName.length > 50) {
+            toast.error(
+                "Name cannot exceed 50 characters."
+            );
+            return;
+        }
+
+        if (trimmedBio.length > 200) {
+            toast.error(
+                "Bio cannot exceed 200 characters."
+            );
+            return;
+        }
+
+        try {
+            setSaving(true);
+
+            let updatedUser =
+                user;
+
+            // ===========================
+            // Update name + bio
+            // ===========================
+
+            const profileResponse =
+                await api.put(
+                    "/users/profile",
+                    {
+                        name: trimmedName,
+                        bio: trimmedBio,
+                    }
+                );
+
+            if (
+                !profileResponse.data?.success
+            ) {
+                throw new Error(
+                    profileResponse.data
+                        ?.message ||
+                        "Failed to update profile."
+                );
+            }
+
+            updatedUser =
+                profileResponse.data.user;
+
+            // ===========================
+            // Upload new avatar
+            // ===========================
+
+            if (selectedFile) {
+                const formData =
+                    new FormData();
+
+                formData.append(
+                    "avatar",
+                    selectedFile
+                );
+
+                const avatarResponse =
+                    await api.put(
+                        "/users/avatar",
+                        formData
+                    );
+
+                if (
+                    !avatarResponse.data
+                        ?.success
+                ) {
+                    throw new Error(
+                        avatarResponse.data
+                            ?.message ||
+                            "Failed to upload photo."
+                    );
+                }
+
+                updatedUser =
+                    avatarResponse.data.user;
+            }
+
+            // ===========================
+            // Update Redux
+            // ===========================
+
+            dispatch(
+                updateUser(updatedUser)
+            );
+
+            toast.success(
+                "Profile updated successfully."
+            );
+
+            onClose();
+        } catch (error) {
+            toast.error(
+                error.response?.data
+                    ?.message ||
+                    error.message ||
+                    "Failed to update profile."
+            );
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    if (!open) return null;
+
+    const currentAvatar =
+        user?.avatar
+            ? `${API_URL}${user.avatar}`
+            : null;
+
+    const displayedAvatar =
+        previewUrl ||
+        currentAvatar;
+
+    return (
+        <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+            onMouseDown={(event) => {
+                if (
+                    event.target ===
+                    event.currentTarget
+                ) {
+                    if (!saving) {
+                        onClose();
+                    }
+                }
+            }}
+        >
+            <div className="w-full max-w-md rounded-2xl border border-slate-800 bg-slate-900 p-8 shadow-2xl">
+
+                {/* Header */}
+                <div className="mb-6">
+                    <h2 className="text-2xl font-bold text-white">
+                        Edit Profile
+                    </h2>
+
+                    <p className="mt-1 text-sm text-slate-400">
+                        Update your profile information.
+                    </p>
+                </div>
+
+                <form
+                    onSubmit={handleSubmit}
+                    className="space-y-6"
+                >
+
+                    {/* Photo */}
+                    <div className="text-center">
+
+                        <div className="relative mx-auto h-28 w-28">
+
+                            <div className="flex h-28 w-28 items-center justify-center overflow-hidden rounded-full bg-slate-800">
+
+                                {displayedAvatar ? (
+                                    <img
+                                        src={displayedAvatar}
+                                        alt={
+                                            user?.name ||
+                                            "Profile"
+                                        }
+                                        className="h-full w-full object-cover"
+                                    />
+                                ) : (
+                                    <FaUserCircle className="text-7xl text-slate-500" />
+                                )}
+
+                            </div>
+
+                            <button
+                                type="button"
+                                onClick={() =>
+                                    fileInputRef.current?.click()
+                                }
+                                disabled={saving}
+                                title="Change profile photo"
+                                className="absolute bottom-0 right-0 flex h-9 w-9 items-center justify-center rounded-full border-2 border-slate-900 bg-green-500 text-white transition hover:bg-green-600 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                                <FaCamera />
+                            </button>
+
+                        </div>
+
+                        <input
+                            ref={fileInputRef}
+                            type="file"
+                            accept="image/png,image/jpeg,image/jpg,image/webp"
+                            onChange={
+                                handlePhotoChange
+                            }
+                            className="hidden"
+                        />
+
+                        <button
+                            type="button"
+                            onClick={() =>
+                                fileInputRef.current?.click()
+                            }
+                            disabled={saving}
+                            className="mt-3 text-sm font-medium text-green-400 hover:text-green-300 disabled:opacity-50"
+                        >
+                            Change Photo
+                        </button>
+
+                        <p className="mt-1 text-xs text-slate-500">
+                            JPG, PNG or WebP · Max 5 MB
+                        </p>
+
+                    </div>
+
+                    {/* Name */}
+                    <div>
+                        <label
+                            htmlFor="profile-name"
+                            className="mb-2 block text-sm font-medium text-slate-300"
+                        >
+                            Full Name
+                        </label>
+
+                        <input
+                            id="profile-name"
+                            type="text"
+                            value={name}
+                            onChange={(event) =>
+                                setName(
+                                    event.target.value
+                                )
+                            }
+                            maxLength={50}
+                            disabled={saving}
+                            className="w-full rounded-xl border border-slate-700 bg-slate-800 p-3 text-white outline-none transition placeholder:text-slate-500 focus:border-green-500"
+                        />
+                    </div>
+
+                    {/* Bio */}
+                    <div>
+                        <label
+                            htmlFor="profile-bio"
+                            className="mb-2 block text-sm font-medium text-slate-300"
+                        >
+                            Bio
+                        </label>
+
+                        <textarea
+                            id="profile-bio"
+                            rows={4}
+                            value={bio}
+                            onChange={(event) =>
+                                setBio(
+                                    event.target.value
+                                )
+                            }
+                            maxLength={200}
+                            disabled={saving}
+                            className="w-full resize-none rounded-xl border border-slate-700 bg-slate-800 p-3 text-white outline-none transition placeholder:text-slate-500 focus:border-green-500"
+                        />
+
+                        <p className="mt-1 text-right text-xs text-slate-500">
+                            {bio.length}/200
+                        </p>
+                    </div>
+
+                    {/* Buttons */}
+                    <div className="flex justify-end gap-3">
+
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            disabled={saving}
+                            className="rounded-xl bg-slate-700 px-5 py-3 text-white transition hover:bg-slate-600 disabled:opacity-50"
+                        >
+                            Cancel
+                        </button>
+
+                        <button
+                            type="submit"
+                            disabled={
+                                saving ||
+                                !name.trim()
+                            }
+                            className="rounded-xl bg-green-500 px-5 py-3 font-medium text-white transition hover:bg-green-600 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                            {saving
+                                ? "Saving..."
+                                : "Save Changes"}
+                        </button>
+
+                    </div>
+
+                </form>
+            </div>
         </div>
-
-        <div className="flex justify-end gap-3 mt-8">
-
-          <button
-            onClick={onClose}
-            className="px-5 py-3 rounded-xl bg-slate-700 hover:bg-slate-600"
-          >
-            Cancel
-          </button>
-
-          <button className="px-5 py-3 rounded-xl bg-green-500 hover:bg-green-600">
-            Save
-          </button>
-
-        </div>
-
-      </div>
-
-    </div>
-  );
+    );
 };
 
 export default EditProfileModal;

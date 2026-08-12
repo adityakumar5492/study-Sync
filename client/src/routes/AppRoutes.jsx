@@ -6,18 +6,37 @@ import Register from "../pages/Register";
 import Dashboard from "../pages/Dashboard";
 import Rooms from "../pages/Rooms";
 import Room from "../pages/Room";
+import Profile from "../pages/Profile";
 
 import ProtectedRoute from "../components/auth/ProtectedRoute";
 
 const AppRoutes = () => {
     return (
         <Routes>
-            {/* Public Routes */}
-            <Route path="/" element={<Landing />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
 
-            {/* Protected Routes */}
+            {/* ===========================
+                Public Routes
+            =========================== */}
+
+            <Route
+                path="/"
+                element={<Landing />}
+            />
+
+            <Route
+                path="/login"
+                element={<Login />}
+            />
+
+            <Route
+                path="/register"
+                element={<Register />}
+            />
+
+            {/* ===========================
+                Protected Routes
+            =========================== */}
+
             <Route
                 path="/dashboard"
                 element={
@@ -44,6 +63,17 @@ const AppRoutes = () => {
                     </ProtectedRoute>
                 }
             />
+
+            {/* Profile */}
+            <Route
+                path="/profile"
+                element={
+                    <ProtectedRoute>
+                        <Profile />
+                    </ProtectedRoute>
+                }
+            />
+
         </Routes>
     );
 };

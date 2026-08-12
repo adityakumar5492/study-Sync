@@ -1,42 +1,71 @@
+import { useState } from "react";
+
 import ProfileHeader from "../components/profile/ProfileHeader";
 import ProfileInfo from "../components/profile/ProfileInfo";
 import ProfileStats from "../components/profile/ProfileStats";
 import ActivityTimeline from "../components/profile/ActivityTimeline";
-import AvatarUpload from "../components/profile/AvatarUpload";
 import EditProfileModal from "../components/profile/EditProfileModal";
 
 const Profile = () => {
-  return (
-    <div className="min-h-screen bg-slate-950 text-white p-8">
+    const [editModalOpen, setEditModalOpen] =
+        useState(false);
 
-      <div className="max-w-6xl mx-auto">
+    return (
+        <div className="min-h-screen bg-slate-950 px-4 py-6 text-white sm:px-6 lg:px-8">
 
-        <h1 className="text-4xl font-bold mb-8">
-          My Profile
-        </h1>
+            <div className="mx-auto max-w-7xl">
 
-        <ProfileHeader />
+                {/* ===========================
+                    Header
+                =========================== */}
 
-        <div className="grid lg:grid-cols-3 gap-8 mt-8">
+                <div className="mb-6">
+                    <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
+                        My Profile
+                    </h1>
+                </div>
 
-          <div className="lg:col-span-2 space-y-8">
-            <ProfileInfo />
-            <ActivityTimeline />
-          </div>
+                <ProfileHeader
+                    onEdit={() =>
+                        setEditModalOpen(true)
+                    }
+                />
 
-          <div className="space-y-8">
-            <AvatarUpload />
-            <ProfileStats />
-          </div>
+                {/* ===========================
+                    Statistics
+                =========================== */}
+
+                <div className="mt-6">
+                    <ProfileStats />
+                </div>
+
+                {/* ===========================
+                    Main Information
+                =========================== */}
+
+                <div className="mt-6 grid gap-6 lg:grid-cols-2">
+
+                    <ProfileInfo />
+
+                    <ActivityTimeline />
+
+                </div>
+
+                {/* ===========================
+                    Edit Profile
+                =========================== */}
+
+                <EditProfileModal
+                    open={editModalOpen}
+                    onClose={() =>
+                        setEditModalOpen(false)
+                    }
+                />
+
+            </div>
 
         </div>
-
-        <EditProfileModal />
-
-      </div>
-
-    </div>
-  );
+    );
 };
 
 export default Profile;

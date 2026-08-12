@@ -1,63 +1,106 @@
 import {
-  FaUsers,
-  FaClock,
-  FaFilePdf,
-  FaFire,
+    FaUsers,
+    FaDoorOpen,
+    FaCalendarAlt,
+    FaCheckCircle,
 } from "react-icons/fa";
 
-const stats = [
-  {
-    title: "Rooms Joined",
-    value: 12,
-    icon: <FaUsers className="text-green-500" />,
-  },
-  {
-    title: "Study Hours",
-    value: 58,
-    icon: <FaClock className="text-blue-500" />,
-  },
-  {
-    title: "PDFs Shared",
-    value: 24,
-    icon: <FaFilePdf className="text-red-500" />,
-  },
-  {
-    title: "Current Streak",
-    value: "14 Days",
-    icon: <FaFire className="text-orange-500" />,
-  },
-];
+import { useAppSelector } from "../../redux/hooks";
 
 const ProfileStats = () => {
-  return (
-    <section className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
+    const { user } = useAppSelector(
+        (state) => state.auth
+    );
 
-      <h2 className="text-2xl font-bold mb-6">
-        Statistics
-      </h2>
+    const memberSince = user?.createdAt
+        ? new Date(
+              user.createdAt
+          ).toLocaleDateString(
+              undefined,
+              {
+                  month: "short",
+                  year: "numeric",
+              }
+          )
+        : "—";
 
-      <div className="space-y-5">
+    const profileComplete =
+        Boolean(
+            user?.name &&
+            user?.email &&
+            user?.bio &&
+            user?.avatar
+        );
 
-        {stats.map((item) => (
-          <div
-            key={item.title}
-            className="flex items-center justify-between"
-          >
-            <div className="flex items-center gap-3">
-              {item.icon}
-              <span>{item.title}</span>
+    const stats = [
+        {
+            title: "Rooms Joined",
+            value: "—",
+            icon: FaUsers,
+            iconClass: "text-green-400",
+        },
+        {
+            title: "Rooms Created",
+            value: "—",
+            icon: FaDoorOpen,
+            iconClass: "text-blue-400",
+        },
+        {
+            title: "Member Since",
+            value: memberSince,
+            icon: FaCalendarAlt,
+            iconClass: "text-purple-400",
+        },
+        {
+            title: "Profile",
+            value: profileComplete
+                ? "Complete"
+                : "Incomplete",
+            icon: FaCheckCircle,
+            iconClass: profileComplete
+                ? "text-green-400"
+                : "text-yellow-400",
+        },
+    ];
+
+    return (
+        <section className="rounded-2xl border border-slate-800 bg-slate-900 p-5">
+
+            <div className="grid grid-cols-1 divide-y divide-slate-800 sm:grid-cols-2 sm:divide-x sm:divide-y-0 lg:grid-cols-4">
+
+                {stats.map((item) => {
+                    const Icon = item.icon;
+
+                    return (
+                        <div
+                            key={item.title}
+                            className="flex items-center gap-4 px-4 py-3 first:pt-3 sm:py-2"
+                        >
+
+                            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-slate-800">
+                                <Icon
+                                    className={`text-lg ${item.iconClass}`}
+                                />
+                            </div>
+
+                            <div className="min-w-0">
+                                <p className="text-sm text-slate-500">
+                                    {item.title}
+                                </p>
+
+                                <p className="mt-1 truncate text-lg font-semibold text-white">
+                                    {item.value}
+                                </p>
+                            </div>
+
+                        </div>
+                    );
+                })}
+
             </div>
 
-            <span className="font-semibold">
-              {item.value}
-            </span>
-          </div>
-        ))}
-
-      </div>
-
-    </section>
-  );
+        </section>
+    );
 };
 
 export default ProfileStats;
