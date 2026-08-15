@@ -7,7 +7,17 @@ const {
     deleteRoom,
     updateRoom,
     uploadRoomPdf,
+    deleteRoomPdf,
+    getRoomMessages,
+
+    requestRejoin,
+    approveRejoinRequest,
+    rejectRejoinRequest,
 } = require("../services/room.service");
+
+const {
+    getSocketIO,
+} = require("../services/activity.service");
 
 const createStudyRoom = async (req, res) => {
     try {
@@ -150,9 +160,123 @@ const deleteStudyRoom = async (req, res) => {
             req.params.id
         );
 
+        const io = getSocketIO();
+
+        if (io) {
+            io.emit("room:deleted", {
+                roomId: req.params.id,
+                message:
+                    "A study room was deleted.",
+            });
+        }
+
         res.status(200).json({
             success: true,
-            message: "Room deleted successfully.",
+            message:
+                "Room deleted successfully.",
+        });
+    } catch (error) {
+        res.status(400).json({
+            success: false,
+            message: error.message,
+        });
+    }
+};
+
+const deleteStudyMaterial = async (req, res) => {
+    try {
+        const room = await deleteRoomPdf(
+            req.user._id,
+            req.params.id
+        );
+
+        res.status(200).json({
+            success: true,
+            message: "Study material deleted successfully.",
+            room,
+        });
+    } catch (error) {
+        res.status(400).json({
+            success: false,
+            message: error.message,
+        });
+    }
+};
+
+const getMessages = async (req, res) => {
+    try {
+        const messages = await getRoomMessages(
+            req.user._id,
+            req.params.id
+        );
+
+        res.status(200).json({
+            success: true,
+            messages,
+        });
+    } catch (error) {
+        res.status(400).json({
+            success: false,
+            message: error.message,
+        });
+    }
+};
+
+const requestRoomRejoin = async (req, res) => {
+    try {
+        await requestRejoin(
+            req.user._id,
+            req.params.id
+        );
+
+        res.status(200).json({
+            success: true,
+            message:
+                "Rejoin request sent to the host.",
+        });
+    } catch (error) {
+        res.status(400).json({
+            success: false,
+            message: error.message,
+        });
+    }
+};
+
+
+const approveRoomRejoin = async (req, res) => {
+    try {
+        await approveRejoinRequest(
+            req.user._id,
+            req.params.id,
+            req.body.userId
+        );
+
+        res.status(200).json({
+            success: true,
+            message:
+                "Rejoin request approved.",
+        });
+    } catch (error) {
+        res.status(400).json({
+            success: false,
+            message: error.message,
+        });
+    }
+};
+
+
+const rejectRoomRejoin = async (req, res) => {
+    try {
+        await rejectRejoinRequest(
+            req.user._id,
+            req.params.id,
+            req.body.userId
+        );
+
+        res.status(200).json({
+            success: true,
+            message:
+                "Rejoin request rejected.",
         });
     } catch (error) {
         res.status(400).json({
@@ -171,4 +295,9 @@ module.exports = {
     updateStudyRoom,
     deleteStudyRoom,
     uploadStudyMaterial,
+    deleteStudyMaterial,
+    getMessages,
+    requestRoomRejoin,
+    approveRoomRejoin,
+    rejectRoomRejoin,
 };

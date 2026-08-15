@@ -13,7 +13,10 @@ import { Link, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 
 import { useAppDispatch } from "../../redux/hooks";
-import { deleteRoomThunk, leaveRoomThunk } from "../../redux/room/roomThunk";
+import {
+    deleteRoomThunk,
+    leaveRoomThunk,
+} from "../../redux/room/roomThunk";
 
 const RoomHeader = ({ room, currentUser }) => {
     const navigate = useNavigate();
@@ -25,56 +28,124 @@ const RoomHeader = ({ room, currentUser }) => {
 
     if (!room) return null;
 
+    // ===========================
+    // User / Host
+    // ===========================
+
     const hostId =
-    typeof room.host === "object"
-        ? room.host?._id?.toString()
-        : room.host?.toString();
+        typeof room.host === "object"
+            ? room.host?._id?.toString()
+            : room.host?.toString();
 
-const currentUserId = currentUser?._id?.toString();
+    const currentUserId =
+        currentUser?._id?.toString();
 
-const isHost = hostId === currentUserId;
+    const isHost =
+        hostId === currentUserId;
 
-    const isMember = room.members?.some((member) => {
-        const memberId =
-            typeof member === "object" ? member._id?.toString() : member?.toString();
-        return memberId === currentUserId;
-    });
+    const isMember =
+        room.members?.some((member) => {
+            const memberId =
+                typeof member === "object"
+                    ? member._id?.toString()
+                    : member?.toString();
+
+            return memberId === currentUserId;
+        });
+
+    // ===========================
+    // Copy Invite Code
+    // ===========================
 
     const copyInviteCode = async () => {
         try {
-            await navigator.clipboard.writeText(room.inviteCode);
-            toast.success("Invite code copied.");
-        } catch {
-            toast.error("Failed to copy invite code.");
-        }
-    };
-
-    const handleDeleteRoom = async () => {
-        setMenuOpen(false);
-
-        const confirmed = window.confirm(
-            `Delete "${room.name}"? This cannot be undone — all members will lose access immediately.`
-        );
-
-        if (!confirmed) return;
-
-        setDeleting(true);
-
-        try {
-            await dispatch(deleteRoomThunk(room._id)).unwrap();
-            toast.success("Room deleted.");
-            navigate("/rooms");
-        } catch (err) {
-            toast.error(
-                typeof err === "string" ? err : "Failed to delete room."
+            await navigator.clipboard.writeText(
+                room.inviteCode
             );
-            setDeleting(false);
+
+            toast.success(
+                "Invite code copied."
+            );
+        } catch {
+            toast.error(
+                "Failed to copy invite code."
+            );
         }
     };
 
-    const handleLeaveRoom = async () => {
+    // ===========================
+    // Delete Room
+    // ===========================
+
+        const handleDeleteRoom = async () => {
+            setMenuOpen(false);
+
+            const confirmed = window.confirm(
+                `Delete "${room.name}"? This cannot be undone — all members will lose access immediately.`
+            );
+
+            if (!confirmed) return;
+
+            setDeleting(true);
+
+            try {
+                await dispatch(
+                    deleteRoomThunk(room._id)
+                ).unwrap();
+
+                toast.success(
+                    "Room deleted."
+                );
+
+                navigate("/rooms");
+            } catch (err) {
+                toast.error(
+                    typeof err === "string"
+                        ? err
+                        : err?.message ||
+                            "Failed to delete room."
+                );
+
+                setDeleting(false);
+            }
+        };
+
+        // ===========================
+        // Leave Room
+        // ===========================
+
+        const handleLeaveRoom = async () => {
         setMenuOpen(false);
 
+        // Public room → no confirmation
+        if (!room.isPrivate) {
+            setLeaving(true);
+
+            try {
+                await dispatch(
+                    leaveRoomThunk(room._id)
+                ).unwrap();
+
+                toast.success(
+                    "You left the room."
+                );
+
+                navigate("/rooms");
+            } catch (err) {
+                toast.error(
+                    typeof err === "string"
+                        ? err
+                        : err?.message ||
+                            "Failed to leave room."
+                );
+
+                setLeaving(false);
+            }
+
+            return;
+        }
+
+        // Private room → confirmation
         const confirmed = window.confirm(
             `Leave "${room.name}"? You'll need the invite code to rejoin.`
         );
@@ -84,122 +155,203 @@ const isHost = hostId === currentUserId;
         setLeaving(true);
 
         try {
-            await dispatch(leaveRoomThunk(room._id)).unwrap();
-            toast.success("You left the room.");
+            await dispatch(
+                leaveRoomThunk(room._id)
+            ).unwrap();
+
+            toast.success(
+                "You left the room."
+            );
+
             navigate("/rooms");
         } catch (err) {
             toast.error(
-                typeof err === "string" ? err : "Failed to leave room."
+                typeof err === "string"
+                    ? err
+                    : err?.message ||
+                        "Failed to leave room."
             );
+
             setLeaving(false);
         }
     };
 
     return (
-        <header className="flex items-center justify-between border-b border-slate-800 bg-slate-900 px-6 py-4">
-            <div className="flex items-center gap-4">
+        <header className="flex h-[56px] shrink-0 items-center justify-between border-b border-slate-800 bg-slate-900 px-4">
+
+            {/* ===========================
+                Left
+            =========================== */}
+
+            <div className="flex min-w-0 items-center gap-2.5">
+
+                {/* Back */}
                 <Link
                     to="/rooms"
-                    className="rounded-lg p-2 text-slate-400 transition hover:bg-slate-800 hover:text-white"
+                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-800 hover:text-white"
+                    aria-label="Back to rooms"
                 >
-                    <FaArrowLeft size={18} />
+                    <FaArrowLeft size={14} />
                 </Link>
 
-                <div>
-                    <h1 className="text-xl font-bold text-white">
-                        {room.name}
-                    </h1>
+                {/* Room Info */}
+                <div className="min-w-0">
 
-                    <div className="mt-1 flex flex-wrap items-center gap-4 text-sm text-slate-400">
-                        <span className="flex items-center gap-1">
-                            <FaUsers />
-                            {room.members?.length || 0} Students
+                    <div className="flex min-w-0 items-center gap-3">
+
+                        {/* Room Name */}
+                        <h1 className="max-w-[220px] truncate text-sm font-bold text-white sm:max-w-[320px]">
+                            {room.name}
+                        </h1>
+
+                        {/* Members */}
+                        <span className="hidden items-center gap-1 text-xs text-slate-500 sm:flex">
+                            <FaUsers size={10} />
+                            {room.members?.length || 0}
+                            {room.maxMembers
+                                ? `/${room.maxMembers}`
+                                : ""}{" "}
+                            students
                         </span>
 
-                        <span className="flex items-center gap-1">
+                        {/* Privacy */}
+                        <span
+                            className={`hidden items-center gap-1 text-xs sm:flex ${
+                                room.isPrivate
+                                    ? "text-amber-400"
+                                    : "text-cyan-400"
+                            }`}
+                        >
                             {room.isPrivate ? (
                                 <>
-                                    <FaLock />
+                                    <FaLock size={9} />
                                     Private
                                 </>
                             ) : (
                                 <>
-                                    <FaGlobe />
+                                    <FaGlobe size={9} />
                                     Public
                                 </>
                             )}
                         </span>
+
+                        {/* Invite Code */}
+                        {room.isPrivate &&
+                            isHost && (
+                                <div className="hidden items-center gap-1.5 md:flex">
+
+                                    <span className="rounded-md bg-slate-800 px-2 py-1 font-mono text-[10px] font-semibold tracking-wider text-indigo-400">
+                                        {room.inviteCode}
+                                    </span>
+
+                                    <button
+                                        type="button"
+                                        onClick={
+                                            copyInviteCode
+                                        }
+                                        className="flex items-center gap-1 rounded-md bg-indigo-500/10 px-2 py-1 text-[10px] font-semibold text-indigo-400 transition hover:bg-indigo-500 hover:text-white"
+                                    >
+                                        <FaCopy size={9} />
+                                        Copy
+                                    </button>
+
+                                </div>
+                            )}
+
                     </div>
 
-                    {room.isPrivate && isHost && (
-                        <div className="mt-3 flex items-center gap-3">
-                            <span className="rounded-lg bg-slate-800 px-3 py-2 font-mono text-green-400">
-                                {room.inviteCode}
-                            </span>
-
-                            <button
-                                onClick={copyInviteCode}
-                                className="flex items-center gap-2 rounded-lg bg-green-500 px-3 py-2 text-sm font-medium text-white hover:bg-green-600"
-                            >
-                                <FaCopy />
-                                Copy
-                            </button>
-                        </div>
-                    )}
                 </div>
+
             </div>
 
-            {/* Room options menu */}
-            <div className="relative">
+            {/* ===========================
+                Room Menu
+            =========================== */}
+
+            <div className="relative shrink-0">
+
                 <button
-                    onClick={() => setMenuOpen((open) => !open)}
-                    className="rounded-lg p-2 text-slate-400 transition hover:bg-slate-800 hover:text-white"
+                    type="button"
+                    onClick={() =>
+                        setMenuOpen(
+                            (open) => !open
+                        )
+                    }
+                    className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-800 hover:text-white"
                     aria-label="Room options"
                     aria-expanded={menuOpen}
                 >
-                    <FaEllipsisV />
+                    <FaEllipsisV size={13} />
                 </button>
 
                 {menuOpen && (
                     <>
-                        {/* Click-outside catcher */}
+                        {/* Outside Click */}
                         <div
                             className="fixed inset-0 z-10"
-                            onClick={() => setMenuOpen(false)}
+                            onClick={() =>
+                                setMenuOpen(false)
+                            }
                         />
 
-                        <div className="absolute right-0 z-20 mt-2 w-48 overflow-hidden rounded-xl border border-slate-800 bg-slate-900 shadow-2xl">
+                        {/* Menu */}
+                        <div className="absolute right-0 z-20 mt-2 w-48 overflow-hidden rounded-xl border border-slate-800 bg-slate-900 p-1.5 shadow-2xl shadow-black/40">
+
+                            {/* Delete */}
                             {isHost && (
                                 <button
-                                    onClick={handleDeleteRoom}
-                                    disabled={deleting}
-                                    className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm text-red-400 transition hover:bg-slate-800 disabled:opacity-50"
+                                    type="button"
+                                    onClick={
+                                        handleDeleteRoom
+                                    }
+                                    disabled={
+                                        deleting
+                                    }
+                                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-red-400 transition hover:bg-red-500/10 disabled:opacity-50"
                                 >
                                     <FaTrash />
-                                    {deleting ? "Deleting..." : "Delete Room"}
+
+                                    {deleting
+                                        ? "Deleting..."
+                                        : "Delete Room"}
                                 </button>
                             )}
 
-                            {!isHost && isMember && (
-                                <button
-                                    onClick={handleLeaveRoom}
-                                    disabled={leaving}
-                                    className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm text-yellow-400 transition hover:bg-slate-800 disabled:opacity-50"
-                                >
-                                    <FaSignOutAlt />
-                                    {leaving ? "Leaving..." : "Leave Room"}
-                                </button>
-                            )}
+                            {/* Leave */}
+                            {!isHost &&
+                                isMember && (
+                                    <button
+                                        type="button"
+                                        onClick={
+                                            handleLeaveRoom
+                                        }
+                                        disabled={
+                                            leaving
+                                        }
+                                        className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-yellow-400 transition hover:bg-yellow-500/10 disabled:opacity-50"
+                                    >
+                                        <FaSignOutAlt />
 
-                            {!isHost && !isMember && (
-                                <p className="px-4 py-3 text-sm text-slate-500">
-                                    No actions available.
-                                </p>
-                            )}
+                                        {leaving
+                                            ? "Leaving..."
+                                            : "Leave Room"}
+                                    </button>
+                                )}
+
+                            {/* No Actions */}
+                            {!isHost &&
+                                !isMember && (
+                                    <p className="px-3 py-2.5 text-sm text-slate-600">
+                                        No actions available.
+                                    </p>
+                                )}
+
                         </div>
                     </>
                 )}
+
             </div>
+
         </header>
     );
 };

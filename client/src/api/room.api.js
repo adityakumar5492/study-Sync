@@ -34,5 +34,40 @@ export const uploadRoomPdf = (roomId, formData) =>
     api.post(`/rooms/${roomId}/pdf`, formData, {
         headers: {
             "Content-Type": "multipart/form-data",
-    },
-});
+        },
+    });
+
+export const deleteRoomPdf = (roomId) => {
+    return api.delete(`/rooms/${roomId}/pdf`);
+};
+
+export const getRoomMessages = (roomId) => {
+    return api.get(`/rooms/${roomId}/messages`);
+};
+
+
+export const requestRoomRejoin = (roomId) => {
+    return api.post(
+        `/rooms/${roomId}/rejoin-request`
+    );
+};
+
+export const approveRoomRejoin = (
+    roomId,
+    userId
+) => {
+    return api.post(
+        `/rooms/${roomId}/rejoin-request/approve`,
+        { userId }
+    );
+};
+
+export const rejectRoomRejoin = (
+    roomId,
+    userId
+) => {
+    return api.post(
+        `/rooms/${roomId}/rejoin-request/reject`,
+        { userId }
+    );
+};

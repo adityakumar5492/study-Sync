@@ -1,4 +1,5 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
+
 import {
     getRooms,
     getRoom,
@@ -8,6 +9,7 @@ import {
     updateRoom,
     deleteRoom,
     uploadRoomPdf,
+    deleteRoomPdf,
 } from "../../api/room.api";
 
 // Get all rooms
@@ -125,6 +127,21 @@ export const uploadRoomPdfThunk = createAsyncThunk(
             return rejectWithValue(
                 error.response?.data?.message ||
                 "Failed to upload PDF"
+            );
+        }
+    }
+);
+
+export const deleteRoomPdfThunk = createAsyncThunk(
+    "room/deleteRoomPdf",
+    async (roomId, { rejectWithValue }) => {
+        try {
+            const { data } = await deleteRoomPdf(roomId);
+            return data;
+        } catch (error) {
+            return rejectWithValue(
+                error.response?.data?.message ||
+                "Failed to delete PDF"
             );
         }
     }
