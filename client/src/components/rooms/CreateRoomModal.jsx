@@ -1,5 +1,9 @@
 import { useEffect, useState } from "react";
-import { FaTimes } from "react-icons/fa";
+import {
+    FaTimes,
+    FaLock,
+    FaGlobe,
+} from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 
@@ -48,6 +52,29 @@ const CreateRoomModal = ({ isOpen, onClose }) => {
         }));
     };
 
+    const handleMaxMembersChange = (e) => {
+        const value = e.target.value;
+
+        // Allow empty input while editing
+        if (value === "") {
+            setFormData((prev) => ({
+                ...prev,
+                maxMembers: "",
+            }));
+            return;
+        }
+
+        // Remove leading zeros
+        const cleanedValue = value.replace(/^0+/, "");
+
+        setFormData((prev) => ({
+            ...prev,
+            maxMembers: cleanedValue
+                ? Number(cleanedValue)
+                : 0,
+        }));
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
 
@@ -60,6 +87,17 @@ const CreateRoomModal = ({ isOpen, onClose }) => {
 
         if (!formData.description.trim()) {
             toast.error("Description is required.");
+            return;
+        }
+
+        if (
+            !formData.maxMembers ||
+            formData.maxMembers < 2 ||
+            formData.maxMembers > 500
+        ) {
+            toast.error(
+                "Maximum members must be between 2 and 500."
+            );
             return;
         }
 
@@ -83,7 +121,8 @@ const CreateRoomModal = ({ isOpen, onClose }) => {
             toast.error(
                 typeof err === "string"
                     ? err
-                    : err?.message || "Failed to create room."
+                    : err?.message ||
+                          "Failed to create room."
             );
         } finally {
             setLoading(false);
@@ -92,107 +131,213 @@ const CreateRoomModal = ({ isOpen, onClose }) => {
 
     return (
         <>
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-                <div className="w-full max-w-lg rounded-2xl border border-slate-800 bg-slate-900 p-8 shadow-2xl">
-                    <div className="mb-6 flex items-center justify-between">
-                        <h2 className="text-2xl font-bold text-white">
-                            Create Study Room
-                        </h2>
+            {/* Overlay */}
+            <div className="fixed inset-0 z-50 flex min-h-screen items-center justify-center overflow-y-auto bg-black/70 px-3 py-4 backdrop-blur-sm sm:px-4 sm:py-6">
+
+                {/* Modal */}
+                <div className="flex max-h-[92vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-slate-800 bg-slate-900 shadow-2xl shadow-black/50 sm:rounded-3xl">
+
+                    {/* Header */}
+                    <div className="flex shrink-0 items-start justify-between gap-4 border-b border-slate-800 px-4 py-4 sm:px-7 sm:py-5">
+
+                        <div className="min-w-0">
+                            <h2 className="text-lg font-bold tracking-tight text-white sm:text-xl">
+                                Create Study Room
+                            </h2>
+
+                            <p className="mt-1 max-w-sm text-xs leading-5 text-slate-500 sm:text-sm">
+                                Set up a collaborative space for your study group.
+                            </p>
+                        </div>
 
                         <button
+                            type="button"
                             onClick={onClose}
                             disabled={loading}
-                            className="text-slate-400 transition hover:text-white disabled:cursor-not-allowed"
+                            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-800 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+                            aria-label="Close modal"
                         >
-                            <FaTimes size={20} />
+                            <FaTimes />
                         </button>
+
                     </div>
 
+                    {/* Form */}
                     <form
                         onSubmit={handleSubmit}
-                        className="space-y-5"
+                        className="space-y-5 overflow-y-auto px-4 py-5 sm:px-7 sm:py-6"
                     >
+
+                        {/* Room Name */}
                         <div>
-                            <label className="mb-2 block text-sm text-slate-300">
-                                Room Name
+                            <label
+                                htmlFor="room-name"
+                                className="mb-2 block text-sm font-medium text-slate-300"
+                            >
+                                Room name
                             </label>
 
                             <input
+                                id="room-name"
                                 type="text"
                                 name="name"
                                 required
                                 disabled={loading}
-                                placeholder="Enter room name"
+                                placeholder="e.g. Operating Systems Revision"
                                 value={formData.name}
                                 onChange={handleChange}
-                                className="w-full rounded-xl border border-transparent bg-slate-800 p-3 text-white outline-none transition focus:border-green-500 disabled:opacity-60"
+                                className="min-h-12 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white outline-none placeholder:truncate placeholder:text-slate-600 transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 disabled:cursor-not-allowed disabled:opacity-60"
                             />
                         </div>
 
+                        {/* Description */}
                         <div>
-                            <label className="mb-2 block text-sm text-slate-300">
+                            <label
+                                htmlFor="room-description"
+                                className="mb-2 block text-sm font-medium text-slate-300"
+                            >
                                 Description
                             </label>
 
                             <textarea
-                                rows={4}
+                                id="room-description"
+                                rows={3}
                                 name="description"
                                 required
                                 disabled={loading}
-                                placeholder="Describe your study room..."
+                                placeholder="What will your group study in this room?"
                                 value={formData.description}
                                 onChange={handleChange}
-                                className="w-full resize-none rounded-xl border border-transparent bg-slate-800 p-3 text-white outline-none transition focus:border-green-500 disabled:opacity-60"
+                                className="min-h-24 w-full resize-none rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm leading-6 text-white outline-none placeholder:text-slate-600 transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 disabled:cursor-not-allowed disabled:opacity-60"
                             />
                         </div>
 
+                        {/* Maximum Members */}
                         <div>
-                            <label className="mb-2 block text-sm text-slate-300">
-                                Maximum Members
+                            <label
+                                htmlFor="max-members"
+                                className="mb-2 block text-sm font-medium text-slate-300"
+                            >
+                                Maximum members
                             </label>
 
                             <input
-                                type="number"
+                                id="max-members"
+                                type="text"
                                 name="maxMembers"
-                                min={2}
-                                max={500}
+                                inputMode="numeric"
+                                pattern="[0-9]*"
                                 disabled={loading}
                                 value={formData.maxMembers}
-                                onChange={handleChange}
-                                className="w-full rounded-xl border border-transparent bg-slate-800 p-3 text-white outline-none transition focus:border-green-500 disabled:opacity-60"
+                                onChange={handleMaxMembersChange}
+                                className="min-h-12 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 disabled:cursor-not-allowed disabled:opacity-60"
                             />
+
+                            <p className="mt-2 text-xs text-slate-600">
+                                Choose between 2 and 500 members.
+                            </p>
                         </div>
 
-                        <label className="flex cursor-pointer items-center gap-3 text-slate-300">
-                            <input
-                                type="checkbox"
-                                name="isPrivate"
-                                checked={formData.isPrivate}
-                                onChange={handleChange}
+                        {/* Privacy */}
+                        <div className="grid gap-3 sm:grid-cols-2">
+
+                            {/* Public */}
+                            <button
+                                type="button"
                                 disabled={loading}
-                                className="h-4 w-4 accent-green-500"
-                            />
+                                onClick={() =>
+                                    setFormData((prev) => ({
+                                        ...prev,
+                                        isPrivate: false,
+                                    }))
+                                }
+                                className={`flex min-h-[76px] items-center gap-3 rounded-xl border p-4 text-left transition ${
+                                    !formData.isPrivate
+                                        ? "border-indigo-500/40 bg-indigo-500/10"
+                                        : "border-slate-800 bg-slate-950 hover:border-slate-700"
+                                }`}
+                            >
+                                <div
+                                    className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${
+                                        !formData.isPrivate
+                                            ? "bg-indigo-500/15 text-indigo-400"
+                                            : "bg-slate-800 text-slate-500"
+                                    }`}
+                                >
+                                    <FaGlobe />
+                                </div>
 
-                            Private Room
-                        </label>
+                                <div className="min-w-0">
+                                    <p className="text-sm font-semibold text-white">
+                                        Public
+                                    </p>
 
+                                    <p className="mt-0.5 text-xs text-slate-500">
+                                        Anyone can join
+                                    </p>
+                                </div>
+                            </button>
+
+                            {/* Private */}
+                            <button
+                                type="button"
+                                disabled={loading}
+                                onClick={() =>
+                                    setFormData((prev) => ({
+                                        ...prev,
+                                        isPrivate: true,
+                                    }))
+                                }
+                                className={`flex min-h-[76px] items-center gap-3 rounded-xl border p-4 text-left transition ${
+                                    formData.isPrivate
+                                        ? "border-indigo-500/40 bg-indigo-500/10"
+                                        : "border-slate-800 bg-slate-950 hover:border-slate-700"
+                                }`}
+                            >
+                                <div
+                                    className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${
+                                        formData.isPrivate
+                                            ? "bg-indigo-500/15 text-indigo-400"
+                                            : "bg-slate-800 text-slate-500"
+                                    }`}
+                                >
+                                    <FaLock />
+                                </div>
+
+                                <div className="min-w-0">
+                                    <p className="text-sm font-semibold text-white">
+                                        Private
+                                    </p>
+
+                                    <p className="mt-0.5 text-xs text-slate-500">
+                                        Invite code required
+                                    </p>
+                                </div>
+                            </button>
+
+                        </div>
+
+                        {/* Submit */}
                         <button
                             type="submit"
                             disabled={loading}
-                            className={`w-full rounded-xl py-3 font-semibold transition ${
-                                loading
-                                    ? "cursor-not-allowed bg-slate-700 text-slate-400"
-                                    : "bg-green-500 text-white hover:bg-green-600"
-                            }`}
+                            className="flex min-h-12 w-full items-center justify-center rounded-xl bg-indigo-500 py-3.5 text-sm font-semibold text-white shadow-lg shadow-indigo-500/20 transition hover:bg-indigo-400 hover:shadow-indigo-500/30 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-400 disabled:shadow-none"
                         >
-                            {loading
-                                ? "Creating Room..."
-                                : "Create Room"}
+                            {loading ? (
+                                <span className="flex items-center gap-2">
+                                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                                    Creating room...
+                                </span>
+                            ) : (
+                                "Create Room"
+                            )}
                         </button>
+
                     </form>
                 </div>
             </div>
 
+            {/* Private Room Invite */}
             <InviteCodeModal
                 isOpen={showInviteModal}
                 room={createdRoom}
@@ -204,5 +349,6 @@ const CreateRoomModal = ({ isOpen, onClose }) => {
             />
         </>
     );
-}
+};
+
 export default CreateRoomModal;

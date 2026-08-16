@@ -1,6 +1,5 @@
-import { useNavigate } from "react-router-dom";
+import { useOutletContext, useNavigate } from "react-router-dom";
 
-import Sidebar from "../components/dashboard/Sidebar";
 import Topbar from "../components/dashboard/Topbar";
 import QuickActions from "../components/dashboard/QuickActions";
 import StatsSection from "../components/dashboard/StatsSection";
@@ -8,25 +7,44 @@ import RecentRooms from "../components/dashboard/RecentRooms";
 
 const Dashboard = () => {
     const navigate = useNavigate();
+    const { openSidebar } = useOutletContext();
 
     return (
-        <div className="min-h-screen bg-slate-950 text-white flex">
+        <div className="min-h-screen bg-slate-950 text-white">
 
-            <Sidebar />
+            <main className="min-w-0 overflow-y-auto">
 
-            <main className="flex-1 p-8 overflow-y-auto">
+                <div className="mx-auto w-full max-w-[1600px] px-3 py-4 sm:px-5 sm:py-6 md:px-6 lg:px-8">
 
-                <Topbar />
+                    {/* Topbar */}
+                    <Topbar onMenuClick={openSidebar} />
 
-                <QuickActions
-                    onCreateRoom={() => navigate("/rooms")}
-                    onJoinRoom={() => navigate("/rooms")}
-                    onUploadMaterial={() => navigate("/rooms")}
-                />
+                    {/* Quick Actions */}
+                    <section className="mb-7 sm:mb-8">
+                        <QuickActions
+                            onCreateRoom={() =>
+                                navigate("/rooms")
+                            }
+                            onJoinRoom={() =>
+                                navigate("/rooms")
+                            }
+                            onUploadMaterial={() =>
+                                navigate("/rooms")
+                            }
+                        />
+                    </section>
 
-                <StatsSection />
+                    {/* Statistics */}
+                    <section className="mb-7 sm:mb-8">
+                        <StatsSection />
+                    </section>
 
-                <RecentRooms />
+                    {/* Recent Rooms */}
+                    <section>
+                        <RecentRooms />
+                    </section>
+
+                </div>
 
             </main>
 

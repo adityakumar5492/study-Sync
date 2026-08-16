@@ -1,32 +1,35 @@
 const StatCard = ({
-  title,
-  value,
-  icon,
-  subtitle,
+    title,
+    value,
+    icon,
+    subtitle,
 }) => {
-  return (
-    <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 transition-all duration-300 hover:border-green-500 hover:-translate-y-1">
+    return (
+        <div className="group relative overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/70 p-4 shadow-lg shadow-black/5 transition duration-300 hover:-translate-y-1 hover:border-indigo-500/30 hover:bg-slate-900 hover:shadow-indigo-500/5 sm:p-5">
 
-      <div className="text-3xl mb-5">
-        {icon}
-      </div>
+            {/* Subtle hover glow */}
+            <div className="pointer-events-none absolute -right-10 -top-10 h-24 w-24 rounded-full bg-indigo-500/0 blur-3xl transition duration-500 group-hover:bg-indigo-500/10" />
 
-      <h3 className="text-3xl font-bold">
-        {value}
-      </h3>
+            <div className="relative mb-4">
+                {icon}
+            </div>
 
-      <p className="text-slate-400 mt-2">
-        {title}
-      </p>
+            <h3 className="relative text-xl font-bold tracking-tight text-white sm:text-2xl">
+                {value}
+            </h3>
 
-      {subtitle && (
-        <p className="text-sm text-green-400 mt-3">
-          {subtitle}
-        </p>
-      )}
+            <p className="relative mt-1 text-sm text-slate-500">
+                {title}
+            </p>
 
-    </div>
-  );
+            {subtitle && (
+                <p className="relative mt-3 text-xs font-medium text-indigo-400">
+                    {subtitle}
+                </p>
+            )}
+
+        </div>
+    );
 };
 
 export default StatCard;

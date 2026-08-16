@@ -4,7 +4,10 @@ import {
     useState,
 } from "react";
 
-import { useNavigate } from "react-router-dom";
+import {
+    useNavigate,
+    useOutletContext,
+} from "react-router-dom";
 import toast from "react-hot-toast";
 import { removeRoom } from "../redux/room/roomSlice";
 import {
@@ -26,6 +29,7 @@ import CreateRoomModal from "../components/rooms/CreateRoomModal";
 const Rooms = () => {
     const dispatch = useAppDispatch();
     const navigate = useNavigate();
+    const { openSidebar } = useOutletContext();
 
     const {
         rooms,
@@ -181,6 +185,7 @@ useEffect(() => {
                         onCreate={() =>
                             setOpenModal(true)
                         }
+                        onMenuClick={openSidebar}
                     />
 
                     {/* ===========================
