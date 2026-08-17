@@ -8,28 +8,28 @@ import {
 
 const steps = [
   {
-    icon: <FaPlusCircle className="text-4xl text-green-500" />,
-    title: "Create a Study Room",
+    icon: <FaPlusCircle />,
+    title: "Create a Room",
     description:
-      "Start a private or public study room in just one click.",
+      "Create a private or public study room and set up your collaborative workspace.",
   },
   {
-    icon: <FaFileUpload className="text-4xl text-blue-500" />,
-    title: "Upload a PDF",
+    icon: <FaFileUpload />,
+    title: "Share Material",
     description:
-      "Share your notes, books, or lecture slides with everyone instantly.",
+      "Upload your PDF notes, books, or lecture slides for everyone in the room.",
   },
   {
-    icon: <FaUserFriends className="text-4xl text-purple-500" />,
-    title: "Invite Friends",
+    icon: <FaUserFriends />,
+    title: "Invite Your Group",
     description:
-      "Share the room code and let your friends join the session.",
+      "Share the room invite code and bring your study partners into the session.",
   },
   {
-    icon: <FaBookOpen className="text-4xl text-orange-500" />,
+    icon: <FaBookOpen />,
     title: "Study Together",
     description:
-      "Chat, annotate, and collaborate on the same PDF in real time.",
+      "Read, annotate, chat, and collaborate on the same material in real time.",
   },
 ];
 
@@ -37,55 +37,67 @@ const HowItWorks = () => {
   return (
     <section
       id="how-it-works"
-      className="bg-slate-950 text-white py-24"
+      className="bg-slate-950 py-24 text-white"
     >
-      <div className="max-w-7xl mx-auto px-6">
+      <div className="mx-auto max-w-7xl px-6">
 
+        {/* Heading */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
           viewport={{ once: true }}
-          className="text-center mb-20"
+          className="mx-auto mb-20 max-w-3xl text-center"
         >
-          <p className="text-green-400 font-semibold mb-3">
-            HOW IT WORKS
-          </p>
+          <span className="text-sm font-semibold uppercase tracking-[0.2em] text-cyan-400">
+            Simple workflow
+          </span>
 
-          <h2 className="text-4xl font-bold">
-            Start Studying in 4 Easy Steps
+          <h2 className="mt-4 text-4xl font-bold tracking-tight sm:text-5xl">
+            From setup to study
+            <span className="text-slate-500"> in minutes.</span>
           </h2>
 
-          <p className="text-slate-400 mt-4 max-w-2xl mx-auto">
-            Everything is designed to help students collaborate quickly
-            without complicated setup.
+          <p className="mt-5 text-lg leading-8 text-slate-400">
+            Create your room, invite your group, and start learning together
+            without unnecessary setup.
           </p>
         </motion.div>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+        {/* Steps */}
+        <div className="relative grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+
+          {/* Connecting line */}
+          <div className="absolute left-[12%] right-[12%] top-12 hidden h-px bg-gradient-to-r from-indigo-500/20 via-indigo-500/60 to-cyan-500/20 lg:block" />
+
           {steps.map((step, index) => (
             <motion.div
-              key={index}
-              initial={{ opacity: 0, y: 40 }}
+              key={step.title}
+              initial={{ opacity: 0, y: 35 }}
               whileInView={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.15 }}
+              transition={{
+                duration: 0.5,
+                delay: index * 0.12,
+              }}
               viewport={{ once: true }}
-              whileHover={{ y: -8 }}
-              className="relative bg-slate-900 border border-slate-800 rounded-2xl p-8 text-center hover:border-green-500 transition"
+              className="relative text-center"
             >
-              <div className="absolute -top-4 left-1/2 -translate-x-1/2 w-9 h-9 rounded-full bg-green-500 text-black font-bold flex items-center justify-center">
-                {index + 1}
+              {/* Number + Icon */}
+              <div className="relative z-10 mx-auto flex h-24 w-24 items-center justify-center rounded-2xl border border-slate-700 bg-slate-900 shadow-xl shadow-black/20">
+                <div className="text-3xl text-indigo-400">
+                  {step.icon}
+                </div>
+
+                <span className="absolute -right-2 -top-2 flex h-7 w-7 items-center justify-center rounded-full border-4 border-slate-950 bg-indigo-500 text-xs font-bold text-white">
+                  {index + 1}
+                </span>
               </div>
 
-              <div className="flex justify-center mt-4 mb-6">
-                {step.icon}
-              </div>
-
-              <h3 className="text-xl font-semibold mb-3">
+              <h3 className="mt-7 text-xl font-semibold">
                 {step.title}
               </h3>
 
-              <p className="text-slate-400 leading-7">
+              <p className="mx-auto mt-3 max-w-xs text-sm leading-6 text-slate-400">
                 {step.description}
               </p>
             </motion.div>

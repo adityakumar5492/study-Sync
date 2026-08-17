@@ -8,24 +8,28 @@ import {
 
 const stats = [
   {
-    icon: <FaUsers className="text-4xl text-green-500" />,
-    number: "10K+",
-    title: "Students",
+    icon: <FaUsers />,
+    value: "Real-Time",
+    title: "Collaboration",
+    description: "Study with your group in the same room.",
   },
   {
-    icon: <FaBookOpen className="text-4xl text-blue-500" />,
-    number: "5K+",
+    icon: <FaBookOpen />,
+    value: "Shared",
     title: "Study Rooms",
+    description: "Create private or public collaborative rooms.",
   },
   {
-    icon: <FaFilePdf className="text-4xl text-red-500" />,
-    number: "50K+",
-    title: "PDFs Shared",
+    icon: <FaFilePdf />,
+    value: "Live",
+    title: "PDF Workspace",
+    description: "Study from the same material together.",
   },
   {
-    icon: <FaComments className="text-4xl text-purple-500" />,
-    number: "100K+",
-    title: "Messages",
+    icon: <FaComments />,
+    value: "Instant",
+    title: "Communication",
+    description: "Chat with everyone while you study.",
   },
 ];
 
@@ -33,52 +37,61 @@ const Stats = () => {
   return (
     <section
       id="stats"
-      className="bg-slate-900 text-white py-24"
+      className="border-y border-slate-800/60 bg-slate-900 py-24 text-white"
     >
-      <div className="max-w-7xl mx-auto px-6">
+      <div className="mx-auto max-w-7xl px-6">
 
+        {/* Heading */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.7 }}
+          transition={{ duration: 0.6 }}
           viewport={{ once: true }}
-          className="text-center mb-16"
+          className="mx-auto mb-14 max-w-3xl text-center"
         >
-          <p className="text-green-400 font-semibold mb-3">
-            OUR IMPACT
-          </p>
+          <span className="text-sm font-semibold uppercase tracking-[0.2em] text-indigo-400">
+            Built for collaboration
+          </span>
 
-          <h2 className="text-4xl font-bold">
-            Trusted by Students Everywhere
+          <h2 className="mt-4 text-4xl font-bold tracking-tight sm:text-5xl">
+            Everything happens
+            <span className="text-slate-500"> in one place.</span>
           </h2>
 
-          <p className="text-slate-400 mt-4 max-w-2xl mx-auto">
-            StudySync helps students collaborate, discuss, and learn
-            together through interactive study rooms.
+          <p className="mt-5 text-lg leading-8 text-slate-400">
+            StudySync brings the essential tools for collaborative learning
+            into one focused workspace.
           </p>
         </motion.div>
 
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
+        {/* Stats */}
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {stats.map((stat, index) => (
             <motion.div
-              key={index}
-              initial={{ opacity: 0, scale: 0.8 }}
-              whileInView={{ opacity: 1, scale: 1 }}
-              transition={{ delay: index * 0.15 }}
+              key={stat.title}
+              initial={{ opacity: 0, y: 25 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{
+                duration: 0.5,
+                delay: index * 0.1,
+              }}
               viewport={{ once: true }}
-              whileHover={{ y: -8 }}
-              className="bg-slate-800 border border-slate-700 rounded-2xl p-8 text-center hover:border-green-500 transition"
+              className="group rounded-2xl border border-slate-800 bg-slate-950/60 p-7 transition duration-300 hover:-translate-y-1 hover:border-indigo-500/40"
             >
-              <div className="flex justify-center mb-5">
+              <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-500/10 text-xl text-indigo-400 transition group-hover:bg-indigo-500/15">
                 {stat.icon}
               </div>
 
-              <h3 className="text-4xl font-bold text-green-400">
-                {stat.number}
+              <p className="text-2xl font-bold text-white">
+                {stat.value}
+              </p>
+
+              <h3 className="mt-1 font-semibold text-slate-200">
+                {stat.title}
               </h3>
 
-              <p className="text-slate-400 mt-3">
-                {stat.title}
+              <p className="mt-3 text-sm leading-6 text-slate-500">
+                {stat.description}
               </p>
             </motion.div>
           ))}

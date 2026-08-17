@@ -173,8 +173,7 @@ const Participants = ({
                 Header
             =========================== */}
 
-            <div className="mb-4 flex items-center justify-between">
-
+                <div className="mb-4 flex min-w-0 items-start justify-between gap-3">
                 <div>
 
                     <h3 className="text-lg font-semibold text-white">
@@ -187,9 +186,9 @@ const Participants = ({
 
                 </div>
 
-                <span className="rounded-full bg-green-500/10 px-3 py-1 text-sm text-green-400">
-                    {onlineUsers.length} Online
-                </span>
+                    <span className="shrink-0 whitespace-nowrap rounded-full bg-green-500/10 px-3 py-1 text-sm text-green-400">
+                        {onlineUsers.length} Online
+                    </span>
 
             </div>
 

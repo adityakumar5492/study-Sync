@@ -23,7 +23,7 @@ pdfjs.GlobalWorkerOptions.workerSrc = new URL(
     import.meta.url
 ).toString();
 
-const PdfViewer = ({ roomId, room, currentUser }) => {
+const PdfViewer = ({ roomId, room, currentUser,drawingPermission: externalDrawingPermission, }) => {
     const dispatch = useAppDispatch();
 
     const { currentRoom, loading } = useAppSelector(
@@ -68,33 +68,22 @@ const PdfViewer = ({ roomId, room, currentUser }) => {
     const [numPages, setNumPages] = useState(0);
     const [pageNumber, setPageNumber] = useState(1);
     const [pageInput, setPageInput] = useState("1");
-    
-    const [drawingAllowed, setDrawingAllowed] = useState(true);
 
-    useEffect(() => {
-    const handlePermissionChange = ({ allowed }) => {
-        setDrawingAllowed(Boolean(allowed));
+const activeDrawingPermission =
+    externalDrawingPermission || {
+        mode: "everyone",
+        allowedUsers: [],
     };
 
-    socket.on("drawing:permission-change", handlePermissionChange);
-
-    return () => {
-        socket.off("drawing:permission-change", handlePermissionChange);
-    };
-    }, []);
-
-    const handleToggleDrawing = () => {
-    if (!isHost) return;
-
-    socket.emit("drawing:toggle", {
-        roomId,
-        allowed: !drawingAllowed,
-        isHost,
-    });
-};
-
-// Host can always draw; members only when host has allowed it.
-const canDraw = isHost || drawingAllowed;
+const canDraw =
+    isHost ||
+    activeDrawingPermission.mode === "everyone" ||
+    (
+        activeDrawingPermission.mode === "selected" &&
+        activeDrawingPermission.allowedUsers.includes(
+            currentUserId
+        )
+    );
 
 
     const [followHost, setFollowHost] = useState(() => {
@@ -717,6 +706,17 @@ if (uploadedPdfUrl) {
     // ===========================
     // Keyboard Navigation
     // ===========================
+    //
+    // FIX: this effect previously only depended on [pdfUrl, numPages].
+    // handlePreviousPage/handleNextPage/goToPage are plain functions
+    // recreated every render, closing over that render's `pageNumber`.
+    // Because the effect wasn't re-running when `pageNumber` changed,
+    // the attached listener kept calling stale versions of those
+    // handlers — the first arrow-key press worked, but every press
+    // after that recomputed the page from the same stale `pageNumber`
+    // (e.g. always 1 -> 2), so React saw an unchanged value and
+    // nothing happened. Adding `pageNumber` here makes the effect
+    // re-subscribe with fresh closures on every page change.
 
     useEffect(() => {
         if (!pdfUrl) return;
@@ -807,7 +807,7 @@ if (uploadedPdfUrl) {
                 handleKeyboardScroll
             );
         };
-    }, [pdfUrl, numPages]);
+    }, [pdfUrl, numPages, pageNumber]);
 
     // ===========================
     // Calculated PDF Width
@@ -828,7 +828,7 @@ if (uploadedPdfUrl) {
     // ===========================
 
     return (
-        <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-slate-800 bg-slate-900">
+        <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-slate-800/80 bg-slate-900 shadow-2xl shadow-black/20">
 
             <input
                 ref={fileInputRef}
@@ -839,63 +839,69 @@ if (uploadedPdfUrl) {
             />
 
                    <PdfToolbar
-                        pdfUrl={pdfUrl}
-                        pdfName={pdfName}
-                        pageNumber={pageNumber}
-                        pageInput={pageInput}
-                        numPages={numPages}
-                        zoom={zoom}
-                        isHost={isHost}
-                        followHost={followHost}
-                        onToggleFollowHost={() => {
-                            setFollowHost((prev) => {
+                    pdfUrl={pdfUrl}
+                    pdfName={pdfName}
+                    pageNumber={pageNumber}
+                    pageInput={pageInput}
+                    numPages={numPages}
+                    zoom={zoom}
+                    isHost={isHost}
+
+                    followHost={followHost}
+                    onToggleFollowHost={() => {
+                        setFollowHost((prev) => {
                             const next = !prev;
 
-                                if (next) {
-                                        socket.emit("pdf:request-current-page", {
-                                            roomId,
-                                        });
+                            if (next) {
+                                socket.emit(
+                                    "pdf:request-current-page",
+                                    {
+                                        roomId,
                                     }
+                                );
+                            }
 
-                                    return next;
-                                });
-                        }}
+                            return next;
+                        });
+                    }}
 
-                        drawingAllowed={drawingAllowed}
-                        onToggleDrawing={handleToggleDrawing}
-                        loading={loading}
-                        deleting={deleting}
-                        onUpload={handleUploadClick}
-                        onDelete={handleDeletePdf}
-                        onPreviousPage={handlePreviousPage}
-                        onNextPage={handleNextPage}
-                        onPageInputChange={handlePageInputChange}
-                        onPageInputKeyDown={handlePageInputKeyDown}
-                        onGoToPage={goToPage}
-                        onZoomOut={() =>
-                            setZoom((z) => Math.max(0.5, z - 0.1))
-                        }
-                        onZoomIn={() =>
-                            setZoom((z) => Math.min(3, z + 0.1))
-                        }
-                        onResetZoom={() => setZoom(1)}
-                    />
+                    loading={loading}
+                    deleting={deleting}
+                    onUpload={handleUploadClick}
+                    onDelete={handleDeletePdf}
+                    onPreviousPage={handlePreviousPage}
+                    onNextPage={handleNextPage}
+                    onPageInputChange={handlePageInputChange}
+                    onPageInputKeyDown={handlePageInputKeyDown}
+                    onGoToPage={goToPage}
+                    onZoomOut={() =>
+                        setZoom((z) =>
+                            Math.max(0.5, z - 0.1)
+                        )
+                    }
+                    onZoomIn={() =>
+                        setZoom((z) =>
+                            Math.min(3, z + 0.1)
+                        )
+                    }
+                    onResetZoom={() => setZoom(1)}
+                />
 
             <div
                 ref={measureRef}
-                className="relative min-h-0 flex-1 overflow-hidden"
+                className="relative min-h-0 flex-1 overflow-hidden bg-slate-950"
             >
 
                 <div
                     ref={viewerRef}
-                    className="absolute inset-0 overflow-auto bg-slate-950 p-4"
+                    className="absolute inset-0 overflow-auto bg-slate-950 p-2 sm:p-3 md:p-4 lg:p-5"
                     style={{
                         overscrollBehavior: "contain",
                     }}
                 >
 
                     {pdfUrl ? (
-                        <div className="flex min-w-full justify-center">
+                        <div className="flex min-w-full justify-center py-2 sm:py-3">
 
                             <Document
                                 file={pdfUrl}
@@ -903,12 +909,12 @@ if (uploadedPdfUrl) {
                                     onDocumentLoadSuccess
                                 }
                                 loading={
-                                    <div className="py-10 text-center text-slate-400">
+                                    <div className="rounded-xl border border-slate-800 bg-slate-900/70 px-6 py-10 text-center text-sm text-slate-400 shadow-lg">
                                         Loading PDF...
                                     </div>
                                 }
                                 error={
-                                    <div className="py-10 text-center text-red-400">
+                                    <div className="rounded-xl border border-red-900/40 bg-slate-900/70 px-6 py-10 text-center text-sm text-red-400 shadow-lg">
                                         Failed to load PDF.
                                     </div>
                                 }
@@ -937,6 +943,9 @@ if (uploadedPdfUrl) {
             pageNumber={pageNumber}
             containerRef={toolbarLayerRef}
             enabled={canDraw}
+            canDraw={canDraw}
+            currentUser={currentUser}
+            isHost={isHost}
         />
     </div>
 </div>
@@ -946,19 +955,19 @@ if (uploadedPdfUrl) {
 
                         </div>
                     ) : (
-                        <div className="flex h-full items-center justify-center">
+                        <div className="flex h-full min-h-0 items-center justify-center overflow-auto px-4 py-8 sm:px-6">
 
-                            <div className="text-center">
+                            <div className="w-full max-w-md text-center">
 
-                                <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-slate-800">
+                                <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl border border-slate-700 bg-slate-800/80 shadow-xl shadow-black/20 sm:h-20 sm:w-20">
                                     <FaFilePdf className="text-4xl text-red-500" />
                                 </div>
 
-                                <h2 className="mb-3 text-2xl font-bold">
+                                <h2 className="mb-3 text-xl font-bold tracking-tight sm:text-2xl">
                                     No PDF Loaded
                                 </h2>
 
-                                <p className="mb-8 max-w-md text-slate-400">
+                                <p className="mx-auto mb-8 max-w-md text-sm leading-6 text-slate-400 sm:text-base">
                                     Upload a PDF to study collaboratively with your team.
                                 </p>
 
@@ -969,7 +978,7 @@ if (uploadedPdfUrl) {
                                         onClick={
                                             handleUploadClick
                                         }
-                                        className="inline-flex items-center gap-3 rounded-xl bg-green-500 px-6 py-3 font-semibold transition hover:bg-green-600 disabled:cursor-not-allowed disabled:opacity-60"
+                                        className="inline-flex items-center justify-center gap-3 rounded-xl bg-green-500 px-5 py-3 text-sm font-semibold shadow-lg shadow-green-950/30 transition hover:bg-green-600 disabled:cursor-not-allowed disabled:opacity-60 sm:px-6"
                                     >
                                         <FaUpload />
 

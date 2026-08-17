@@ -2,7 +2,7 @@ const Room = require("../models/room.model");
 
 const {
     hostSocketId,
-    drawingAllowed,
+    drawingPermission,
 } = require("./roomState");
 
 
@@ -19,6 +19,9 @@ module.exports = (io, socket) => {
 
 socket.on("user:register", ({ userId }) => {
     if (!userId) return;
+
+    socket.data.userId =
+        userId.toString();
 
     connectedUsers.set(
         userId.toString(),
@@ -157,15 +160,19 @@ socket.on(
             // Drawing permission
             // ===========================
 
-            socket.emit(
-                "drawing:permission-change",
-                {
-                    allowed:
-                        drawingAllowed.get(
-                            roomId
-                        ) ?? true,
-                }
-            );
+            const permission =
+    drawingPermission.get(roomId) || {
+        mode: "everyone",
+        allowedUsers: [],
+    };
+
+socket.emit(
+    "drawing:permission-change",
+    {
+        mode: permission.mode,
+        allowedUsers: permission.allowedUsers,
+    }
+);
 
             // ===========================
             // Online users
@@ -619,43 +626,59 @@ socket.on(
     // ===========================
 
     socket.on(
-        "drawing:toggle",
-        ({
-            roomId,
-            allowed,
-            isHost,
-        }) => {
-            if (
-                !roomId ||
-                !isHost
-            ) {
-                return;
-            }
-
-            if (
-                hostSocketId.get(
-                    roomId
-                ) !== socket.id
-            ) {
-                return;
-            }
-
-            drawingAllowed.set(
-                roomId,
-                Boolean(allowed)
-            );
-
-            io.to(roomId).emit(
-                "drawing:permission-change",
-                {
-                    allowed:
-                        Boolean(
-                            allowed
-                        ),
-                }
-            );
+    "drawing:permission-change",
+    ({
+        roomId,
+        mode,
+        allowedUsers = [],
+    }) => {
+        if (!roomId) {
+            return;
         }
-    );
+
+        if (
+            !["none", "everyone", "selected"].includes(
+                mode
+            )
+        ) {
+            return;
+        }
+
+        // Server-authoritative host check.
+        if (
+            hostSocketId.get(roomId) !==
+            socket.id
+        ) {
+            return;
+        }
+
+        const safeAllowedUsers =
+            mode === "selected"
+                ? allowedUsers
+                    .map((id) => id?.toString())
+                    .filter(Boolean)
+                : [];
+
+        const permission = {
+            mode,
+            allowedUsers: [
+                ...new Set(
+                    safeAllowedUsers
+                ),
+            ],
+        };
+
+        drawingPermission.set(
+            roomId,
+            permission
+        );
+
+        io.to(roomId).emit(
+            "drawing:permission-change",
+            permission
+        );
+    }
+);
 
     // ===========================
     // Rejoin Request Notification

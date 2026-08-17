@@ -11,22 +11,23 @@ const routes = require("./routes");
 
 const app = express();
 
+// =========================================
 // Security
-app.use(helmet());
+// =========================================
 
-// Logging
-app.use(morgan("dev"));
-
-// Rate Limiting
 app.use(
-    rateLimit({
-        windowMs: 15 * 60 * 1000, // 15 minutes
-        max: 100,
-        message: "Too many requests. Please try again later.",
+    helmet({
+        crossOriginResourcePolicy: {
+            policy: "cross-origin",
+        },
     })
 );
 
+// =========================================
 // CORS
+// IMPORTANT: Must come before rate limiting
+// =========================================
+
 app.use(
     cors({
         origin: CLIENT_URL,
@@ -34,32 +35,78 @@ app.use(
     })
 );
 
+// =========================================
+// Logging
+// =========================================
+
+app.use(morgan("dev"));
+
+// =========================================
 // Body Parser
+// =========================================
+
 app.use(express.json());
+
 app.use(
     express.urlencoded({
         extended: true,
     })
 );
 
+// =========================================
 // Cookies
+// =========================================
+
 app.use(cookieParser());
 
+// =========================================
 // Serve Uploaded Files
+// IMPORTANT: Do NOT apply API rate limiter
+// to static PDF files.
+// =========================================
+
 app.use(
     "/uploads",
-    express.static(path.join(__dirname, "../uploads"))
+    express.static(
+        path.join(__dirname, "../uploads")
+    )
 );
 
-// Health Check Route
+// =========================================
+// API Rate Limiting
+// Only API requests should be rate limited.
+// =========================================
+
+const apiLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 300,
+    message: {
+        success: false,
+        message:
+            "Too many requests. Please try again later.",
+    },
+});
+
+// =========================================
+// Health Check
+// =========================================
+
 app.get("/", (req, res) => {
     res.status(200).json({
         success: true,
-        message: "StudySync Backend Running 🚀",
+        message:
+            "StudySync Backend Running 🚀",
     });
 });
 
+// =========================================
 // API Routes
-app.use("/api", routes);
+// =========================================
+
+app.use(
+    "/api",
+    apiLimiter,
+    routes
+);
 
 module.exports = app;

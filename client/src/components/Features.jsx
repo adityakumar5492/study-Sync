@@ -5,22 +5,28 @@ import { BsPencilSquare } from "react-icons/bs";
 
 const features = [
   {
-    icon: <FaFilePdf className="text-4xl text-red-500" />,
-    title: "Shared PDF Study",
+    icon: <FaFilePdf />,
+    title: "Shared PDF Workspace",
     description:
-      "Upload a PDF once and everyone in the room can view and study it together in real time.",
+      "Upload study material once and let everyone in the room study from the same document in real time.",
+    accent: "text-red-400",
+    bg: "bg-red-500/10",
   },
   {
-    icon: <BsPencilSquare className="text-4xl text-green-500" />,
+    icon: <BsPencilSquare />,
     title: "Live Annotations",
     description:
-      "Highlight, draw, underline, and write notes together on the same PDF instantly.",
+      "Draw, highlight, and annotate directly on the shared PDF while studying together.",
+    accent: "text-indigo-400",
+    bg: "bg-indigo-500/10",
   },
   {
-    icon: <HiOutlineChatAlt2 className="text-4xl text-blue-500" />,
+    icon: <HiOutlineChatAlt2 />,
     title: "Real-Time Chat",
     description:
-      "Discuss concepts, ask questions, and collaborate with your study group while learning.",
+      "Ask questions, discuss concepts, and communicate with your study group without leaving the room.",
+    accent: "text-cyan-400",
+    bg: "bg-cyan-500/10",
   },
 ];
 
@@ -28,53 +34,65 @@ const Features = () => {
   return (
     <section
       id="features"
-      className="bg-slate-900 text-white py-24"
+      className="border-y border-slate-800/60 bg-slate-900 py-24 text-white"
     >
-      <div className="max-w-7xl mx-auto px-6">
+      <div className="mx-auto max-w-7xl px-6">
 
+        {/* Heading */}
         <motion.div
-          initial={{ opacity: 0, y: 40 }}
+          initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
           viewport={{ once: true }}
-          className="text-center mb-16"
+          className="mx-auto mb-16 max-w-3xl text-center"
         >
-          <p className="text-green-400 font-semibold mb-3">
-            FEATURES
-          </p>
+          <span className="text-sm font-semibold uppercase tracking-[0.2em] text-indigo-400">
+            Everything in one room
+          </span>
 
-          <h2 className="text-4xl font-bold">
-            Everything You Need to Study Together
+          <h2 className="mt-4 text-4xl font-bold tracking-tight sm:text-5xl">
+            Built for studying
+            <span className="text-slate-500"> together.</span>
           </h2>
 
-          <p className="text-slate-400 mt-4 max-w-2xl mx-auto">
-            StudySync combines collaborative learning tools into one
-            seamless platform designed for students.
+          <p className="mt-5 text-lg leading-8 text-slate-400">
+            StudySync brings the tools your study group needs into one
+            collaborative workspace.
           </p>
         </motion.div>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+        {/* Feature Cards */}
+        <div className="grid gap-6 md:grid-cols-3">
           {features.map((feature, index) => (
             <motion.div
-              key={index}
-              initial={{ opacity: 0, y: 40 }}
+              key={feature.title}
+              initial={{ opacity: 0, y: 35 }}
               whileInView={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.2 }}
+              transition={{
+                duration: 0.5,
+                delay: index * 0.12,
+              }}
               viewport={{ once: true }}
-              whileHover={{ y: -8 }}
-              className="bg-slate-800 border border-slate-700 rounded-2xl p-8 hover:border-green-500 transition"
+              whileHover={{ y: -6 }}
+              className="group rounded-2xl border border-slate-800 bg-slate-950/60 p-8 transition duration-300 hover:border-slate-700 hover:bg-slate-950"
             >
-              <div className="mb-6">
+              {/* Icon */}
+              <div
+                className={`mb-7 flex h-14 w-14 items-center justify-center rounded-xl ${feature.bg} ${feature.accent} text-2xl`}
+              >
                 {feature.icon}
               </div>
 
-              <h3 className="text-2xl font-semibold mb-4">
+              <h3 className="text-xl font-semibold tracking-tight">
                 {feature.title}
               </h3>
 
-              <p className="text-slate-400 leading-7">
+              <p className="mt-4 leading-7 text-slate-400">
                 {feature.description}
               </p>
+
+              {/* Bottom accent */}
+              <div className="mt-8 h-px w-10 bg-slate-700 transition-all duration-300 group-hover:w-20 group-hover:bg-indigo-400" />
             </motion.div>
           ))}
         </div>

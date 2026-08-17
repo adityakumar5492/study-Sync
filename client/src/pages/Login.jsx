@@ -1,6 +1,13 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { FcGoogle } from "react-icons/fc";
+import {
+    FiMail,
+    FiLock,
+    FiArrowRight,
+    FiEye,
+    FiEyeOff,
+} from "react-icons/fi";
 
 import AuthLayout from "../components/auth/AuthLayout";
 
@@ -20,6 +27,8 @@ const Login = () => {
         email: "",
         password: "",
     });
+
+    const [showPassword, setShowPassword] = useState(false);
 
     const handleChange = (e) => {
         setFormData((prev) => ({
@@ -48,98 +57,183 @@ const Login = () => {
 
     return (
         <AuthLayout>
-            <div className="w-full max-w-lg bg-slate-900 border border-slate-800 rounded-3xl p-8 shadow-2xl">
+            <div className="relative w-full max-w-md">
 
-                <h2 className="text-3xl font-bold text-center text-white">
-                    Welcome Back 👋
-                </h2>
+                {/* Background Glow */}
+                <div className="pointer-events-none absolute -inset-8 -z-10 rounded-full bg-indigo-500/10 blur-3xl" />
 
-                <p className="text-slate-400 text-center mt-3 mb-8">
-                    Sign in to continue your study journey.
-                </p>
+                <div className="rounded-3xl border border-slate-800 bg-slate-900/90 p-8 shadow-2xl shadow-black/30 backdrop-blur-xl sm:p-10">
 
-                <form onSubmit={handleSubmit}>
+                    {/* Header */}
+                    <div className="text-center">
+                        <h2 className="text-3xl font-bold tracking-tight text-white">
+                            Welcome back
+                        </h2>
 
-                    <div className="space-y-5">
-
-                        <div>
-                            <label className="text-slate-300 text-sm">
-                                Email
-                            </label>
-
-                            <input
-                                type="email"
-                                name="email"
-                                value={formData.email}
-                                onChange={handleChange}
-                                placeholder="john@gmail.com"
-                                className="mt-2 w-full bg-slate-800 rounded-xl px-4 py-3 border border-slate-700 focus:border-green-500 outline-none text-white"
-                            />
-                        </div>
-
-                        <div>
-                            <label className="text-slate-300 text-sm">
-                                Password
-                            </label>
-
-                            <input
-                                type="password"
-                                name="password"
-                                value={formData.password}
-                                onChange={handleChange}
-                                placeholder="********"
-                                className="mt-2 w-full bg-slate-800 rounded-xl px-4 py-3 border border-slate-700 focus:border-green-500 outline-none text-white"
-                            />
-                        </div>
-
-                    </div>
-
-                    {error && (
-                        <p className="mt-4 text-red-400 text-sm">
-                            {error}
+                        <p className="mt-3 text-sm leading-6 text-slate-400">
+                            Sign in to continue your collaborative
+                            learning journey.
                         </p>
-                    )}
-
-                    <div className="text-right mt-3">
-                        <button
-                            type="button"
-                            className="text-green-400 text-sm hover:text-green-300"
-                        >
-                            Forgot Password?
-                        </button>
                     </div>
 
+                    <form onSubmit={handleSubmit} className="mt-8">
+
+                        <div className="space-y-5">
+
+                            {/* Email */}
+                            <div>
+                                <label
+                                    htmlFor="email"
+                                    className="mb-2 block text-sm font-medium text-slate-300"
+                                >
+                                    Email address
+                                </label>
+
+                                <div className="relative">
+                                    <FiMail
+                                        className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-500"
+                                    />
+
+                                    <input
+                                        id="email"
+                                        type="email"
+                                        name="email"
+                                        value={formData.email}
+                                        onChange={handleChange}
+                                        placeholder="you@example.com"
+                                        autoComplete="email"
+                                        required
+                                        className="w-full rounded-xl border border-slate-700 bg-slate-950 py-3.5 pl-11 pr-4 text-sm text-white outline-none placeholder:text-slate-600 transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Password */}
+                            <div>
+                                <div className="mb-2 flex items-center justify-between">
+                                    <label
+                                        htmlFor="password"
+                                        className="block text-sm font-medium text-slate-300"
+                                    >
+                                        Password
+                                    </label>
+
+                                    <button
+                                        type="button"
+                                        className="text-xs font-medium text-indigo-400 transition hover:text-indigo-300"
+                                    >
+                                        Forgot password?
+                                    </button>
+                                </div>
+
+                                <div className="relative">
+                                    <FiLock
+                                        className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-500"
+                                    />
+
+                                    <input
+                                        id="password"
+                                        type={
+                                            showPassword
+                                                ? "text"
+                                                : "password"
+                                        }
+                                        name="password"
+                                        value={formData.password}
+                                        onChange={handleChange}
+                                        placeholder="Enter your password"
+                                        autoComplete="current-password"
+                                        required
+                                        className="w-full rounded-xl border border-slate-700 bg-slate-950 py-3.5 pl-11 pr-12 text-sm text-white outline-none placeholder:text-slate-600 transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+                                    />
+
+                                    <button
+                                        type="button"
+                                        onClick={() =>
+                                            setShowPassword(
+                                                (prev) => !prev
+                                            )
+                                        }
+                                        className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 transition hover:text-slate-300"
+                                        aria-label={
+                                            showPassword
+                                                ? "Hide password"
+                                                : "Show password"
+                                        }
+                                    >
+                                        {showPassword ? (
+                                            <FiEyeOff size={18} />
+                                        ) : (
+                                            <FiEye size={18} />
+                                        )}
+                                    </button>
+                                </div>
+                            </div>
+
+                        </div>
+
+                        {/* Error */}
+                        {error && (
+                            <div className="mt-5 rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3">
+                                <p className="text-sm text-red-400">
+                                    {error}
+                                </p>
+                            </div>
+                        )}
+
+                        {/* Login Button */}
+                        <button
+                            type="submit"
+                            disabled={loading}
+                            className="group mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-500 py-3.5 text-sm font-semibold text-white shadow-lg shadow-indigo-500/20 transition hover:bg-indigo-400 hover:shadow-indigo-500/30 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                            {loading ? (
+                                <>
+                                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                                    Signing in...
+                                </>
+                            ) : (
+                                <>
+                                    Sign in
+                                    <FiArrowRight className="transition-transform group-hover:translate-x-1" />
+                                </>
+                            )}
+                        </button>
+
+                    </form>
+
+                    {/* Divider */}
+                    <div className="my-7 flex items-center gap-4">
+                        <div className="h-px flex-1 bg-slate-800" />
+
+                        <span className="text-xs font-medium text-slate-600">
+                            OR
+                        </span>
+
+                        <div className="h-px flex-1 bg-slate-800" />
+                    </div>
+
+                    {/* Google */}
                     <button
-                        type="submit"
-                        disabled={loading}
-                        className="w-full mt-6 bg-green-500 hover:bg-green-600 py-3 rounded-xl font-semibold text-white transition disabled:opacity-50"
+                        type="button"
+                        className="flex w-full items-center justify-center gap-3 rounded-xl border border-slate-700 bg-slate-950 py-3.5 text-sm font-medium text-slate-200 transition hover:border-slate-600 hover:bg-slate-800"
                     >
-                        {loading ? "Logging in..." : "Login"}
+                        <FcGoogle size={20} />
+                        Continue with Google
                     </button>
 
-                </form>
+                    {/* Register */}
+                    <p className="mt-8 text-center text-sm text-slate-500">
+                        Don't have an account?{" "}
+                        <Link
+                            to="/register"
+                            className="font-semibold text-indigo-400 transition hover:text-indigo-300"
+                        >
+                            Create account
+                        </Link>
+                    </p>
 
-                <div className="flex items-center gap-4 my-7">
-                    <div className="flex-1 h-px bg-slate-700"></div>
-                    <span className="text-slate-500 text-sm">OR</span>
-                    <div className="flex-1 h-px bg-slate-700"></div>
                 </div>
-
-                <button className="w-full border border-slate-700 hover:border-green-500 rounded-xl py-3 text-white flex justify-center items-center gap-3 transition">
-                    <FcGoogle size={24} />
-                    Continue with Google
-                </button>
-
-                <p className="text-center text-slate-400 mt-8">
-                    Don't have an account?{" "}
-                    <Link
-                        to="/register"
-                        className="text-green-400 hover:text-green-300"
-                    >
-                        Register
-                    </Link>
-                </p>
-
             </div>
         </AuthLayout>
     );

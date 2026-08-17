@@ -29,6 +29,40 @@ const roomSchema = new mongoose.Schema(
             },
         ],
 
+        // Users who were previously removed from this room.
+        // They are not allowed to rejoin directly.
+        removedMembers: [
+            {
+                user: {
+                    type: mongoose.Schema.Types.ObjectId,
+                    ref: "User",
+                },
+                removedAt: {
+                    type: Date,
+                    default: Date.now,
+                },
+            },
+        ],
+
+        rejoinRequests: [
+            {
+                user: {
+                    type: mongoose.Schema.Types.ObjectId,
+                    ref: "User",
+                    required: true,
+                },
+                requestedAt: {
+                    type: Date,
+                    default: Date.now,
+                },
+                status: {
+                    type: String,
+                    enum: ["pending", "approved", "rejected"],
+                    default: "pending",
+                },
+            },
+        ],
+
         pdfUrl: {
             type: String,
             default: "",

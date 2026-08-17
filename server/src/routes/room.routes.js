@@ -12,6 +12,11 @@ const {
     deleteStudyRoom,
     updateStudyRoom,
     uploadStudyMaterial,
+    deleteStudyMaterial,
+    getMessages,
+    requestRoomRejoin,
+    approveRoomRejoin,
+    rejectRoomRejoin,
 } = require("../controllers/room.controller");
 
 const router = express.Router();
@@ -24,13 +29,30 @@ router.get("/", auth, getRooms);
 router.post("/join", auth, joinStudyRoom);
 
 // Upload Study Material (PDF)
+router.post("/:id/pdf",auth,uploadPdf.single("pdf"),uploadStudyMaterial);
+
+// Delete Study Material (PDF)
+router.delete("/:id/pdf",auth,deleteStudyMaterial);
+
+router.get("/:id/messages", auth, getMessages);
+
 router.post(
-    "/:id/pdf",
+    "/:id/rejoin-request",
     auth,
-    uploadPdf.single("pdf"),
-    uploadStudyMaterial
+    requestRoomRejoin
 );
 
+router.post(
+    "/:id/rejoin-request/approve",
+    auth,
+    approveRoomRejoin
+);
+
+router.post(
+    "/:id/rejoin-request/reject",
+    auth,
+    rejectRoomRejoin
+);
 router.get("/:id", auth, getRoom);
 router.post("/:id/leave", auth, leaveStudyRoom);
 router.delete("/:id", auth, deleteStudyRoom);

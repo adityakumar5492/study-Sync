@@ -44,6 +44,12 @@ const Room = () => {
     const [onlineUsers, setOnlineUsers] =
         useState([]);
 
+    const [drawingPermission, setDrawingPermission] =
+    useState({
+        mode: "everyone",
+        allowedUsers: [],
+    });
+
     const {
         currentRoom: room,
         loading,
@@ -89,9 +95,6 @@ const Room = () => {
     // Room Socket
     // ===========================
 
-    // ===========================
-// Room Socket
-// ===========================
 
 useEffect(() => {
     if (!room?._id || !user) return;
@@ -199,12 +202,16 @@ useEffect(() => {
     // ===========================
     // NOW JOIN ROOM
     // ===========================
+socket.emit("user:register", {
+    userId: user._id,
+});
 
-    socket.emit("room:join", {
-        roomId: room._id,
-        user,
-        isHost,
-    });
+// NOW JOIN ROOM
+socket.emit("room:join", {
+    roomId: room._id,
+    user,
+    isHost,
+});
 
     // ===========================
     // CLEANUP
@@ -248,6 +255,30 @@ useEffect(() => {
     dispatch,
     navigate,
 ]);
+
+useEffect(() => {
+    const handleDrawingPermissionChange = ({
+        mode,
+        allowedUsers = [],
+    }) => {
+        setDrawingPermission({
+            mode: mode || "everyone",
+            allowedUsers,
+        });
+    };
+
+    socket.on(
+        "drawing:permission-change",
+        handleDrawingPermissionChange
+    );
+
+    return () => {
+        socket.off(
+            "drawing:permission-change",
+            handleDrawingPermissionChange
+        );
+    };
+}, []);
 
     // ===========================
     // Remove Member
@@ -296,6 +327,28 @@ useEffect(() => {
             }
         );
     };
+
+const handleDrawingPermissionChange = ({
+    mode,
+    allowedUsers = [],
+}) => {
+    if (!isHost) return;
+
+    const permission = {
+        mode,
+        allowedUsers,
+    };
+
+    setDrawingPermission(permission);
+
+    socket.emit(
+        "drawing:permission-change",
+        {
+            roomId: room._id,
+            ...permission,
+        }
+    );
+};
 
     // ===========================
     // Loading
@@ -364,13 +417,13 @@ useEffect(() => {
     }
 
     return (
-        <div className="flex h-screen flex-col overflow-hidden bg-slate-950 text-white">
+        <div className="flex h-screen min-h-0 flex-col overflow-hidden bg-slate-950 text-white">
 
             {/* =================================
                 ROOM HEADER
             ================================= */}
 
-            <div className="shrink-0">
+            <div className="z-50 shrink-0 border-b border-slate-800/80 bg-slate-950/95 shadow-lg shadow-black/10 backdrop-blur">
                 <RoomHeader
                     room={room}
                     currentUser={user}
@@ -381,31 +434,33 @@ useEffect(() => {
                 MAIN ROOM AREA
             ================================= */}
 
-            <div className="relative flex min-h-0 flex-1 overflow-hidden">
+            <div className="relative flex min-h-0 flex-1 overflow-hidden bg-slate-950">
 
                 {/* =================================
                     LEFT SIDEBAR
                 ================================= */}
 
                 <aside
-                    className={`relative z-40 flex shrink-0 flex-col border-r border-slate-800 bg-slate-900 ${
+                    className={`relative z-40 flex min-h-0 shrink-0 flex-col overflow-hidden border-r border-slate-800/80 bg-slate-900 shadow-2xl shadow-black/20 transition-[width] duration-200 ease-out ${
                         sidebarOpen
-                            ? "w-[320px]"
+                            ? "w-[320px] max-w-[38vw]"
                             : "w-0"
                     }`}
                 >
                     {sidebarOpen && (
     <RoomCommunication
-        room={room}
-        roomId={room._id}
-        currentUser={user}
-        onlineUsers={onlineUsers}
-        isHost={isHost}
-        isMember={isMember}
-        onRemoveMember={
-            handleRemoveMember
-        }
-    />
+    room={room}
+    roomId={room._id}
+    currentUser={user}
+    onlineUsers={onlineUsers}
+    isHost={isHost}
+    isMember={isMember}
+    onRemoveMember={handleRemoveMember}
+    drawingPermission={drawingPermission}
+    onDrawingPermissionChange={
+        handleDrawingPermissionChange
+    }
+/>
 )}
                 </aside>
 
@@ -420,7 +475,7 @@ useEffect(() => {
                             (open) => !open
                         )
                     }
-                    className={`absolute top-1/2 z-[100] flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-slate-700 bg-slate-800 text-slate-300 shadow-xl hover:bg-slate-700 hover:text-white ${
+                    className={`absolute top-1/2 z-[100] flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-slate-700/80 bg-slate-800/95 text-slate-300 shadow-xl shadow-black/30 transition hover:bg-slate-700 hover:text-white ${
                         sidebarOpen
                             ? "left-[304px]"
                             : "left-2"
@@ -451,11 +506,11 @@ useEffect(() => {
                     MAIN STUDY WORKSPACE
                 ================================= */}
 
-                <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
+                <main className="flex min-w-0 min-h-0 flex-1 flex-col overflow-hidden bg-slate-950">
 
                     {/* WORKSPACE TABS */}
 
-                    <div className="flex h-10 shrink-0 border-b border-slate-800 bg-slate-900">
+                    <div className="flex h-11 shrink-0 border-b border-slate-800/80 bg-slate-900/95 px-1 pt-1 shadow-sm">
 
                         {/* PDF */}
 
@@ -466,11 +521,11 @@ useEffect(() => {
                                     "pdf"
                                 )
                             }
-                            className={`flex flex-1 items-center justify-center gap-1.5 text-sm font-medium transition ${
+                            className={`flex flex-1 items-center justify-center gap-1.5 rounded-t-lg px-3 text-xs font-semibold transition-colors sm:text-sm ${
                                 activeTab ===
                                 "pdf"
-                                    ? "border-b-2 border-green-500 text-green-400"
-                                    : "text-slate-400 hover:bg-slate-800 hover:text-white"
+                                    ? "bg-slate-800 text-green-400 shadow-sm"
+                                    : "text-slate-500 hover:bg-slate-800/80 hover:text-slate-200"
                             }`}
                         >
                             <span>
@@ -489,11 +544,11 @@ useEffect(() => {
                                     "whiteboard"
                                 )
                             }
-                            className={`flex flex-1 items-center justify-center gap-1.5 text-sm font-medium transition ${
+                            className={`flex flex-1 items-center justify-center gap-1.5 rounded-t-lg px-3 text-xs font-semibold transition-colors sm:text-sm ${
                                 activeTab ===
                                 "whiteboard"
-                                    ? "border-b-2 border-green-500 text-green-400"
-                                    : "text-slate-400 hover:bg-slate-800 hover:text-white"
+                                    ? "bg-slate-800 text-green-400 shadow-sm"
+                                    : "text-slate-500 hover:bg-slate-800/80 hover:text-slate-200"
                             }`}
                         >
                             <span>
@@ -507,14 +562,14 @@ useEffect(() => {
 
                     {/* STUDY WORKSPACE */}
 
-                    <div className="min-h-0 flex-1 overflow-hidden p-2">
+                    <div className="min-h-0 flex-1 overflow-hidden p-1.5 sm:p-2 lg:p-3">
 
                         {/* PDF */}
 
                         {activeTab ===
                             "pdf" &&
                             room._id && (
-                                <div className="h-full min-h-0 overflow-hidden">
+                                <div className="h-full min-h-0 overflow-hidden rounded-xl border border-slate-800/80 bg-slate-900 shadow-xl shadow-black/10">
 
                                     <PdfViewer
                                         roomId={
@@ -526,6 +581,7 @@ useEffect(() => {
                                         currentUser={
                                             user
                                         }
+                                        drawingPermission={drawingPermission}
                                     />
 
                                 </div>
@@ -535,7 +591,7 @@ useEffect(() => {
 
                         {activeTab ===
                             "whiteboard" && (
-                                <div className="h-full min-h-0 overflow-hidden rounded-xl border border-slate-800 bg-white">
+                                <div className="h-full min-h-0 overflow-hidden rounded-xl border border-slate-800/80 bg-white shadow-xl shadow-black/10">
 
                                     <Whiteboard
                                         roomId={

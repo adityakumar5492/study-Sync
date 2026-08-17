@@ -10,12 +10,12 @@ const Landing = () => {
   return (
     <>
       <Navbar />
-      <Hero/>
-      <Features/>
-      <HowItWorks/>
-      <Stats/>
-      <CTA/>
-      <Footer/>
+      <Hero />
+      <Features />
+      <HowItWorks />
+      <Stats />
+      <CTA />
+      <Footer />
 
     </>
   );

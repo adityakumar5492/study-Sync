@@ -8,6 +8,7 @@ import {
     FaCopy,
     FaTrash,
     FaSignOutAlt,
+    FaBars,
 } from "react-icons/fa";
 import { Link, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
@@ -18,7 +19,7 @@ import {
     leaveRoomThunk,
 } from "../../redux/room/roomThunk";
 
-const RoomHeader = ({ room, currentUser }) => {
+const RoomHeader = ({ room, currentUser, onMenuClick, }) => {
     const navigate = useNavigate();
     const dispatch = useAppDispatch();
 
@@ -184,6 +185,15 @@ const RoomHeader = ({ room, currentUser }) => {
             =========================== */}
 
             <div className="flex min-w-0 items-center gap-2.5">
+                {/* Mobile Menu */}
+                <button
+                    type="button"
+                    onClick={onMenuClick}
+                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-slate-800 bg-slate-900 text-slate-400 transition hover:bg-slate-800 hover:text-white lg:hidden"
+                    aria-label="Open navigation menu"
+                >
+                    <FaBars size={13} />
+                </button>
 
                 {/* Back */}
                 <Link
