@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { FaPaperPlane } from "react-icons/fa";
+import { FaPaperPlane, FaCircle } from "react-icons/fa";
+import { BsThreeDots, BsLightningChargeFill } from "react-icons/bs";
+import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
 
 import { useAppSelector } from "../../redux/hooks";
@@ -8,7 +10,7 @@ import { getRoomMessages } from "../../api/room.api";
 
 import MessageBubble from "./MessageBubble";
 
-const ChatPanel = ({ roomId, isHost = false,isMember = false, }) => {
+const ChatPanel = ({ roomId, isHost = false, isMember = false }) => {
     const { user } = useAppSelector(
         (state) => state.auth
     );
@@ -54,11 +56,20 @@ const ChatPanel = ({ roomId, isHost = false,isMember = false, }) => {
         loadMessages();
 
         const handleNewMessage = (message) => {
-            setMessages((prev) => [
-                ...prev,
-                message,
-            ]);
-        };
+    const normalizedMessage = {
+        ...message,
+        senderId:
+            message.senderId?._id ||
+            message.senderId ||
+            message.sender?._id ||
+            user?._id,
+    };
+
+    setMessages((prev) => [
+        ...prev,
+        normalizedMessage,
+    ]);
+};
 
         const handleMessageDeleted = ({
             messageId,
@@ -133,7 +144,6 @@ const ChatPanel = ({ roomId, isHost = false,isMember = false, }) => {
     // ===========================
 
     const handleDeleteMessage = (messageId) => {
-        
         if (
             !messageId ||
             !roomId ||
@@ -262,142 +272,540 @@ const ChatPanel = ({ roomId, isHost = false,isMember = false, }) => {
         }
     };
 
+    const isConnected = socket.connected;
+
     return (
-        <div className="flex h-full min-h-0 flex-col">
+        <div className="relative flex h-full min-h-0 flex-col overflow-hidden bg-[#07070c] text-white">
 
-            {/* Chat Header */}
+            {/* ==========================================
+                BACKGROUND ATMOSPHERE
+            ========================================== */}
 
-            <div className="flex h-[58px] shrink-0 items-center justify-between border-b border-slate-800 px-4">
-                <div>
-                    <h3 className="text-sm font-semibold text-white">
-                        Live Chat
-                    </h3>
+            <div className="pointer-events-none absolute inset-0 overflow-hidden">
+                <motion.div
+                    animate={{
+                        x: [0, 30, -20, 0],
+                        y: [0, -20, 30, 0],
+                        scale: [1, 1.08, 0.96, 1],
+                    }}
+                    transition={{
+                        duration: 18,
+                        repeat: Infinity,
+                        ease: "easeInOut",
+                    }}
+                    className="absolute -right-24 -top-24 h-64 w-64 rounded-full bg-violet-600/[0.07] blur-[90px]"
+                />
 
-                    <p className="text-[11px] text-slate-500">
-                        Study together
-                    </p>
-                </div>
+                <motion.div
+                    animate={{
+                        x: [0, -25, 15, 0],
+                        y: [0, 20, -15, 0],
+                    }}
+                    transition={{
+                        duration: 16,
+                        repeat: Infinity,
+                        ease: "easeInOut",
+                    }}
+                    className="absolute -bottom-24 -left-24 h-64 w-64 rounded-full bg-cyan-500/[0.05] blur-[90px]"
+                />
 
-                <span className="rounded-full bg-slate-800 px-2 py-1 text-[10px] text-slate-400">
-                    Live
-                </span>
+                <div
+                    className="absolute inset-0 opacity-[0.025]"
+                    style={{
+                        backgroundImage:
+                            "linear-gradient(rgba(255,255,255,.7) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.7) 1px, transparent 1px)",
+                        backgroundSize: "42px 42px",
+                    }}
+                />
             </div>
 
-            {/* Messages */}
+            {/* ==========================================
+                CHAT HEADER
+            ========================================== */}
 
-            <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-3">
+            <motion.div
+                initial={{
+                    opacity: 0,
+                    y: -15,
+                }}
+                animate={{
+                    opacity: 1,
+                    y: 0,
+                }}
+                className="relative z-10 flex h-[68px] shrink-0 items-center justify-between border-b border-white/[0.07] bg-[#09090f]/80 px-4 backdrop-blur-2xl"
+            >
+                <div className="flex items-center gap-3">
 
-                {messages.length === 0 ? (
-                    <div className="flex h-full items-center justify-center px-4 text-center">
-                        <div className="text-sm text-slate-500">
-                            <p>No messages yet.</p>
+                    <motion.div
+                        animate={{
+                            boxShadow: [
+                                "0 0 0 rgba(139,92,246,0)",
+                                "0 0 22px rgba(139,92,246,.25)",
+                                "0 0 0 rgba(139,92,246,0)",
+                            ],
+                        }}
+                        transition={{
+                            duration: 2.5,
+                            repeat: Infinity,
+                        }}
+                        className="relative flex h-10 w-10 items-center justify-center rounded-xl border border-violet-400/15 bg-gradient-to-br from-violet-500/15 to-cyan-400/10"
+                    >
+                        <BsThreeDots className="text-sm text-violet-300" />
 
-                            <p className="mt-1 text-xs">
-                                Start the discussion.
-                            </p>
+                        <motion.span
+                            animate={{
+                                scale: [1, 1.5, 1],
+                                opacity: [0.7, 0, 0.7],
+                            }}
+                            transition={{
+                                duration: 2,
+                                repeat: Infinity,
+                            }}
+                            className="absolute inset-0 rounded-xl border border-violet-400/20"
+                        />
+                    </motion.div>
+
+                    <div>
+                        <div className="flex items-center gap-2">
+                            <h3 className="text-sm font-bold tracking-tight text-white">
+                                Live Chat
+                            </h3>
+
+                            <motion.span
+                                animate={{
+                                    opacity: [0.45, 1, 0.45],
+                                }}
+                                transition={{
+                                    duration: 2,
+                                    repeat: Infinity,
+                                }}
+                                className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_10px_#34d399]"
+                            />
+                        </div>
+
+                        <div className="mt-1 flex items-center gap-1.5">
+                            <span className="text-[10px] text-zinc-600">
+                                Study together
+                            </span>
+
+                            <span className="text-zinc-800">
+                                •
+                            </span>
+
+                            <span className="text-[10px] text-emerald-400/80">
+                                {isConnected
+                                    ? "Connected"
+                                    : "Offline"}
+                            </span>
                         </div>
                     </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+
+                    <motion.div
+                        animate={{
+                            scale: [1, 1.04, 1],
+                        }}
+                        transition={{
+                            duration: 2,
+                            repeat: Infinity,
+                        }}
+                        className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[9px] font-bold ${
+                            isConnected
+                                ? "border-emerald-400/15 bg-emerald-400/[0.06] text-emerald-300"
+                                : "border-red-400/15 bg-red-400/[0.06] text-red-300"
+                        }`}
+                    >
+                        <FaCircle className="text-[5px]" />
+                        {isConnected
+                            ? "LIVE"
+                            : "OFFLINE"}
+                    </motion.div>
+                </div>
+            </motion.div>
+
+            {/* ==========================================
+                MESSAGES
+            ========================================== */}
+
+            <div className="relative z-10 min-h-0 flex-1 space-y-3 overflow-y-auto p-3 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-white/10">
+
+                {/* Empty state */}
+                {messages.length === 0 ? (
+                    <motion.div
+                        initial={{
+                            opacity: 0,
+                            scale: 0.94,
+                        }}
+                        animate={{
+                            opacity: 1,
+                            scale: 1,
+                        }}
+                        transition={{
+                            duration: 0.7,
+                        }}
+                        className="flex h-full items-center justify-center px-4 text-center"
+                    >
+                        <div className="relative">
+
+                            <motion.div
+                                animate={{
+                                    scale: [1, 1.12, 1],
+                                    rotate: [0, 3, -3, 0],
+                                }}
+                                transition={{
+                                    duration: 5,
+                                    repeat: Infinity,
+                                    ease: "easeInOut",
+                                }}
+                                className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl border border-violet-400/10 bg-gradient-to-br from-violet-500/10 to-cyan-400/10 text-violet-300 shadow-[0_0_50px_rgba(139,92,246,.12)]"
+                            >
+                                <BsLightningChargeFill />
+                            </motion.div>
+
+                            <p className="mt-5 text-sm font-bold text-zinc-300">
+                                No messages yet.
+                            </p>
+
+                            <p className="mx-auto mt-2 max-w-[190px] text-[11px] leading-5 text-zinc-600">
+                                Start the discussion and turn this
+                                quiet room into a live study session.
+                            </p>
+
+                            <div className="mt-5 flex justify-center gap-1">
+                                {[0, 1, 2, 3, 4].map(
+                                    (item) => (
+                                        <motion.span
+                                            key={item}
+                                            animate={{
+                                                height: [
+                                                    4,
+                                                    10 +
+                                                        item *
+                                                            2,
+                                                    4,
+                                                ],
+                                            }}
+                                            transition={{
+                                                duration:
+                                                    0.8 +
+                                                    item *
+                                                        0.08,
+                                                repeat: Infinity,
+                                                delay:
+                                                    item *
+                                                    0.08,
+                                            }}
+                                            className="w-1 rounded-full bg-gradient-to-t from-violet-500 to-cyan-300"
+                                        />
+                                    )
+                                )}
+                            </div>
+                        </div>
+                    </motion.div>
                 ) : (
-                    messages.map(
-                        (msg, index) => {
-                            const messageSenderId =
-                                msg.senderId?._id ||
-                                msg.senderId ||
-                                msg.sender?._id;
+                    <AnimatePresence initial={false}>
+                        {messages.map(
+                            (msg, index) => {
+                                const messageSenderId =
+                                    msg.senderId?._id ||
+                                    msg.senderId ||
+                                    msg.sender?._id;
 
-                            const isOwn =
-                                messageSenderId?.toString() ===
-                                user?._id?.toString();
+                                const isOwn =
+                                    messageSenderId?.toString() ===
+                                    user?._id?.toString();
 
-                            const canDelete =
-                                isHost || isOwn;
+                                const canDelete =
+                                    isHost ||
+                                    isOwn;
 
-                            return (
-                                <MessageBubble
-                                    key={
-                                        msg._id ||
-                                        `${msg.sender}-${msg.createdAt}-${index}`
-                                    }
-                                    sender={
-                                        msg.sender?.name ||
-                                        msg.sender
-                                    }
-                                    text={msg.message}
-                                    avatar={
-                                        msg.avatar ||
-                                        msg.sender?.avatar
-                                    }
-                                    time={
-                                        msg.createdAt
-                                            ? new Date(
-                                                  msg.createdAt
-                                              ).toLocaleTimeString(
-                                                  [],
-                                                  {
-                                                      hour: "2-digit",
-                                                      minute: "2-digit",
-                                                  }
-                                              )
-                                            : ""
-                                    }
-                                    isOwn={isOwn}
-                                    canDelete={
-                                        canDelete
-                                    }
-                                    onDelete={() =>
-                                        handleDeleteMessage(
-                                            msg._id
-                                        )
-                                    }
-                                />
-                            );
-                        }
-                    )
+                                return (
+                                    <motion.div
+                                        key={
+                                            msg._id ||
+                                            `${msg.sender}-${msg.createdAt}-${index}`
+                                        }
+                                        initial={{
+                                            opacity: 0,
+                                            y: 18,
+                                            scale: 0.97,
+                                        }}
+                                        animate={{
+                                            opacity: 1,
+                                            y: 0,
+                                            scale: 1,
+                                        }}
+                                        exit={{
+                                            opacity: 0,
+                                            scale: 0.95,
+                                            x: isOwn
+                                                ? 30
+                                                : -30,
+                                        }}
+                                        transition={{
+                                            duration: 0.35,
+                                            ease: [
+                                                0.22,
+                                                1,
+                                                0.36,
+                                                1,
+                                            ],
+                                        }}
+                                        className="group"
+                                    >
+                                        <MessageBubble
+                                            sender={
+                                                msg.sender
+                                                    ?.name ||
+                                                msg.sender
+                                            }
+                                            text={
+                                                msg.message
+                                            }
+                                            avatar={
+                                                msg.avatar ||
+                                                msg.sender
+                                                    ?.avatar
+                                            }
+                                            time={
+                                                msg.createdAt
+                                                    ? new Date(
+                                                          msg.createdAt
+                                                      ).toLocaleTimeString(
+                                                          [],
+                                                          {
+                                                              hour: "2-digit",
+                                                              minute: "2-digit",
+                                                          }
+                                                      )
+                                                    : ""
+                                            }
+                                            isOwn={
+                                                isOwn
+                                            }
+                                            canDelete={
+                                                canDelete
+                                            }
+                                            onDelete={() =>
+                                                handleDeleteMessage(
+                                                    msg._id
+                                                )
+                                            }
+                                        />
+                                    </motion.div>
+                                );
+                            }
+                        )}
+                    </AnimatePresence>
                 )}
 
-                {/* Typing indicator */}
+                {/* ==========================================
+                    TYPING INDICATOR
+                ========================================== */}
 
-                {typingUser &&
-                    typingUser !== user?.name && (
-                        <div className="px-2 text-xs text-slate-500">
-                            {typingUser} is typing...
-                        </div>
-                    )}
+                <AnimatePresence>
+                    {typingUser &&
+                        typingUser !==
+                            user?.name && (
+                            <motion.div
+                                initial={{
+                                    opacity: 0,
+                                    y: 8,
+                                    x: -8,
+                                }}
+                                animate={{
+                                    opacity: 1,
+                                    y: 0,
+                                    x: 0,
+                                }}
+                                exit={{
+                                    opacity: 0,
+                                    y: 5,
+                                }}
+                                className="flex items-center gap-2 px-2 py-1"
+                            >
+                                <div className="flex items-center gap-[3px] rounded-full border border-white/[0.06] bg-white/[0.025] px-3 py-2">
+                                    <span className="text-[9px] text-zinc-500">
+                                        {typingUser}
+                                    </span>
+
+                                    {[0, 1, 2].map(
+                                        (dot) => (
+                                            <motion.span
+                                                key={
+                                                    dot
+                                                }
+                                                animate={{
+                                                    y: [
+                                                        0,
+                                                        -3,
+                                                        0,
+                                                    ],
+                                                    opacity: [
+                                                        0.3,
+                                                        1,
+                                                        0.3,
+                                                    ],
+                                                }}
+                                                transition={{
+                                                    duration:
+                                                        0.7,
+                                                    repeat: Infinity,
+                                                    delay:
+                                                        dot *
+                                                        0.12,
+                                                }}
+                                                className="h-1 w-1 rounded-full bg-violet-400"
+                                            />
+                                        )
+                                    )}
+                                </div>
+                            </motion.div>
+                        )}
+                </AnimatePresence>
 
                 <div ref={messagesEndRef} />
             </div>
 
-            {/* Message Input */}
+            {/* ==========================================
+                MESSAGE INPUT
+            ========================================== */}
 
             <form
                 onSubmit={handleSend}
-                className="flex shrink-0 gap-2 border-t border-slate-800 p-3"
+                className="relative z-20 shrink-0 border-t border-white/[0.07] bg-[#08080e]/90 p-3 backdrop-blur-2xl"
             >
-                <input
-                    type="text"
-                    value={input}
-                    disabled={!socket.connected}
-                    onKeyDown={handleKeyDown}
-                    onChange={handleTyping}
-                    placeholder={
-                        socket.connected
-                            ? "Type a message..."
-                            : "Connecting..."
-                    }
-                    className="min-w-0 flex-1 rounded-lg border border-slate-700 bg-slate-800 px-3 py-2.5 text-sm text-white placeholder-slate-400 outline-none transition focus:border-green-500 disabled:cursor-not-allowed disabled:opacity-60"
-                />
+                <div className="relative flex items-center gap-2">
 
-                <button
-                    type="submit"
-                    disabled={
-                        !socket.connected ||
-                        !input.trim()
-                    }
-                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-green-500 text-white transition hover:bg-green-600 disabled:cursor-not-allowed disabled:bg-slate-700"
-                    aria-label="Send message"
-                >
-                    <FaPaperPlane size={14} />
-                </button>
+                    <div className="pointer-events-none absolute -inset-2 rounded-2xl bg-violet-500/[0.02] blur-xl" />
+
+                    <div className="group relative flex min-w-0 flex-1 items-center">
+                        <motion.div
+                            animate={{
+                                opacity: input.trim()
+                                    ? 1
+                                    : 0,
+                            }}
+                            className="pointer-events-none absolute inset-0 rounded-xl bg-violet-500/5 blur-md"
+                        />
+
+                        <input
+                            type="text"
+                            value={input}
+                            disabled={!socket.connected}
+                            onKeyDown={
+                                handleKeyDown
+                            }
+                            onChange={
+                                handleTyping
+                            }
+                            placeholder={
+                                socket.connected
+                                    ? "Type a message..."
+                                    : "Connecting..."
+                            }
+                            className="relative w-full rounded-xl border border-white/[0.08] bg-white/[0.035] px-4 py-3 text-xs text-white outline-none placeholder:text-zinc-600 transition-all duration-300 focus:border-violet-400/30 focus:bg-white/[0.05] focus:ring-4 focus:ring-violet-500/5 disabled:cursor-not-allowed disabled:opacity-50"
+                        />
+
+                        {input.trim() && (
+                            <motion.span
+                                initial={{
+                                    opacity: 0,
+                                    scale: 0,
+                                }}
+                                animate={{
+                                    opacity: 1,
+                                    scale: 1,
+                                }}
+                                className="pointer-events-none absolute right-3 text-[8px] font-bold uppercase tracking-widest text-violet-400/70"
+                            >
+                                ready
+                            </motion.span>
+                        )}
+                    </div>
+
+                    <motion.button
+                        type="submit"
+                        disabled={
+                            !socket.connected ||
+                            !input.trim()
+                        }
+                        whileHover={
+                            !socket.connected ||
+                            !input.trim()
+                                ? {}
+                                : {
+                                      scale: 1.08,
+                                      rotate: -4,
+                                  }
+                        }
+                        whileTap={
+                            !socket.connected ||
+                            !input.trim()
+                                ? {}
+                                : {
+                                      scale: 0.92,
+                                  }
+                        }
+                        className="relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-violet-500 to-cyan-400 text-white shadow-[0_10px_35px_rgba(139,92,246,.18)] transition disabled:cursor-not-allowed disabled:bg-white/5 disabled:from-zinc-800 disabled:to-zinc-800 disabled:text-zinc-600 disabled:shadow-none"
+                        aria-label="Send message"
+                    >
+                        <motion.span
+                            animate={
+                                input.trim()
+                                    ? {
+                                          x: [
+                                              -35,
+                                              45,
+                                          ],
+                                      }
+                                    : {}
+                            }
+                            transition={{
+                                duration: 1.3,
+                                repeat: Infinity,
+                            }}
+                            className="absolute h-10 w-3 rotate-12 bg-white/30 blur-md"
+                        />
+
+                        <FaPaperPlane
+                            size={13}
+                            className="relative"
+                        />
+                    </motion.button>
+                </div>
+
+                <div className="mt-2 flex items-center justify-between px-1">
+                    <div className="flex items-center gap-2">
+                        <span className="text-[8px] text-zinc-700">
+                            Press
+                        </span>
+
+                        <kbd className="rounded border border-white/[0.06] bg-white/[0.025] px-1.5 py-0.5 text-[7px] text-zinc-600">
+                            ENTER
+                        </kbd>
+
+                        <span className="text-[8px] text-zinc-700">
+                            to send
+                        </span>
+                    </div>
+
+                    <motion.div
+                        animate={{
+                            opacity: [0.4, 0.8, 0.4],
+                        }}
+                        transition={{
+                            duration: 2.5,
+                            repeat: Infinity,
+                        }}
+                        className="flex items-center gap-1.5 text-[8px] text-zinc-700"
+                    >
+                        <span className="h-1 w-1 rounded-full bg-emerald-400" />
+                        real-time sync
+                    </motion.div>
+                </div>
             </form>
         </div>
     );

@@ -1,4 +1,8 @@
 import { useOutletContext, useNavigate } from "react-router-dom";
+import {
+    motion,
+    useReducedMotion,
+} from "framer-motion";
 
 import Topbar from "../components/dashboard/Topbar";
 import QuickActions from "../components/dashboard/QuickActions";
@@ -9,45 +13,175 @@ const Dashboard = () => {
     const navigate = useNavigate();
     const { openSidebar } = useOutletContext();
 
+    const shouldReduceMotion = useReducedMotion();
+
+    const handleCreateRoom = () => {
+        navigate("/rooms");
+    };
+
+    const handleJoinRoom = () => {
+        navigate("/rooms");
+    };
+
+    const handleUploadMaterial = () => {
+        navigate("/rooms");
+    };
+
+    const sectionVariants = {
+        hidden: {
+            opacity: 0,
+            y: shouldReduceMotion ? 0 : 12,
+        },
+        visible: {
+            opacity: 1,
+            y: 0,
+            transition: {
+                duration: 0.45,
+                ease: [0.16, 1, 0.3, 1],
+            },
+        },
+    };
+
     return (
-        <div className="min-h-screen bg-slate-950 text-white">
+        <div className="relative min-h-screen overflow-hidden bg-[#060a10] text-white">
+            {/* =========================================
+                BACKGROUND ATMOSPHERE
+            ========================================= */}
 
-            <main className="min-w-0 overflow-y-auto">
+            <div
+                aria-hidden="true"
+                className="
+                    pointer-events-none
+                    fixed
+                    -left-40
+                    top-0
+                    h-96
+                    w-96
+                    rounded-full
+                    bg-indigo-500/[0.025]
+                    blur-[120px]
+                "
+            />
 
-                <div className="mx-auto w-full max-w-[1600px] px-3 py-4 sm:px-5 sm:py-6 md:px-6 lg:px-8">
+            <div
+                aria-hidden="true"
+                className="
+                    pointer-events-none
+                    fixed
+                    bottom-[-180px]
+                    right-[-120px]
+                    h-[500px]
+                    w-[500px]
+                    rounded-full
+                    bg-violet-500/[0.02]
+                    blur-[140px]
+                "
+            />
 
-                    {/* Topbar */}
-                    <Topbar onMenuClick={openSidebar} />
+            <main className="relative min-w-0 overflow-y-auto">
+                <div
+                    className="
+                        mx-auto
+                        w-full
+                        max-w-[1600px]
+                        px-3
+                        py-4
+                        sm:px-5
+                        sm:py-6
+                        md:px-6
+                        lg:px-8
+                    "
+                >
+                    {/* =====================================
+                        TOPBAR
+                    ===================================== */}
 
-                    {/* Quick Actions */}
-                    <section className="mb-7 sm:mb-8">
+                    <motion.div
+                        initial={
+                            shouldReduceMotion
+                                ? false
+                                : {
+                                      opacity: 0,
+                                      y: -8,
+                                  }
+                        }
+                        animate={
+                            shouldReduceMotion
+                                ? undefined
+                                : {
+                                      opacity: 1,
+                                      y: 0,
+                                  }
+                        }
+                        transition={{
+                            duration: 0.4,
+                            ease: [0.16, 1, 0.3, 1],
+                        }}
+                    >
+                        <Topbar
+                            onMenuClick={openSidebar}
+                        />
+                    </motion.div>
+
+                    {/* =====================================
+                        QUICK ACTIONS
+                    ===================================== */}
+
+                    <motion.section
+                        variants={sectionVariants}
+                        initial="hidden"
+                        animate="visible"
+                        className="mb-7 sm:mb-8"
+                    >
                         <QuickActions
-                            onCreateRoom={() =>
-                                navigate("/rooms")
+                            onCreateRoom={
+                                handleCreateRoom
                             }
-                            onJoinRoom={() =>
-                                navigate("/rooms")
+                            onJoinRoom={
+                                handleJoinRoom
                             }
-                            onUploadMaterial={() =>
-                                navigate("/rooms")
+                            onUploadMaterial={
+                                handleUploadMaterial
                             }
                         />
-                    </section>
+                    </motion.section>
 
-                    {/* Statistics */}
-                    <section className="mb-7 sm:mb-8">
+                    {/* =====================================
+                        STATISTICS
+                    ===================================== */}
+
+                    <motion.section
+                        variants={sectionVariants}
+                        initial="hidden"
+                        animate="visible"
+                        transition={{
+                            delay: shouldReduceMotion
+                                ? 0
+                                : 0.06,
+                        }}
+                        className="mb-7 sm:mb-8"
+                    >
                         <StatsSection />
-                    </section>
+                    </motion.section>
 
-                    {/* Recent Rooms */}
-                    <section>
+                    {/* =====================================
+                        RECENT ROOMS
+                    ===================================== */}
+
+                    <motion.section
+                        variants={sectionVariants}
+                        initial="hidden"
+                        animate="visible"
+                        transition={{
+                            delay: shouldReduceMotion
+                                ? 0
+                                : 0.12,
+                        }}
+                    >
                         <RecentRooms />
-                    </section>
-
+                    </motion.section>
                 </div>
-
             </main>
-
         </div>
     );
 };

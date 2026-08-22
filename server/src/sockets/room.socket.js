@@ -539,6 +539,57 @@ socket.on(
         }
     }
 );
+// ===========================
+// PDF - PDF Delete Sync
+// ===========================
+
+socket.on(
+    "pdf:deleted",
+    async ({ roomId }) => {
+        try {
+            if (!roomId) return;
+
+            const room =
+                await Room.findById(roomId);
+
+            if (!room) return;
+
+            const hostUserId =
+                getUserIdFromSocket(
+                    roomId,
+                    socket
+                );
+
+            // Only actual host can broadcast PDF deletion
+            if (
+                !hostUserId ||
+                room.host.toString() !==
+                    hostUserId
+            ) {
+                return;
+            }
+
+            currentPdfPages.set(
+                roomId,
+                1
+            );
+
+            socket
+                .to(roomId)
+                .emit(
+                    "pdf:deleted",
+                    {
+                        roomId,
+                    }
+                );
+        } catch (error) {
+            console.error(
+                "PDF delete socket error:",
+                error
+            );
+        }
+    }
+);
     // ===========================
     // PDF - Host Page Change
     // ===========================

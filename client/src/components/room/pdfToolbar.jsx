@@ -7,7 +7,11 @@ import {
     FaChevronLeft,
     FaChevronRight,
     FaTrash,
+    FaPlay,
+    FaPause,
+    FaCircle,
 } from "react-icons/fa";
+import { motion, AnimatePresence } from "framer-motion";
 
 const PdfToolbar = ({
     pdfUrl,
@@ -36,194 +40,528 @@ const PdfToolbar = ({
     onZoomIn,
     onResetZoom,
 }) => {
+    const controlButton =
+        "group relative flex h-9 w-9 items-center justify-center rounded-xl border border-white/[0.07] bg-white/[0.035] text-zinc-400 transition-all duration-300 hover:-translate-y-0.5 hover:border-violet-400/20 hover:bg-violet-500/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-25";
+
     return (
-        <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-slate-700 bg-slate-800 px-4 py-2">
+        <motion.div
+            initial={{
+                opacity: 0,
+                y: -8,
+            }}
+            animate={{
+                opacity: 1,
+                y: 0,
+            }}
+            className="relative z-40 flex min-h-[62px] shrink-0 flex-wrap items-center justify-between gap-3 overflow-hidden border-b border-white/[0.07] bg-[#08080d]/95 px-4 py-2.5 shadow-[0_12px_40px_rgba(0,0,0,.18)] backdrop-blur-2xl"
+        >
+            {/* ==========================================
+                PREMIUM BACKGROUND
+            ========================================== */}
 
-            {/* ===========================
-                PDF Information
-            =========================== */}
+            <div className="pointer-events-none absolute inset-0 overflow-hidden">
+                <motion.div
+                    animate={{
+                        x: [0, 80, 0],
+                        opacity: [0.02, 0.06, 0.02],
+                    }}
+                    transition={{
+                        duration: 10,
+                        repeat: Infinity,
+                        ease: "easeInOut",
+                    }}
+                    className="absolute -left-20 top-0 h-full w-72 bg-violet-500 blur-[80px]"
+                />
 
-            <div className="flex min-w-0 items-center gap-2">
-                <FaFilePdf className="shrink-0 text-lg text-red-500" />
+                <motion.div
+                    animate={{
+                        x: [0, -70, 0],
+                        opacity: [0.015, 0.045, 0.015],
+                    }}
+                    transition={{
+                        duration: 12,
+                        repeat: Infinity,
+                        ease: "easeInOut",
+                    }}
+                    className="absolute -right-20 top-0 h-full w-64 bg-cyan-400 blur-[90px]"
+                />
 
-                <span
-                    className="max-w-[220px] truncate text-sm font-medium text-white"
-                    title={pdfName}
-                >
-                    {pdfUrl
-                        ? pdfName
-                        : "No PDF Loaded"}
-                </span>
+                <div
+                    className="absolute inset-0 opacity-[0.018]"
+                    style={{
+                        backgroundImage:
+                            "linear-gradient(rgba(255,255,255,.6) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.6) 1px, transparent 1px)",
+                        backgroundSize:
+                            "32px 32px",
+                    }}
+                />
             </div>
 
-            {/* ===========================
-                Controls
-            =========================== */}
+            {/* ==========================================
+                PDF INFORMATION
+            ========================================== */}
 
-            {pdfUrl && (
-                <div className="flex flex-wrap items-center gap-3">
+            <motion.div
+                whileHover={{
+                    x: 2,
+                }}
+                className="relative flex min-w-0 items-center gap-3"
+            >
+                <div className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-red-400/10 bg-red-500/[0.07]">
+                    <motion.div
+                        animate={{
+                            scale: [
+                                1,
+                                1.15,
+                                1,
+                            ],
+                            opacity: [
+                                0.25,
+                                0.5,
+                                0.25,
+                            ],
+                        }}
+                        transition={{
+                            duration: 2.5,
+                            repeat: Infinity,
+                        }}
+                        className="absolute inset-0 rounded-xl bg-red-500/10 blur-md"
+                    />
 
-                    {/* Previous Page */}
+                    <FaFilePdf className="relative text-sm text-red-400" />
+                </div>
 
-                    <button
-                        type="button"
-                        onClick={onPreviousPage}
-                        disabled={pageNumber === 1}
-                        className="text-white transition hover:text-green-400 disabled:cursor-not-allowed disabled:opacity-40"
-                        title="Previous page"
-                    >
-                        <FaChevronLeft />
-                    </button>
-
-                    {/* Page Input */}
-
+                <div className="min-w-0">
                     <div className="flex items-center gap-2">
-                        <input
-                            type="number"
-                            min="1"
-                            max={numPages}
-                            value={pageInput}
-                            onChange={
-                                onPageInputChange
-                            }
-                            onKeyDown={
-                                onPageInputKeyDown
-                            }
-                            className="w-14 rounded-md border border-slate-600 bg-slate-900 px-2 py-1 text-center text-sm text-white outline-none focus:border-green-500"
-                            aria-label="Page number"
-                        />
-
-                        <span className="text-sm text-slate-300">
-                            / {numPages}
+                        <span
+                            className="max-w-[220px] truncate text-xs font-bold tracking-tight text-white sm:max-w-[280px]"
+                            title={pdfName}
+                        >
+                            {pdfUrl
+                                ? pdfName
+                                : "No PDF Loaded"}
                         </span>
 
-                        <button
-                            type="button"
-                            onClick={() =>
-                                onGoToPage(
-                                    pageInput
-                                )
-                            }
-                            className="rounded-md bg-green-500 px-3 py-1 text-xs font-semibold text-white transition hover:bg-green-600"
-                        >
-                            Go
-                        </button>
+                        {pdfUrl && (
+                            <motion.span
+                                animate={{
+                                    opacity: [
+                                        0.45,
+                                        1,
+                                        0.45,
+                                    ],
+                                }}
+                                transition={{
+                                    duration: 2,
+                                    repeat: Infinity,
+                                }}
+                                className="hidden items-center gap-1 rounded-full border border-emerald-400/10 bg-emerald-400/[0.06] px-2 py-0.5 text-[7px] font-bold uppercase tracking-wider text-emerald-400 sm:flex"
+                            >
+                                <FaCircle className="text-[4px]" />
+                                Live
+                            </motion.span>
+                        )}
                     </div>
 
-                    {/* Next Page */}
+                    {pdfUrl && (
+                        <p className="mt-0.5 text-[8px] text-zinc-600">
+                            Collaborative study document
+                        </p>
+                    )}
+                </div>
+            </motion.div>
 
-                    <button
-                        type="button"
-                        onClick={onNextPage}
-                        disabled={
-                            pageNumber ===
-                            numPages
-                        }
-                        className="text-white transition hover:text-green-400 disabled:cursor-not-allowed disabled:opacity-40"
-                        title="Next page"
-                    >
-                        <FaChevronRight />
-                    </button>
+            {/* ==========================================
+                CONTROLS
+            ========================================== */}
 
-                    {/* Zoom Out */}
+            {pdfUrl && (
+                <div className="relative flex flex-wrap items-center gap-2">
 
-                    <button
-                        type="button"
-                        onClick={onZoomOut}
-                        className="text-white transition hover:text-green-400"
-                        title="Zoom out"
-                    >
-                        <FaSearchMinus />
-                    </button>
+                    {/* PAGE NAVIGATION */}
 
-                    {/* Zoom */}
+                    <div className="flex items-center gap-1 rounded-2xl border border-white/[0.06] bg-white/[0.025] p-1">
+                        <motion.button
+                            type="button"
+                            whileHover={{
+                                scale: 1.08,
+                            }}
+                            whileTap={{
+                                scale: 0.92,
+                            }}
+                            onClick={
+                                onPreviousPage
+                            }
+                            disabled={
+                                pageNumber === 1
+                            }
+                            className={controlButton}
+                            title="Previous page"
+                        >
+                            <FaChevronLeft className="text-[10px]" />
+                        </motion.button>
 
-                    <span className="w-12 text-center text-sm text-slate-300">
-                        {Math.round(
-                            zoom * 100
-                        )}
-                        %
-                    </span>
+                        <div className="flex items-center gap-1.5 px-1">
+                            <input
+                                type="number"
+                                min="1"
+                                max={numPages}
+                                value={pageInput}
+                                onChange={
+                                    onPageInputChange
+                                }
+                                onKeyDown={
+                                    onPageInputKeyDown
+                                }
+                                className="h-8 w-12 rounded-lg border border-white/[0.07] bg-black/30 px-1 text-center text-[11px] font-semibold text-white outline-none transition focus:border-violet-400/40 focus:bg-violet-500/[0.04]"
+                                aria-label="Page number"
+                            />
 
-                    {/* Zoom In */}
+                            <span className="text-[10px] font-medium text-zinc-600">
+                                /{" "}
+                                {numPages}
+                            </span>
 
-                    <button
-                        type="button"
-                        onClick={onZoomIn}
-                        className="text-white transition hover:text-green-400"
-                        title="Zoom in"
-                    >
-                        <FaSearchPlus />
-                    </button>
+                            <motion.button
+                                type="button"
+                                whileHover={{
+                                    scale: 1.05,
+                                }}
+                                whileTap={{
+                                    scale: 0.95,
+                                }}
+                                onClick={() =>
+                                    onGoToPage(
+                                        pageInput
+                                    )
+                                }
+                                className="h-8 rounded-lg bg-gradient-to-r from-violet-500 to-cyan-400 px-2.5 text-[9px] font-black text-white shadow-[0_6px_20px_rgba(139,92,246,.18)]"
+                            >
+                                Go
+                            </motion.button>
+                        </div>
 
-                    {/* Reset Zoom */}
+                        <motion.button
+                            type="button"
+                            whileHover={{
+                                scale: 1.08,
+                            }}
+                            whileTap={{
+                                scale: 0.92,
+                            }}
+                            onClick={
+                                onNextPage
+                            }
+                            disabled={
+                                pageNumber ===
+                                numPages
+                            }
+                            className={controlButton}
+                            title="Next page"
+                        >
+                            <FaChevronRight className="text-[10px]" />
+                        </motion.button>
+                    </div>
 
-                    <button
-                        type="button"
-                        onClick={onResetZoom}
-                        className="text-white transition hover:text-green-400"
-                        title="Fit to width"
-                    >
-                        <FaUndo />
-                    </button>
+                    {/* DIVIDER */}
 
-                    {/* ===========================
-                        Follow Host
-                    =========================== */}
+                    <span className="hidden h-7 w-px bg-white/[0.07] lg:block" />
+
+                    {/* ZOOM */}
+
+                    <div className="flex items-center gap-1 rounded-2xl border border-white/[0.06] bg-white/[0.025] p-1">
+                        <motion.button
+                            type="button"
+                            whileHover={{
+                                scale: 1.08,
+                            }}
+                            whileTap={{
+                                scale: 0.92,
+                            }}
+                            onClick={
+                                onZoomOut
+                            }
+                            className={controlButton}
+                            title="Zoom out"
+                        >
+                            <FaSearchMinus className="text-[10px]" />
+                        </motion.button>
+
+                        <motion.span
+                            key={Math.round(
+                                zoom * 100
+                            )}
+                            initial={{
+                                opacity: 0,
+                                y: -4,
+                            }}
+                            animate={{
+                                opacity: 1,
+                                y: 0,
+                            }}
+                            className="w-12 text-center text-[10px] font-bold text-zinc-400"
+                        >
+                            {Math.round(
+                                zoom * 100
+                            )}
+                            %
+                        </motion.span>
+
+                        <motion.button
+                            type="button"
+                            whileHover={{
+                                scale: 1.08,
+                            }}
+                            whileTap={{
+                                scale: 0.92,
+                            }}
+                            onClick={
+                                onZoomIn
+                            }
+                            className={controlButton}
+                            title="Zoom in"
+                        >
+                            <FaSearchPlus className="text-[10px]" />
+                        </motion.button>
+
+                        <motion.button
+                            type="button"
+                            whileHover={{
+                                scale: 1.08,
+                                rotate: -10,
+                            }}
+                            whileTap={{
+                                scale: 0.92,
+                            }}
+                            onClick={
+                                onResetZoom
+                            }
+                            className={controlButton}
+                            title="Fit to width"
+                        >
+                            <FaUndo className="text-[10px]" />
+                        </motion.button>
+                    </div>
+
+                    {/* ==========================================
+                        FOLLOW HOST
+                    ========================================== */}
 
                     {!isHost && (
-                        <button
-                            type="button"
-                            onClick={
-                                onToggleFollowHost
-                            }
-                            className={`rounded-lg px-3 py-2 text-xs font-semibold transition ${
-                                followHost
-                                    ? "bg-green-500 text-white hover:bg-green-600"
-                                    : "bg-slate-700 text-slate-300 hover:bg-slate-600"
-                            }`}
-                        >
-                            {followHost
-                                ? "Following Host"
-                                : "Follow Host"}
-                        </button>
+                        <>
+                            <span className="hidden h-7 w-px bg-white/[0.07] xl:block" />
+
+                            <motion.button
+                                type="button"
+                                whileHover={{
+                                    y: -1,
+                                    scale: 1.02,
+                                }}
+                                whileTap={{
+                                    scale: 0.97,
+                                }}
+                                onClick={
+                                    onToggleFollowHost
+                                }
+                                className={`relative flex h-9 items-center gap-2 overflow-hidden rounded-xl border px-3 text-[9px] font-bold transition-all ${
+                                    followHost
+                                        ? "border-emerald-400/20 bg-emerald-500/[0.1] text-emerald-300 shadow-[0_6px_25px_rgba(16,185,129,.08)]"
+                                        : "border-white/[0.07] bg-white/[0.035] text-zinc-400 hover:border-violet-400/20 hover:text-white"
+                                }`}
+                            >
+                                {followHost ? (
+                                    <>
+                                        <motion.span
+                                            animate={{
+                                                scale: [
+                                                    1,
+                                                    1.5,
+                                                    1,
+                                                ],
+                                                opacity: [
+                                                    0.7,
+                                                    0,
+                                                    0.7,
+                                                ],
+                                            }}
+                                            transition={{
+                                                duration: 1.8,
+                                                repeat: Infinity,
+                                            }}
+                                            className="absolute left-3 h-1.5 w-1.5 rounded-full bg-emerald-400"
+                                        />
+
+                                        <span className="ml-3">
+                                            Following Host
+                                        </span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <FaPlay className="text-[8px]" />
+                                        <span>
+                                            Follow Host
+                                        </span>
+                                    </>
+                                )}
+                            </motion.button>
+                        </>
                     )}
 
-                    {/* ===========================
-                        Host Controls
-                    =========================== */}
+                    {/* ==========================================
+                        HOST CONTROLS
+                    ========================================== */}
 
                     {isHost && (
                         <>
-                            <button
+                            <span className="hidden h-7 w-px bg-white/[0.07] xl:block" />
+
+                            <motion.button
                                 type="button"
+                                whileHover={{
+                                    y: -1,
+                                    scale: 1.03,
+                                }}
+                                whileTap={{
+                                    scale: 0.97,
+                                }}
                                 onClick={onUpload}
                                 disabled={loading}
-                                className="inline-flex items-center gap-2 rounded-lg bg-blue-500 px-3 py-2 text-xs font-semibold text-white transition hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-50"
+                                className="inline-flex h-9 items-center gap-2 rounded-xl border border-blue-400/15 bg-blue-500/[0.09] px-3 text-[9px] font-bold text-blue-300 transition hover:border-blue-400/25 hover:bg-blue-500/[0.15] disabled:cursor-not-allowed disabled:opacity-30"
                                 title="Replace PDF"
                             >
-                                <FaUpload />
-                                Replace
-                            </button>
+                                <motion.span
+                                    animate={
+                                        loading
+                                            ? {
+                                                  rotate: 360,
+                                              }
+                                            : {}
+                                    }
+                                    transition={{
+                                        duration: 1,
+                                        repeat: loading
+                                            ? Infinity
+                                            : 0,
+                                        ease: "linear",
+                                    }}
+                                >
+                                    <FaUpload />
+                                </motion.span>
 
-                            <button
+                                <span>
+                                    {loading
+                                        ? "Uploading..."
+                                        : "Replace"}
+                                </span>
+                            </motion.button>
+
+                            <motion.button
                                 type="button"
+                                whileHover={{
+                                    y: -1,
+                                    scale: 1.03,
+                                }}
+                                whileTap={{
+                                    scale: 0.97,
+                                }}
                                 onClick={onDelete}
                                 disabled={deleting}
-                                className="inline-flex items-center gap-2 rounded-lg bg-red-500 px-3 py-2 text-xs font-semibold text-white transition hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-50"
+                                className="inline-flex h-9 items-center gap-2 rounded-xl border border-red-400/15 bg-red-500/[0.07] px-3 text-[9px] font-bold text-red-300 transition hover:border-red-400/25 hover:bg-red-500/[0.13] disabled:cursor-not-allowed disabled:opacity-30"
                                 title="Delete PDF"
                             >
-                                <FaTrash />
+                                <motion.span
+                                    animate={
+                                        deleting
+                                            ? {
+                                                  rotate: [
+                                                      0,
+                                                      -8,
+                                                      8,
+                                                      0,
+                                                  ],
+                                              }
+                                            : {}
+                                    }
+                                    transition={{
+                                        duration: 0.5,
+                                        repeat: deleting
+                                            ? Infinity
+                                            : 0,
+                                    }}
+                                >
+                                    <FaTrash />
+                                </motion.span>
 
-                                {deleting
-                                    ? "Deleting..."
-                                    : "Delete"}
-                            </button>
+                                <span>
+                                    {deleting
+                                        ? "Deleting..."
+                                        : "Delete"}
+                                </span>
+                            </motion.button>
                         </>
                     )}
                 </div>
             )}
-        </div>
+
+            {/* ==========================================
+                EMPTY PDF STATE
+            ========================================== */}
+
+            <AnimatePresence>
+                {!pdfUrl && (
+                    <motion.div
+                        initial={{
+                            opacity: 0,
+                            scale: 0.95,
+                        }}
+                        animate={{
+                            opacity: 1,
+                            scale: 1,
+                        }}
+                        className="relative flex items-center gap-2"
+                    >
+                        <span className="text-[9px] text-zinc-600">
+                            No document loaded
+                        </span>
+
+                        {isHost && (
+                            <motion.button
+                                type="button"
+                                whileHover={{
+                                    scale: 1.04,
+                                    y: -1,
+                                }}
+                                whileTap={{
+                                    scale: 0.96,
+                                }}
+                                onClick={onUpload}
+                                disabled={loading}
+                                className="inline-flex h-9 items-center gap-2 rounded-xl bg-gradient-to-r from-violet-500 to-cyan-400 px-3 text-[9px] font-bold text-white shadow-[0_8px_25px_rgba(139,92,246,.18)] disabled:opacity-40"
+                            >
+                                <FaUpload />
+                                Upload PDF
+                            </motion.button>
+                        )}
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Bottom animated light */}
+            <motion.div
+                animate={{
+                    x: [
+                        "-20%",
+                        "120%",
+                    ],
+                }}
+                transition={{
+                    duration: 6,
+                    repeat: Infinity,
+                    ease: "linear",
+                }}
+                className="pointer-events-none absolute bottom-0 left-0 h-px w-1/4 bg-gradient-to-r from-transparent via-violet-400/40 to-transparent blur-sm"
+            />
+        </motion.div>
     );
 };
 

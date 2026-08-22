@@ -21,6 +21,10 @@ const useVoiceChat = ({
     const [participants, setParticipants] =
         useState([]);
 
+    // NEW: tracks users who are currently speaking
+    const [speakingUsers, setSpeakingUsers] =
+        useState({});
+
     const localStreamRef =
         useRef(null);
 
@@ -29,6 +33,16 @@ const useVoiceChat = ({
 
     const remoteAudioRefs =
         useRef(new Map());
+
+    // NEW: audio analysers
+    const audioAnalyserRefs =
+        useRef(new Map());
+
+    const speakingAnimationRefs =
+        useRef(new Map());
+
+    const audioContextRef =
+        useRef(null);
 
     const isJoinedRef =
         useRef(false);
@@ -39,14 +53,191 @@ const useVoiceChat = ({
     const userRef =
         useRef(user);
 
-    // ===========================
-    // Keep Refs Updated
-    // ===========================
-
     useEffect(() => {
         roomIdRef.current = roomId;
         userRef.current = user;
     }, [roomId, user]);
+
+    // ===========================
+    // Audio Speaking Detection
+    // ===========================
+
+    const stopSpeakingDetection = useCallback(
+        (userId) => {
+            const animation =
+                speakingAnimationRefs.current.get(
+                    userId
+                );
+
+            if (animation) {
+                cancelAnimationFrame(animation);
+                speakingAnimationRefs.current.delete(
+                    userId
+                );
+            }
+
+            audioAnalyserRefs.current.delete(
+                userId
+            );
+
+            setSpeakingUsers((current) => {
+                if (!current[userId]) {
+                    return current;
+                }
+
+                const next = {
+                    ...current,
+                };
+
+                delete next[userId];
+
+                return next;
+            });
+        },
+        []
+    );
+
+    const startSpeakingDetection = useCallback(
+        (userId, stream) => {
+            if (!stream) {
+                return;
+            }
+
+            if (
+                audioAnalyserRefs.current.has(
+                    userId
+                )
+            ) {
+                return;
+            }
+
+            try {
+                if (!audioContextRef.current) {
+                    audioContextRef.current =
+                        new (
+                            window.AudioContext ||
+                            window.webkitAudioContext
+                        )();
+                }
+
+                const audioContext =
+                    audioContextRef.current;
+
+                if (
+                    audioContext.state ===
+                    "suspended"
+                ) {
+                    audioContext.resume().catch(
+                        () => {}
+                    );
+                }
+
+                const analyser =
+                    audioContext.createAnalyser();
+
+                analyser.fftSize = 256;
+                analyser.smoothingTimeConstant = 0.75;
+
+                const source =
+                    audioContext.createMediaStreamSource(
+                        stream
+                    );
+
+                source.connect(analyser);
+
+                const dataArray =
+                    new Uint8Array(
+                        analyser.frequencyBinCount
+                    );
+
+                audioAnalyserRefs.current.set(
+                    userId,
+                    {
+                        analyser,
+                        source,
+                        dataArray,
+                    }
+                );
+
+                const detect = () => {
+                    const analyserData =
+                        audioAnalyserRefs.current.get(
+                            userId
+                        );
+
+                    if (!analyserData) {
+                        return;
+                    }
+
+                    const {
+                        analyser,
+                        dataArray,
+                    } = analyserData;
+
+                    analyser.getByteTimeDomainData(
+                        dataArray
+                    );
+
+                    let sum = 0;
+
+                    for (
+                        let i = 0;
+                        i < dataArray.length;
+                        i++
+                    ) {
+                        const normalized =
+                            (dataArray[i] - 128) /
+                            128;
+
+                        sum +=
+                            normalized *
+                            normalized;
+                    }
+
+                    const rms = Math.sqrt(
+                        sum / dataArray.length
+                    );
+
+                    // Speaking threshold.
+                    // Small background noise is ignored.
+                    const speaking =
+                        rms > 0.035;
+
+                    setSpeakingUsers((current) => {
+                        if (
+                            current[userId] ===
+                            speaking
+                        ) {
+                            return current;
+                        }
+
+                        return {
+                            ...current,
+                            [userId]: speaking,
+                        };
+                    });
+
+                    const animationFrame =
+                        requestAnimationFrame(
+                            detect
+                        );
+
+                    speakingAnimationRefs.current.set(
+                        userId,
+                        animationFrame
+                    );
+                };
+
+                detect();
+            } catch (error) {
+                console.error(
+                    "Speaking detection error:",
+                    error
+                );
+            }
+        },
+        []
+    );
 
     // ===========================
     // Create Peer Connection
@@ -127,6 +318,12 @@ const useVoiceChat = ({
                         remoteStream;
 
                     audio.play().catch(() => {});
+
+                    // NEW: detect remote speaking
+                    startSpeakingDetection(
+                        userId,
+                        remoteStream
+                    );
                 };
 
                 // ICE
@@ -157,7 +354,7 @@ const useVoiceChat = ({
 
                 return peerConnection;
             },
-            []
+            [startSpeakingDetection]
         );
 
     // ===========================
@@ -194,6 +391,12 @@ const useVoiceChat = ({
 
                     localStreamRef.current =
                         stream;
+
+                    // NEW: detect local speaking
+                    startSpeakingDetection(
+                        currentUser._id.toString(),
+                        stream
+                    );
                 }
 
                 isJoinedRef.current = true;
@@ -238,7 +441,7 @@ const useVoiceChat = ({
                 }
             }
         },
-        []
+        [startSpeakingDetection]
     );
 
     // ===========================
@@ -283,6 +486,19 @@ const useVoiceChat = ({
 
         remoteAudioRefs.current.clear();
 
+        // NEW: stop all speaking detection
+        speakingAnimationRefs.current.forEach(
+            (animation) => {
+                cancelAnimationFrame(animation);
+            }
+        );
+
+        speakingAnimationRefs.current.clear();
+
+        audioAnalyserRefs.current.clear();
+
+        setSpeakingUsers({});
+
         if (localStreamRef.current) {
             localStreamRef.current
                 .getTracks()
@@ -291,6 +507,14 @@ const useVoiceChat = ({
                 });
 
             localStreamRef.current = null;
+        }
+
+        if (audioContextRef.current) {
+            audioContextRef.current
+                .close()
+                .catch(() => {});
+
+            audioContextRef.current = null;
         }
 
         isJoinedRef.current = false;
@@ -335,6 +559,14 @@ const useVoiceChat = ({
             !audioTrack.enabled;
 
         setIsMuted(muted);
+
+        if (muted) {
+            setSpeakingUsers((current) => ({
+                ...current,
+                [currentUser._id.toString()]:
+                    false,
+            }));
+        }
 
         socket.emit("voice:mute", {
             roomId: currentRoomId,
@@ -525,6 +757,10 @@ const useVoiceChat = ({
                 );
             }
 
+            stopSpeakingDetection(
+                userId
+            );
+
             setParticipants((current) =>
                 current.filter(
                     (participant) =>
@@ -557,6 +793,16 @@ const useVoiceChat = ({
                 setIsMuted(
                     Boolean(muted)
                 );
+
+                if (muted) {
+                    setSpeakingUsers(
+                        (current) => ({
+                            ...current,
+                            [userId.toString()]:
+                                false,
+                        })
+                    );
+                }
             }
         };
 
@@ -635,6 +881,7 @@ const useVoiceChat = ({
         roomId,
         user?._id,
         createPeerConnection,
+        stopSpeakingDetection,
     ]);
 
     // ===========================
@@ -717,6 +964,28 @@ const useVoiceChat = ({
 
                 remoteAudioRefs.current.clear();
 
+                speakingAnimationRefs.current.forEach(
+                    (animation) => {
+                        cancelAnimationFrame(
+                            animation
+                        );
+                    }
+                );
+
+                speakingAnimationRefs.current.clear();
+
+                audioAnalyserRefs.current.clear();
+
+                if (
+                    audioContextRef.current
+                ) {
+                    audioContextRef.current
+                        .close()
+                        .catch(() => {});
+
+                    audioContextRef.current = null;
+                }
+
                 if (
                     localStreamRef.current
                 ) {
@@ -741,6 +1010,7 @@ const useVoiceChat = ({
         isJoined,
         isMuted,
         participants,
+        speakingUsers,
         joinVoice,
         leaveVoice,
         toggleMute,

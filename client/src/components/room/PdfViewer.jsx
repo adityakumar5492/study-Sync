@@ -1,32 +1,61 @@
 import { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
+import { motion, AnimatePresence } from "framer-motion";
 
-import { useAppDispatch, useAppSelector } from "../../redux/hooks";
+import {
+    FaFilePdf,
+    FaUpload,
+    FaChevronDown,
+    FaUsers,
+    FaBookOpen,
+    FaCircle,
+
+} from "react-icons/fa";
+
+import {
+    useAppDispatch,
+    useAppSelector,
+} from "../../redux/hooks";
+
 import {
     uploadRoomPdfThunk,
     deleteRoomPdfThunk,
+    getRoomThunk,
 } from "../../redux/room/roomThunk";
+
 import PdfAnnotationLayer from "./PdfAnnotationLayer";
 import PdfToolbar from "./PdfToolbar";
 
-import { FaFilePdf,FaUpload, } from "react-icons/fa";
 import socket from "../../socket/socket";
 
-
-import { Document, Page, pdfjs } from "react-pdf";
+import {
+    Document,
+    Page,
+    pdfjs,
+} from "react-pdf";
 
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
 
-pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-    "pdfjs-dist/build/pdf.worker.min.mjs",
-    import.meta.url
-).toString();
+pdfjs.GlobalWorkerOptions.workerSrc =
+    new URL(
+        "pdfjs-dist/build/pdf.worker.min.mjs",
+        import.meta.url
+    ).toString();
 
-const PdfViewer = ({ roomId, room, currentUser,drawingPermission: externalDrawingPermission, }) => {
+const PdfViewer = ({
+    roomId,
+    room,
+    currentUser,
+    drawingPermission:
+        externalDrawingPermission,
+}) => {
     const dispatch = useAppDispatch();
 
-    const { currentRoom, loading } = useAppSelector(
+    const {
+        currentRoom,
+        loading,
+    } = useAppSelector(
         (state) => state.room
     );
 
@@ -39,165 +68,233 @@ const PdfViewer = ({ roomId, room, currentUser,drawingPermission: externalDrawin
             ? room.host?._id?.toString()
             : room?.host?.toString();
 
-    const currentUserId = currentUser?._id?.toString();
+    const currentUserId =
+        currentUser?._id?.toString();
 
-    const isHost = hostId === currentUserId;
+    const isHost =
+        hostId === currentUserId;
 
     // ===========================
     // Refs
     // ===========================
 
-    const fileInputRef = useRef(null);
+    const fileInputRef =
+        useRef(null);
 
-    // measureRef: non-scrolling wrapper, used ONLY to measure available width.
-    const measureRef = useRef(null);
+    const measureRef =
+        useRef(null);
 
-    // viewerRef: the actual scrollable element (scrolling + wheel/pinch handling).
-    const viewerRef = useRef(null);
+    const viewerRef =
+        useRef(null);
 
-    // toolbarLayerRef: non-scrolling overlay for the annotation toolbar.
-    const toolbarLayerRef = useRef(null);
+    const toolbarLayerRef =
+        useRef(null);
 
     // ===========================
     // PDF State
     // ===========================
 
-    const [pdfUrl, setPdfUrl] = useState("");
-    const [pdfName, setPdfName] = useState("");
+    const [pdfUrl, setPdfUrl] =
+        useState("");
 
-    const [numPages, setNumPages] = useState(0);
-    const [pageNumber, setPageNumber] = useState(1);
-    const [pageInput, setPageInput] = useState("1");
+    const [pdfName, setPdfName] =
+        useState("");
 
-const activeDrawingPermission =
-    externalDrawingPermission || {
-        mode: "everyone",
-        allowedUsers: [],
-    };
+    const [numPages, setNumPages] =
+        useState(0);
 
-const canDraw =
-    isHost ||
-    activeDrawingPermission.mode === "everyone" ||
-    (
-        activeDrawingPermission.mode === "selected" &&
-        activeDrawingPermission.allowedUsers.includes(
-            currentUserId
-        )
-    );
+    const [pageNumber, setPageNumber] =
+        useState(1);
 
+    const [pageInput, setPageInput] =
+        useState("1");
 
-    const [followHost, setFollowHost] = useState(() => {
-        return sessionStorage.getItem(
-        `studysync-follow-host-${roomId}`
-        ) !== "false";
-    });
+    const activeDrawingPermission =
+        externalDrawingPermission || {
+            mode: "everyone",
+            allowedUsers: [],
+        };
+
+    const canDraw =
+        isHost ||
+        activeDrawingPermission.mode ===
+            "everyone" ||
+        (
+            activeDrawingPermission.mode ===
+                "selected" &&
+            activeDrawingPermission.allowedUsers.includes(
+                currentUserId
+            )
+        );
+
+    // ===========================
+    // Follow Host
+    // ===========================
+
+    const [followHost, setFollowHost] =
+        useState(() => {
+            return (
+                sessionStorage.getItem(
+                    `studysync-follow-host-${roomId}`
+                ) !== "false"
+            );
+        });
+
     useEffect(() => {
-    sessionStorage.setItem(
-        `studysync-follow-host-${roomId}`,
-        String(followHost)
-    );
-}, [roomId, followHost]);
+        sessionStorage.setItem(
+            `studysync-follow-host-${roomId}`,
+            String(followHost)
+        );
+    }, [roomId, followHost]);
+
     useEffect(() => {
-    if (!roomId || isHost) return;
+        if (!roomId || isHost) return;
 
-    const handleHostPageChange = ({
-        pageNumber,
-    }) => {
-        if (!followHost) return;
+        const handleHostPageChange = ({
+            pageNumber,
+        }) => {
+            if (!followHost) return;
 
-        setPageNumber(pageNumber);
-        setPageInput(String(pageNumber));
-    };
+            setPageNumber(pageNumber);
+            setPageInput(
+                String(pageNumber)
+            );
+        };
 
-    socket.on(
-        "pdf:host-page-change",
-        handleHostPageChange
-    );
-
-    return () => {
-        socket.off(
+        socket.on(
             "pdf:host-page-change",
             handleHostPageChange
         );
-    };
-}, [roomId, isHost, followHost]);
 
-    // FIX (Issue #1 / #2): this now applies to the host too, so a
-    // reloading host resumes at their last saved page, and a follower
-    // that just requested the current page jumps to it immediately.
-useEffect(() => {
-    if (!roomId) return;
+        return () => {
+            socket.off(
+                "pdf:host-page-change",
+                handleHostPageChange
+            );
+        };
+    }, [
+        roomId,
+        isHost,
+        followHost,
+    ]);
 
-    const handleCurrentPage = ({ pageNumber }) => {
-        if (
-            typeof pageNumber !== "number" ||
-            pageNumber < 1
-        ) {
-            return;
-        }
+    // ===========================
+    // Current Page Sync
+    // ===========================
 
-        setPageNumber(pageNumber);
-        setPageInput(String(pageNumber));
-    };
+    useEffect(() => {
+        if (!roomId) return;
 
-    // Register listener FIRST
-    socket.on(
-        "pdf:current-page",
-        handleCurrentPage
-    );
-
-    const requestCurrentPage = () => {
-        socket.emit(
-            "pdf:request-current-page",
-            {
-                roomId,
+        const handleCurrentPage = ({
+            pageNumber,
+        }) => {
+            if (
+                typeof pageNumber !==
+                    "number" ||
+                pageNumber < 1
+            ) {
+                return;
             }
-        );
-    };
 
-    // Socket already connected
-    if (socket.connected) {
-        requestCurrentPage();
-    } else {
-        // Wait for socket connection
-        socket.once(
-            "connect",
-            requestCurrentPage
-        );
-    }
+            setPageNumber(pageNumber);
+            setPageInput(
+                String(pageNumber)
+            );
+        };
 
-    return () => {
-        socket.off(
+        socket.on(
             "pdf:current-page",
             handleCurrentPage
         );
 
-        socket.off(
-            "connect",
-            requestCurrentPage
-        );
-    };
-}, [roomId]);
+        const requestCurrentPage = () => {
+            socket.emit(
+                "pdf:request-current-page",
+                {
+                    roomId,
+                }
+            );
+        };
+
+        if (socket.connected) {
+            requestCurrentPage();
+        } else {
+            socket.once(
+                "connect",
+                requestCurrentPage
+            );
+        }
+
+        return () => {
+            socket.off(
+                "pdf:current-page",
+                handleCurrentPage
+            );
+
+            socket.off(
+                "connect",
+                requestCurrentPage
+            );
+        };
+    }, [roomId]);
 
     // ===========================
-// PDF Replacement Sync
+    // PDF Replacement Sync
+    // ===========================
+
+    useEffect(() => {
+        if (!roomId) return;
+
+        const handlePdfUpdated = ({
+            pdfUrl,
+        }) => {
+            if (!pdfUrl) return;
+
+            const newUrl =
+                `http://localhost:5000${pdfUrl}`;
+
+            setPdfUrl(newUrl);
+
+            setPdfName(
+                pdfUrl
+                    .split("/")
+                    .pop()
+            );
+
+            setPageNumber(1);
+            setPageInput("1");
+            setNumPages(0);
+
+            setZoom(1);
+            setRenderZoom(1);
+
+            if (viewerRef.current) {
+                viewerRef.current.scrollTop = 0;
+            }
+        };
+
+        socket.on(
+            "pdf:updated",
+            handlePdfUpdated
+        );
+
+        return () => {
+            socket.off(
+                "pdf:updated",
+                handlePdfUpdated
+            );
+        };
+    }, [roomId]);
+    // ===========================
+// PDF Delete Sync
 // ===========================
 
 useEffect(() => {
     if (!roomId) return;
 
-    const handlePdfUpdated = ({ pdfUrl }) => {
-        if (!pdfUrl) return;
-
-        const newUrl = `http://localhost:5000${pdfUrl}`;
-
-        setPdfUrl(newUrl);
-
-        setPdfName(
-            pdfUrl
-                .split("/")
-                .pop()
-        );
+    const handlePdfDeleted = () => {
+        setPdfUrl("");
+        setPdfName("");
 
         setPageNumber(1);
         setPageInput("1");
@@ -209,51 +306,68 @@ useEffect(() => {
         if (viewerRef.current) {
             viewerRef.current.scrollTop = 0;
         }
+
+        dispatch(getRoomThunk(roomId));
     };
 
     socket.on(
-        "pdf:updated",
-        handlePdfUpdated
+        "pdf:deleted",
+        handlePdfDeleted
     );
 
     return () => {
         socket.off(
-            "pdf:updated",
-            handlePdfUpdated
+            "pdf:deleted",
+            handlePdfDeleted
         );
     };
-}, [roomId]);
-    // "zoom" = live value, updates instantly (drives CSS transform for
-    // smooth pinch/button feedback, no PDF re-render).
-    const [zoom, setZoom] = useState(1);
+}, [roomId, dispatch]);
 
-    // "renderZoom" = committed value, updates only after zoom settles.
-    const [renderZoom, setRenderZoom] = useState(1);
+    // ===========================
+    // Zoom
+    // ===========================
 
-    const zoomCommitTimeoutRef = useRef(null);
+    const [zoom, setZoom] =
+        useState(1);
+
+    const [renderZoom, setRenderZoom] =
+        useState(1);
+
+    const zoomCommitTimeoutRef =
+        useRef(null);
 
     useEffect(() => {
-        if (zoomCommitTimeoutRef.current) {
-            clearTimeout(zoomCommitTimeoutRef.current);
+        if (
+            zoomCommitTimeoutRef.current
+        ) {
+            clearTimeout(
+                zoomCommitTimeoutRef.current
+            );
         }
 
-        zoomCommitTimeoutRef.current = setTimeout(() => {
-            setRenderZoom(zoom);
-        }, 150);
+        zoomCommitTimeoutRef.current =
+            setTimeout(() => {
+                setRenderZoom(zoom);
+            }, 150);
 
         return () => {
-            if (zoomCommitTimeoutRef.current) {
-                clearTimeout(zoomCommitTimeoutRef.current);
+            if (
+                zoomCommitTimeoutRef.current
+            ) {
+                clearTimeout(
+                    zoomCommitTimeoutRef.current
+                );
             }
         };
     }, [zoom]);
 
     // ===========================
-    // Touchpad pinch zoom (wheel + ctrlKey)
+    // Touchpad Pinch Zoom
     // ===========================
 
     useEffect(() => {
-        const element = viewerRef.current;
+        const element =
+            viewerRef.current;
 
         if (!element) return;
 
@@ -266,23 +380,33 @@ useEffect(() => {
 
             accumulatedDelta += e.deltaY;
 
-            if (Math.abs(accumulatedDelta) < 8) {
+            if (
+                Math.abs(
+                    accumulatedDelta
+                ) < 8
+            ) {
                 return;
             }
 
             const direction =
-                accumulatedDelta > 0 ? -1 : 1;
+                accumulatedDelta > 0
+                    ? -1
+                    : 1;
 
             accumulatedDelta = 0;
 
             setZoom((currentZoom) => {
                 const nextZoom =
-                    currentZoom + direction * 0.02;
+                    currentZoom +
+                    direction * 0.02;
 
                 return Number(
                     Math.min(
                         3,
-                        Math.max(0.5, nextZoom)
+                        Math.max(
+                            0.5,
+                            nextZoom
+                        )
                     ).toFixed(2)
                 );
             });
@@ -291,7 +415,9 @@ useEffect(() => {
         element.addEventListener(
             "wheel",
             handleWheel,
-            { passive: false }
+            {
+                passive: false,
+            }
         );
 
         return () => {
@@ -303,15 +429,14 @@ useEffect(() => {
     }, []);
 
     // ===========================
-    // NEW (Issue #3): Host Scroll Sync — emit
-    // Host's scroll position, throttled, broadcast to the room.
-    // Only the host emits, so followers can never trigger a loop.
+    // Host Scroll Sync
     // ===========================
 
     useEffect(() => {
         if (!roomId || !isHost) return;
 
-        const element = viewerRef.current;
+        const element =
+            viewerRef.current;
 
         if (!element) return;
 
@@ -320,94 +445,138 @@ useEffect(() => {
         const handleScroll = () => {
             if (throttleTimer) return;
 
-            throttleTimer = setTimeout(() => {
-                throttleTimer = null;
+            throttleTimer =
+                setTimeout(() => {
+                    throttleTimer = null;
 
-                const maxScroll =
-                    element.scrollHeight - element.clientHeight;
+                    const maxScroll =
+                        element.scrollHeight -
+                        element.clientHeight;
 
-                const scrollPercent =
-                    maxScroll > 0
-                        ? element.scrollTop / maxScroll
-                        : 0;
+                    const scrollPercent =
+                        maxScroll > 0
+                            ? element.scrollTop /
+                              maxScroll
+                            : 0;
 
-                socket.emit("pdf:host-scroll", {
-                    roomId,
-                    scrollPercent,
-                    isHost,
-                });
-            }, 150);
+                    socket.emit(
+                        "pdf:host-scroll",
+                        {
+                            roomId,
+                            scrollPercent,
+                            isHost,
+                        }
+                    );
+                }, 150);
         };
 
-        element.addEventListener("scroll", handleScroll);
+        element.addEventListener(
+            "scroll",
+            handleScroll
+        );
 
         return () => {
-            element.removeEventListener("scroll", handleScroll);
+            element.removeEventListener(
+                "scroll",
+                handleScroll
+            );
 
             if (throttleTimer) {
-                clearTimeout(throttleTimer);
+                clearTimeout(
+                    throttleTimer
+                );
             }
         };
-    }, [roomId, isHost]);
+    }, [
+        roomId,
+        isHost,
+    ]);
 
     // ===========================
-    // NEW (Issue #3): Host Scroll Sync — receive
-    // Only applied when Follow Host is on. When it's off, the
-    // listener still runs but bails out immediately, so scrolling
-    // stays fully independent.
+    // Receive Host Scroll
     // ===========================
 
     useEffect(() => {
         if (!roomId || isHost) return;
 
-        const handleHostScrollChange = ({ scrollPercent }) => {
+        const handleHostScrollChange = ({
+            scrollPercent,
+        }) => {
             if (!followHost) return;
-            if (typeof scrollPercent !== "number") return;
 
-            const element = viewerRef.current;
+            if (
+                typeof scrollPercent !==
+                "number"
+            ) {
+                return;
+            }
+
+            const element =
+                viewerRef.current;
 
             if (!element) return;
 
             const maxScroll =
-                element.scrollHeight - element.clientHeight;
+                element.scrollHeight -
+                element.clientHeight;
 
-            element.scrollTop = maxScroll * scrollPercent;
+            element.scrollTop =
+                maxScroll *
+                scrollPercent;
         };
 
-        socket.on("pdf:host-scroll-change", handleHostScrollChange);
+        socket.on(
+            "pdf:host-scroll-change",
+            handleHostScrollChange
+        );
 
         return () => {
-            socket.off("pdf:host-scroll-change", handleHostScrollChange);
+            socket.off(
+                "pdf:host-scroll-change",
+                handleHostScrollChange
+            );
         };
-    }, [roomId, isHost, followHost]);
+    }, [
+        roomId,
+        isHost,
+        followHost,
+    ]);
 
-    const [deleting, setDeleting] = useState(false);
+    const [deleting, setDeleting] =
+        useState(false);
 
-    // Width available for PDF page
-    const [viewerWidth, setViewerWidth] = useState(0);
+    const [viewerWidth, setViewerWidth] =
+        useState(0);
 
     // ===========================
-    // Measure PDF workspace
+    // Measure Workspace
     // ===========================
 
     useEffect(() => {
-        const element = measureRef.current;
+        const element =
+            measureRef.current;
 
         if (!element) return;
 
         const updateWidth = () => {
-            const width = element.clientWidth;
+            const width =
+                element.clientWidth;
 
-            setViewerWidth(Math.max(300, width));
+            setViewerWidth(
+                Math.max(300, width)
+            );
         };
 
         updateWidth();
 
-        const resizeObserver = new ResizeObserver(
-            updateWidth
-        );
+        const resizeObserver =
+            new ResizeObserver(
+                updateWidth
+            );
 
-        resizeObserver.observe(element);
+        resizeObserver.observe(
+            element
+        );
 
         window.addEventListener(
             "resize",
@@ -430,7 +599,8 @@ useEffect(() => {
 
     useEffect(() => {
         if (currentRoom?.pdfUrl) {
-            const url = `http://localhost:5000${currentRoom.pdfUrl}`;
+            const url =
+                `http://localhost:5000${currentRoom.pdfUrl}`;
 
             setPdfUrl(url);
 
@@ -450,13 +620,14 @@ useEffect(() => {
             setPageInput("1");
 
             setNumPages(0);
+
             setZoom(1);
             setRenderZoom(1);
         }
     }, [currentRoom]);
 
     // ===========================
-    // Upload / Replace PDF
+    // Upload
     // ===========================
 
     const handleUploadClick = () => {
@@ -470,8 +641,11 @@ useEffect(() => {
         fileInputRef.current?.click();
     };
 
-    const handlePdfChange = async (e) => {
-        const file = e.target.files?.[0];
+    const handlePdfChange = async (
+        e
+    ) => {
+        const file =
+            e.target.files?.[0];
 
         if (!file) return;
 
@@ -483,11 +657,16 @@ useEffect(() => {
         }
 
         if (!roomId) {
-            toast.error("Room not found.");
+            toast.error(
+                "Room not found."
+            );
             return;
         }
 
-        if (file.type !== "application/pdf") {
+        if (
+            file.type !==
+            "application/pdf"
+        ) {
             toast.error(
                 "Please upload a PDF file."
             );
@@ -495,25 +674,35 @@ useEffect(() => {
         }
 
         try {
-            const formData = new FormData();
+            const formData =
+                new FormData();
 
-            formData.append("pdf", file);
+            formData.append(
+                "pdf",
+                file
+            );
 
-            const result = await dispatch(
-    uploadRoomPdfThunk({
-        roomId,
-        formData,
-    })
-).unwrap();
+            const result =
+                await dispatch(
+                    uploadRoomPdfThunk({
+                        roomId,
+                        formData,
+                    })
+                ).unwrap();
 
-const uploadedPdfUrl = result?.room?.pdfUrl;
+            const uploadedPdfUrl =
+                result?.room?.pdfUrl;
 
-if (uploadedPdfUrl) {
-    socket.emit("pdf:updated", {
-        roomId,
-        pdfUrl: uploadedPdfUrl,
-    });
-}
+            if (uploadedPdfUrl) {
+                socket.emit(
+                    "pdf:updated",
+                    {
+                        roomId,
+                        pdfUrl:
+                            uploadedPdfUrl,
+                    }
+                );
+            }
 
             toast.success(
                 pdfUrl
@@ -526,19 +715,22 @@ if (uploadedPdfUrl) {
             setZoom(1);
             setRenderZoom(1);
 
-            // FIX: keep the server's saved page in sync with the new
-            // document, otherwise a reload could restore a stale page
-            // number from before the replacement.
             if (isHost) {
-                socket.emit("pdf:page-change", {
-                    roomId,
-                    pageNumber: 1,
-                    isHost,
-                });
+                socket.emit(
+                    "pdf:page-change",
+                    {
+                        roomId,
+                        pageNumber: 1,
+                        isHost,
+                    }
+                );
             }
 
-            if (fileInputRef.current) {
-                fileInputRef.current.value = "";
+            if (
+                fileInputRef.current
+            ) {
+                fileInputRef.current.value =
+                    "";
             }
         } catch (err) {
             toast.error(
@@ -549,78 +741,123 @@ if (uploadedPdfUrl) {
     };
 
     // ===========================
-    // Delete PDF
+    // Delete
     // ===========================
 
-    const handleDeletePdf = async () => {
-        if (!isHost) {
-            toast.error(
-                "Only the host can delete study material."
-            );
-            return;
-        }
-
-        if (!roomId) {
-            toast.error("Room not found.");
-            return;
-        }
-
-        const confirmed = window.confirm(
-            "Are you sure you want to delete this PDF? This action cannot be undone."
+   const handleDeletePdf = async () => {
+    if (!isHost) {
+        toast.error(
+            "Only the host can delete study material."
         );
+        return;
+    }
 
-        if (!confirmed) {
-            return;
+    if (!roomId) {
+        toast.error(
+            "Room not found."
+        );
+        return;
+    }
+
+    toast.custom(
+        (t) => (
+            <div className="w-[360px] rounded-2xl border border-slate-700 bg-slate-900 p-5 shadow-2xl">
+                <div className="mb-3">
+                    <h3 className="text-base font-semibold text-white">
+                        Delete PDF?
+                    </h3>
+
+                    <p className="mt-1 text-sm text-slate-400">
+                        This will remove the shared PDF for everyone
+                        in this room.
+                    </p>
+                </div>
+
+                <div className="flex justify-end gap-3">
+                    <button
+                        type="button"
+                        onClick={() => toast.dismiss(t.id)}
+                        className="rounded-lg bg-slate-800 px-4 py-2 text-sm font-medium text-slate-300 transition hover:bg-slate-700"
+                    >
+                        Cancel
+                    </button>
+
+                    <button
+                        type="button"
+                        disabled={deleting}
+                        onClick={async () => {
+                            try {
+                                setDeleting(true);
+
+                                await dispatch(
+                                    deleteRoomPdfThunk(roomId)
+                                ).unwrap();
+
+                                socket.emit(
+                                    "pdf:deleted",
+                                    {
+                                        roomId,
+                                    }
+                                );
+
+                                setPdfUrl("");
+                                setPdfName("");
+                                setPageNumber(1);
+                                setPageInput("1");
+                                setNumPages(0);
+                                setZoom(1);
+                                setRenderZoom(1);
+
+                                toast.dismiss(t.id);
+
+                                toast.success(
+                                    "PDF deleted successfully."
+                                );
+                            } catch (err) {
+                                toast.error(
+                                    err?.message ||
+                                        "Failed to delete PDF."
+                                );
+                            } finally {
+                                setDeleting(false);
+                            }
+                        }}
+                        className="rounded-lg bg-red-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                        {deleting ? "Deleting..." : "Delete"}
+                    </button>
+                </div>
+            </div>
+        ),
+        {
+            duration: Infinity,
         }
-
-        try {
-            setDeleting(true);
-
-            await dispatch(
-                deleteRoomPdfThunk(roomId)
-            ).unwrap();
-
-            toast.success(
-                "PDF deleted successfully."
-            );
-
-            setPdfUrl("");
-            setPdfName("");
-
-            setPageNumber(1);
-            setPageInput("1");
-
-            setNumPages(0);
-            setZoom(1);
-            setRenderZoom(1);
-        } catch (err) {
-            toast.error(
-                err?.message ||
-                    "Failed to delete PDF."
-            );
-        } finally {
-            setDeleting(false);
-        }
-    };
+    );
+};
 
     // ===========================
-    // PDF Loaded
+    // Document Loaded
     // ===========================
 
     const onDocumentLoadSuccess = ({
-    numPages,
-}) => {
-    setNumPages(numPages);
-};
+        numPages,
+    }) => {
+        setNumPages(numPages);
+    };
 
     // ===========================
     // Page Navigation
     // ===========================
 
     const goToPage = (page) => {
-        const pageValue = Number(page);
+        const pageValue =
+            Number(page);
 
-        if (!Number.isInteger(pageValue)) {
+        if (
+            !Number.isInteger(
+                pageValue
+            )
+        ) {
             toast.error(
                 "Enter a valid page number."
             );
@@ -647,154 +884,202 @@ if (uploadedPdfUrl) {
             return;
         }
 
-                setPageNumber(pageValue);
-                setPageInput(String(pageValue));
+        setPageNumber(
+            pageValue
+        );
+
+        setPageInput(
+            String(pageValue)
+        );
+
+        if (isHost) {
+            socket.emit(
+                "pdf:page-change",
+                {
+                    roomId,
+                    pageNumber:
+                        pageValue,
+                    isHost,
+                }
+            );
+        }
+    };
+
+    const handlePageInputChange =
+        (e) => {
+            setPageInput(
+                e.target.value
+            );
+        };
+
+    const handlePageInputKeyDown =
+        (e) => {
+            if (e.key === "Enter") {
+                goToPage(pageInput);
+            }
+        };
+
+    const handlePreviousPage =
+        () => {
+            if (pageNumber > 1) {
+                const newPage =
+                    pageNumber - 1;
+
+                setPageNumber(
+                    newPage
+                );
+
+                setPageInput(
+                    String(newPage)
+                );
 
                 if (isHost) {
-                    socket.emit("pdf:page-change", {
-                        roomId,
-                        pageNumber: pageValue,
-                        isHost,
-                    });
+                    socket.emit(
+                        "pdf:page-change",
+                        {
+                            roomId,
+                            pageNumber:
+                                newPage,
+                            isHost,
+                        }
+                    );
                 }
-    };
-
-    const handlePageInputChange = (e) => {
-        setPageInput(e.target.value);
-    };
-
-    const handlePageInputKeyDown = (e) => {
-        if (e.key === "Enter") {
-            goToPage(pageInput);
-        }
-    };
-
-    const handlePreviousPage = () => {
-    if (pageNumber > 1) {
-        const newPage = pageNumber - 1;
-
-        setPageNumber(newPage);
-        setPageInput(String(newPage));
-
-        if (isHost) {
-            socket.emit("pdf:page-change", {
-                roomId,
-                pageNumber: newPage,
-                isHost,
-            });
-        }
-    }
-};
+            }
+        };
 
     const handleNextPage = () => {
-    if (pageNumber < numPages) {
-        const newPage = pageNumber + 1;
+        if (
+            pageNumber <
+            numPages
+        ) {
+            const newPage =
+                pageNumber + 1;
 
-        setPageNumber(newPage);
-        setPageInput(String(newPage));
+            setPageNumber(
+                newPage
+            );
 
-        if (isHost) {
-            socket.emit("pdf:page-change", {
-                roomId,
-                pageNumber: newPage,
-                isHost,
-            });
+            setPageInput(
+                String(newPage)
+            );
+
+            if (isHost) {
+                socket.emit(
+                    "pdf:page-change",
+                    {
+                        roomId,
+                        pageNumber:
+                            newPage,
+                        isHost,
+                    }
+                );
+            }
         }
-    }
     };
 
     // ===========================
     // Keyboard Navigation
     // ===========================
-    //
-    // FIX: this effect previously only depended on [pdfUrl, numPages].
-    // handlePreviousPage/handleNextPage/goToPage are plain functions
-    // recreated every render, closing over that render's `pageNumber`.
-    // Because the effect wasn't re-running when `pageNumber` changed,
-    // the attached listener kept calling stale versions of those
-    // handlers — the first arrow-key press worked, but every press
-    // after that recomputed the page from the same stale `pageNumber`
-    // (e.g. always 1 -> 2), so React saw an unchanged value and
-    // nothing happened. Adding `pageNumber` here makes the effect
-    // re-subscribe with fresh closures on every page change.
 
     useEffect(() => {
         if (!pdfUrl) return;
 
-        const handleKeyboardScroll = (e) => {
-            const target = e.target;
+        const handleKeyboardScroll =
+            (e) => {
+                const target =
+                    e.target;
 
-            if (
-                target instanceof HTMLInputElement ||
-                target instanceof HTMLTextAreaElement ||
-                target instanceof HTMLButtonElement ||
-                target.isContentEditable
-            ) {
-                return;
-            }
+                if (
+                    target instanceof
+                        HTMLInputElement ||
+                    target instanceof
+                        HTMLTextAreaElement ||
+                    target instanceof
+                        HTMLButtonElement ||
+                    target.isContentEditable
+                ) {
+                    return;
+                }
 
-            const viewer = viewerRef.current;
+                const viewer =
+                    viewerRef.current;
 
-            if (!viewer) return;
+                if (!viewer) return;
 
-            if (e.key === "ArrowUp") {
-                e.preventDefault();
+                if (
+                    e.key ===
+                    "ArrowUp"
+                ) {
+                    e.preventDefault();
 
-                viewer.scrollBy({
-                    top: -150,
-                    behavior: "smooth",
-                });
+                    viewer.scrollBy({
+                        top: -150,
+                        behavior:
+                            "smooth",
+                    });
 
-                return;
-            }
+                    return;
+                }
 
-            if (e.key === "ArrowDown") {
-                e.preventDefault();
+                if (
+                    e.key ===
+                    "ArrowDown"
+                ) {
+                    e.preventDefault();
 
-                viewer.scrollBy({
-                    top: 150,
-                    behavior: "smooth",
-                });
+                    viewer.scrollBy({
+                        top: 150,
+                        behavior:
+                            "smooth",
+                    });
 
-                return;
-            }
+                    return;
+                }
 
-            if (
-                e.key === "ArrowLeft" ||
-                e.key === "PageUp"
-            ) {
-                e.preventDefault();
+                if (
+                    e.key ===
+                        "ArrowLeft" ||
+                    e.key ===
+                        "PageUp"
+                ) {
+                    e.preventDefault();
 
-                handlePreviousPage();
+                    handlePreviousPage();
 
-                return;
-            }
+                    return;
+                }
 
-            if (
-    e.key === "ArrowRight" ||
-    e.key === "PageDown"
-) {
-    e.preventDefault();
+                if (
+                    e.key ===
+                        "ArrowRight" ||
+                    e.key ===
+                        "PageDown"
+                ) {
+                    e.preventDefault();
 
-    handleNextPage();
+                    handleNextPage();
 
-    return;
-}
+                    return;
+                }
 
-            if (e.key === "Home") {
-    e.preventDefault();
+                if (
+                    e.key === "Home"
+                ) {
+                    e.preventDefault();
 
-    goToPage(1);
+                    goToPage(1);
 
-    return;
-}
+                    return;
+                }
 
-            if (e.key === "End") {
-    e.preventDefault();
+                if (
+                    e.key === "End"
+                ) {
+                    e.preventDefault();
 
-    goToPage(numPages);
-}
-        };
+                    goToPage(numPages);
+                }
+            };
 
         window.addEventListener(
             "keydown",
@@ -807,38 +1092,138 @@ if (uploadedPdfUrl) {
                 handleKeyboardScroll
             );
         };
-    }, [pdfUrl, numPages, pageNumber]);
+    }, [
+        pdfUrl,
+        numPages,
+        pageNumber,
+    ]);
 
     // ===========================
-    // Calculated PDF Width
+    // Calculated Width
     // ===========================
 
     const pdfWidth =
         viewerWidth > 0
             ? Math.max(
                   300,
-                  viewerWidth * renderZoom
+                  viewerWidth *
+                      renderZoom
               )
             : undefined;
 
-    const liveScale = renderZoom > 0 ? zoom / renderZoom : 1;
+    const liveScale =
+        renderZoom > 0
+            ? zoom / renderZoom
+            : 1;
 
     // ===========================
-    // Render
+    // RENDER
     // ===========================
 
     return (
-        <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-slate-800/80 bg-slate-900 shadow-2xl shadow-black/20">
+        <motion.div
+            initial={{
+                opacity: 0,
+                scale: 0.985,
+            }}
+            animate={{
+                opacity: 1,
+                scale: 1,
+            }}
+            transition={{
+                duration: 0.45,
+                ease: [
+                    0.22,
+                    1,
+                    0.36,
+                    1,
+                ],
+            }}
+            className="relative flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-white/[0.07] bg-[#050509] shadow-[0_30px_100px_rgba(0,0,0,.35)]"
+        >
+            {/* ==========================================
+                AMBIENT BACKGROUND
+            ========================================== */}
+
+            <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
+                <motion.div
+                    animate={{
+                        x: [
+                            "-10%",
+                            "20%",
+                            "-10%",
+                        ],
+                        y: [
+                            "0%",
+                            "8%",
+                            "0%",
+                        ],
+                        scale: [
+                            1,
+                            1.15,
+                            1,
+                        ],
+                    }}
+                    transition={{
+                        duration: 18,
+                        repeat: Infinity,
+                        ease: "easeInOut",
+                    }}
+                    className="absolute -left-32 -top-32 h-96 w-96 rounded-full bg-violet-600/[0.035] blur-[120px]"
+                />
+
+                <motion.div
+                    animate={{
+                        x: [
+                            "10%",
+                            "-15%",
+                            "10%",
+                        ],
+                        y: [
+                            "0%",
+                            "-8%",
+                            "0%",
+                        ],
+                    }}
+                    transition={{
+                        duration: 20,
+                        repeat: Infinity,
+                        ease: "easeInOut",
+                    }}
+                    className="absolute -bottom-40 -right-32 h-96 w-96 rounded-full bg-cyan-500/[0.025] blur-[120px]"
+                />
+
+                <div
+                    className="absolute inset-0 opacity-[0.018]"
+                    style={{
+                        backgroundImage:
+                            "radial-gradient(rgba(255,255,255,.8) 1px, transparent 1px)",
+                        backgroundSize:
+                            "26px 26px",
+                    }}
+                />
+            </div>
+
+            {/* ==========================================
+                FILE INPUT
+            ========================================== */}
 
             <input
                 ref={fileInputRef}
                 type="file"
                 accept=".pdf,application/pdf"
                 hidden
-                onChange={handlePdfChange}
+                onChange={
+                    handlePdfChange
+                }
             />
 
-                   <PdfToolbar
+            {/* ==========================================
+                TOOLBAR
+            ========================================== */}
+
+            <div className="relative z-50">
+                <PdfToolbar
                     pdfUrl={pdfUrl}
                     pdfName={pdfName}
                     pageNumber={pageNumber}
@@ -846,167 +1231,548 @@ if (uploadedPdfUrl) {
                     numPages={numPages}
                     zoom={zoom}
                     isHost={isHost}
-
-                    followHost={followHost}
-                    onToggleFollowHost={() => {
-                        setFollowHost((prev) => {
-                            const next = !prev;
-
-                            if (next) {
-                                socket.emit(
-                                    "pdf:request-current-page",
-                                    {
-                                        roomId,
-                                    }
-                                );
-                            }
-
-                            return next;
-                        });
-                    }}
-
                     loading={loading}
                     deleting={deleting}
-                    onUpload={handleUploadClick}
-                    onDelete={handleDeletePdf}
-                    onPreviousPage={handlePreviousPage}
-                    onNextPage={handleNextPage}
-                    onPageInputChange={handlePageInputChange}
-                    onPageInputKeyDown={handlePageInputKeyDown}
-                    onGoToPage={goToPage}
+                    followHost={
+                        followHost
+                    }
+                    onToggleFollowHost={() => {
+                        setFollowHost(
+                            (prev) => {
+                                const next =
+                                    !prev;
+
+                                if (next) {
+                                    socket.emit(
+                                        "pdf:request-current-page",
+                                        {
+                                            roomId,
+                                        }
+                                    );
+                                }
+
+                                return next;
+                            }
+                        );
+                    }}
+                    onUpload={
+                        handleUploadClick
+                    }
+                    onDelete={
+                        handleDeletePdf
+                    }
+                    onPreviousPage={
+                        handlePreviousPage
+                    }
+                    onNextPage={
+                        handleNextPage
+                    }
+                    onPageInputChange={
+                        handlePageInputChange
+                    }
+                    onPageInputKeyDown={
+                        handlePageInputKeyDown
+                    }
+                    onGoToPage={
+                        goToPage
+                    }
                     onZoomOut={() =>
                         setZoom((z) =>
-                            Math.max(0.5, z - 0.1)
+                            Math.max(
+                                0.5,
+                                z - 0.1
+                            )
                         )
                     }
                     onZoomIn={() =>
                         setZoom((z) =>
-                            Math.min(3, z + 0.1)
+                            Math.min(
+                                3,
+                                z + 0.1
+                            )
                         )
                     }
-                    onResetZoom={() => setZoom(1)}
+                    onResetZoom={() =>
+                        setZoom(1)
+                    }
                 />
+            </div>
+
+            {/* ==========================================
+                PDF WORKSPACE
+            ========================================== */}
 
             <div
                 ref={measureRef}
-                className="relative min-h-0 flex-1 overflow-hidden bg-slate-950"
+                className="relative min-h-0 flex-1 overflow-hidden bg-[#030306]"
             >
+                {/* Animated top glow */}
+
+                <motion.div
+                    animate={{
+                        x: [
+                            "-30%",
+                            "130%",
+                        ],
+                    }}
+                    transition={{
+                        duration: 8,
+                        repeat: Infinity,
+                        ease: "linear",
+                    }}
+                    className="pointer-events-none absolute left-0 top-0 z-30 h-px w-1/3 bg-gradient-to-r from-transparent via-violet-400/40 to-transparent blur-sm"
+                />
+
+                {/* ======================================
+                    SCROLL AREA
+                ====================================== */}
 
                 <div
                     ref={viewerRef}
-                    className="absolute inset-0 overflow-auto bg-slate-950 p-2 sm:p-3 md:p-4 lg:p-5"
+                    className="absolute inset-0 overflow-auto bg-[#030306] p-2 sm:p-3 md:p-4 lg:p-5"
                     style={{
-                        overscrollBehavior: "contain",
+                        overscrollBehavior:
+                            "contain",
+                        scrollbarWidth:
+                            "thin",
                     }}
                 >
-
                     {pdfUrl ? (
-                        <div className="flex min-w-full justify-center py-2 sm:py-3">
-
+                        <motion.div
+                            initial={{
+                                opacity: 0,
+                                y: 12,
+                            }}
+                            animate={{
+                                opacity: 1,
+                                y: 0,
+                            }}
+                            transition={{
+                                duration: 0.5,
+                            }}
+                            className="flex min-w-full justify-center py-3 sm:py-5 md:py-7"
+                        >
                             <Document
                                 file={pdfUrl}
                                 onLoadSuccess={
                                     onDocumentLoadSuccess
                                 }
                                 loading={
-                                    <div className="rounded-xl border border-slate-800 bg-slate-900/70 px-6 py-10 text-center text-sm text-slate-400 shadow-lg">
-                                        Loading PDF...
+                                    <div className="flex min-h-[400px] items-center justify-center">
+                                        <div className="relative overflow-hidden rounded-3xl border border-white/[0.07] bg-white/[0.025] px-10 py-12 text-center shadow-2xl backdrop-blur-xl">
+                                            <motion.div
+                                                animate={{
+                                                    rotate: 360,
+                                                }}
+                                                transition={{
+                                                    duration: 2,
+                                                    repeat: Infinity,
+                                                    ease: "linear",
+                                                }}
+                                                className="mx-auto mb-5 h-10 w-10 rounded-full border-2 border-white/10 border-t-violet-400"
+                                            />
+
+                                            <p className="text-sm font-semibold text-zinc-300">
+                                                Loading document
+                                            </p>
+
+                                            <p className="mt-1 text-[10px] text-zinc-600">
+                                                Preparing your collaborative workspace
+                                            </p>
+                                        </div>
                                     </div>
                                 }
                                 error={
-                                    <div className="rounded-xl border border-red-900/40 bg-slate-900/70 px-6 py-10 text-center text-sm text-red-400 shadow-lg">
-                                        Failed to load PDF.
+                                    <div className="flex min-h-[400px] items-center justify-center">
+                                        <div className="rounded-3xl border border-red-400/10 bg-red-500/[0.04] px-10 py-12 text-center">
+                                            <FaFilePdf className="mx-auto mb-4 text-4xl text-red-400/70" />
+
+                                            <p className="text-sm font-bold text-red-300">
+                                                Failed to load PDF
+                                            </p>
+
+                                            <p className="mt-1 text-[10px] text-zinc-600">
+                                                Check the document and try again.
+                                            </p>
+                                        </div>
                                     </div>
                                 }
                             >
-
                                 {pdfWidth && (
-                                <div
-    style={{
-        transform: `scale(${liveScale})`,
-        transformOrigin: "top center",
-    }}
->
-    <div
-        className="relative"
-        style={{
-            width: pdfWidth,
-        }}
-    >
-        <Page
-            pageNumber={pageNumber}
-            width={pdfWidth}
-        />
-
-        <PdfAnnotationLayer
-            roomId={roomId}
-            pageNumber={pageNumber}
-            containerRef={toolbarLayerRef}
-            enabled={canDraw}
-            canDraw={canDraw}
-            currentUser={currentUser}
-            isHost={isHost}
-        />
-    </div>
-</div>
-)}  
-
-                            </Document>
-
-                        </div>
-                    ) : (
-                        <div className="flex h-full min-h-0 items-center justify-center overflow-auto px-4 py-8 sm:px-6">
-
-                            <div className="w-full max-w-md text-center">
-
-                                <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl border border-slate-700 bg-slate-800/80 shadow-xl shadow-black/20 sm:h-20 sm:w-20">
-                                    <FaFilePdf className="text-4xl text-red-500" />
-                                </div>
-
-                                <h2 className="mb-3 text-xl font-bold tracking-tight sm:text-2xl">
-                                    No PDF Loaded
-                                </h2>
-
-                                <p className="mx-auto mb-8 max-w-md text-sm leading-6 text-slate-400 sm:text-base">
-                                    Upload a PDF to study collaboratively with your team.
-                                </p>
-
-                                {isHost ? (
-                                    <button
-                                        type="button"
-                                        disabled={loading}
-                                        onClick={
-                                            handleUploadClick
-                                        }
-                                        className="inline-flex items-center justify-center gap-3 rounded-xl bg-green-500 px-5 py-3 text-sm font-semibold shadow-lg shadow-green-950/30 transition hover:bg-green-600 disabled:cursor-not-allowed disabled:opacity-60 sm:px-6"
+                                    <motion.div
+                                        animate={{
+                                            scale:
+                                                liveScale,
+                                        }}
+                                        transition={{
+                                            type: "spring",
+                                            stiffness: 180,
+                                            damping: 24,
+                                            mass: 0.45,
+                                        }}
+                                        style={{
+                                            transformOrigin:
+                                                "top center",
+                                        }}
                                     >
-                                        <FaUpload />
+                                        <div
+                                            className="relative overflow-hidden rounded-sm shadow-[0_35px_100px_rgba(0,0,0,.55)]"
+                                            style={{
+                                                width: pdfWidth,
+                                            }}
+                                        >
+                                            {/* PDF Page */}
 
-                                        {loading
-                                            ? "Uploading..."
-                                            : "Upload PDF"}
-                                    </button>
-                                ) : (
-                                    <p className="text-sm text-slate-500">
-                                        Waiting for the host to upload study material.
-                                    </p>
+                                            <Page
+                                                pageNumber={
+                                                    pageNumber
+                                                }
+                                                width={
+                                                    pdfWidth
+                                                }
+                                            />
+
+                                            {/* Annotation layer */}
+
+                                            <PdfAnnotationLayer
+                                                roomId={
+                                                    roomId
+                                                }
+                                                pageNumber={
+                                                    pageNumber
+                                                }
+                                                containerRef={
+                                                    toolbarLayerRef
+                                                }
+                                                enabled={
+                                                    canDraw
+                                                }
+                                                canDraw={
+                                                    canDraw
+                                                }
+                                                currentUser={
+                                                    currentUser
+                                                }
+                                                isHost={
+                                                    isHost
+                                                }
+                                            />
+
+                                            {/* Page edge glow */}
+
+                                            <div className="pointer-events-none absolute inset-0 border border-black/10" />
+
+                                            <div className="pointer-events-none absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-black/[0.04] to-transparent" />
+                                        </div>
+                                    </motion.div>
                                 )}
+                            </Document>
+                        </motion.div>
+                    ) : (
+                        /* ==================================
+                           EMPTY STATE
+                        ================================== */
 
-                            </div>
+                        <div className="flex h-full min-h-[500px] items-center justify-center px-4 py-10">
+                            <motion.div
+                                initial={{
+                                    opacity: 0,
+                                    y: 25,
+                                }}
+                                animate={{
+                                    opacity: 1,
+                                    y: 0,
+                                }}
+                                transition={{
+                                    duration: 0.6,
+                                }}
+                                className="relative w-full max-w-xl overflow-hidden rounded-[32px] border border-white/[0.07] bg-white/[0.025] p-8 text-center shadow-[0_30px_100px_rgba(0,0,0,.3)] backdrop-blur-2xl sm:p-12"
+                            >
+                                {/* Decorative glow */}
 
+                                <motion.div
+                                    animate={{
+                                        scale: [
+                                            1,
+                                            1.15,
+                                            1,
+                                        ],
+                                        opacity: [
+                                            0.15,
+                                            0.3,
+                                            0.15,
+                                        ],
+                                    }}
+                                    transition={{
+                                        duration: 4,
+                                        repeat: Infinity,
+                                    }}
+                                    className="absolute left-1/2 top-0 h-40 w-40 -translate-x-1/2 rounded-full bg-violet-500/20 blur-[80px]"
+                                />
+
+                                <div className="relative">
+                                    <motion.div
+                                        animate={{
+                                            y: [
+                                                0,
+                                                -8,
+                                                0,
+                                            ],
+                                            rotate: [
+                                                0,
+                                                2,
+                                                -2,
+                                                0,
+                                            ],
+                                        }}
+                                        transition={{
+                                            duration: 5,
+                                            repeat: Infinity,
+                                            ease: "easeInOut",
+                                        }}
+                                        className="mx-auto flex h-24 w-24 items-center justify-center rounded-[28px] border border-red-400/10 bg-gradient-to-br from-red-500/[0.1] to-violet-500/[0.06] shadow-[0_20px_60px_rgba(239,68,68,.08)]"
+                                    >
+                                        <FaFilePdf className="text-4xl text-red-400/80" />
+                                    </motion.div>
+
+                                    <div className="mt-7">
+                                        <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-violet-400/10 bg-violet-500/[0.05] px-3 py-1.5">
+                                            <FaBookOpen className="text-[8px] text-violet-300" />
+
+                                            <span className="text-[8px] font-bold uppercase tracking-[0.18em] text-violet-300/70">
+                                                Collaborative workspace
+                                            </span>
+                                        </div>
+
+                                        <h2 className="text-2xl font-black tracking-tight text-white sm:text-3xl">
+                                            No PDF Loaded
+                                        </h2>
+
+                                        <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-zinc-500">
+                                            Upload a study document and turn this room into a shared workspace where everyone can read, annotate and learn together.
+                                        </p>
+                                    </div>
+
+                                    {/* Feature pills */}
+
+                                    <div className="mt-7 flex flex-wrap justify-center gap-2">
+                                        {[
+                                            "Live annotations",
+                                            "Page sync",
+                                            "Study together",
+                                        ].map(
+                                            (
+                                                feature,
+                                                index
+                                            ) => (
+                                                <motion.div
+                                                    key={
+                                                        feature
+                                                    }
+                                                    initial={{
+                                                        opacity: 0,
+                                                        scale: 0.8,
+                                                    }}
+                                                    animate={{
+                                                        opacity: 1,
+                                                        scale: 1,
+                                                    }}
+                                                    transition={{
+                                                        delay:
+                                                            0.15 +
+                                                            index *
+                                                                0.08,
+                                                    }}
+                                                    className="rounded-full border border-white/[0.06] bg-white/[0.025] px-3 py-1.5 text-[9px] font-medium text-zinc-600"
+                                                >
+                                                    {feature}
+                                                </motion.div>
+                                            )
+                                        )}
+                                    </div>
+
+                                    {isHost ? (
+                                        <motion.button
+                                            type="button"
+                                            disabled={
+                                                loading
+                                            }
+                                            onClick={
+                                                handleUploadClick
+                                            }
+                                            whileHover={{
+                                                scale: 1.03,
+                                                y: -2,
+                                            }}
+                                            whileTap={{
+                                                scale: 0.97,
+                                            }}
+                                            className="relative mt-8 inline-flex items-center justify-center gap-3 overflow-hidden rounded-2xl bg-gradient-to-r from-violet-500 via-indigo-500 to-cyan-400 px-7 py-3.5 text-sm font-bold text-white shadow-[0_15px_40px_rgba(99,102,241,.22)] disabled:cursor-not-allowed disabled:opacity-50"
+                                        >
+                                            <motion.span
+                                                animate={{
+                                                    x: [
+                                                        "-100%",
+                                                        "200%",
+                                                    ],
+                                                }}
+                                                transition={{
+                                                    duration: 2.5,
+                                                    repeat: Infinity,
+                                                    ease: "linear",
+                                                }}
+                                                className="absolute inset-y-0 w-10 bg-white/20 blur-md"
+                                            />
+
+                                            <FaUpload className="relative" />
+
+                                            <span className="relative">
+                                                {loading
+                                                    ? "Uploading..."
+                                                    : "Upload PDF"}
+                                            </span>
+                                        </motion.button>
+                                    ) : (
+                                        <div className="mt-8 inline-flex items-center gap-2 rounded-full border border-white/[0.06] bg-white/[0.025] px-4 py-2 text-[9px] text-zinc-600">
+                                            <motion.span
+                                                animate={{
+                                                    opacity:
+                                                        [
+                                                            0.3,
+                                                            1,
+                                                            0.3,
+                                                        ],
+                                                }}
+                                                transition={{
+                                                    duration: 2,
+                                                    repeat: Infinity,
+                                                }}
+                                                className="h-1.5 w-1.5 rounded-full bg-violet-400"
+                                            />
+
+                                            Waiting for the host to upload study material
+                                        </div>
+                                    )}
+                                </div>
+                            </motion.div>
                         </div>
                     )}
-
                 </div>
+
+                {/* ==========================================
+                    ANNOTATION TOOLBAR LAYER
+                ========================================== */}
 
                 <div
                     ref={toolbarLayerRef}
-                    className="pointer-events-none absolute inset-0 z-20"
+                    className="pointer-events-none absolute inset-0 z-40"
                 />
 
-            </div>
+                {/* ==========================================
+                    LIVE WORKSPACE STATUS
+                ========================================== */}
 
-        </div>
+                {pdfUrl && (
+                    <AnimatePresence>
+                        <motion.div
+                            initial={{
+                                opacity: 0,
+                                y: 10,
+                            }}
+                            animate={{
+                                opacity: 1,
+                                y: 0,
+                            }}
+                            className="pointer-events-none absolute bottom-4 left-4 z-30 hidden items-center gap-2 rounded-full border border-white/[0.07] bg-[#08080d]/80 px-3 py-2 text-[8px] text-zinc-600 shadow-xl backdrop-blur-xl sm:flex"
+                        >
+                            <motion.span
+                                animate={{
+                                    scale: [
+                                        1,
+                                        1.5,
+                                        1,
+                                    ],
+                                    opacity: [
+                                        0.6,
+                                        0,
+                                        0.6,
+                                    ],
+                                }}
+                                transition={{
+                                    duration: 2,
+                                    repeat: Infinity,
+                                }}
+                                className="h-1.5 w-1.5 rounded-full bg-emerald-400"
+                            />
+
+                            <span>
+                                Live document
+                            </span>
+
+                            <span className="text-zinc-800">
+                                •
+                            </span>
+
+                            <span>
+                                Page{" "}
+                                {pageNumber}{" "}
+                                of{" "}
+                                {numPages}
+                            </span>
+                        </motion.div>
+                    </AnimatePresence>
+                )}
+
+                {/* Host / follower indicator */}
+
+                {pdfUrl && (
+                    <div className="pointer-events-none absolute bottom-4 right-4 z-30 hidden items-center gap-2 rounded-full border border-white/[0.07] bg-[#08080d]/80 px-3 py-2 text-[8px] shadow-xl backdrop-blur-xl md:flex">
+                        <FaUsers className="text-[8px] text-violet-400" />
+
+                        <span className="text-zinc-600">
+                            {isHost
+                                ? "You control the session"
+                                : followHost
+                                  ? "Following host"
+                                  : "Independent view"}
+                        </span>
+
+                        <FaCircle
+                            className={`text-[4px] ${
+                                followHost ||
+                                isHost
+                                    ? "text-emerald-400"
+                                    : "text-zinc-700"
+                            }`}
+                        />
+                    </div>
+                )}
+
+                {/* Scroll progress */}
+
+                {pdfUrl && (
+                    <div className="pointer-events-none absolute bottom-0 left-0 right-0 z-50 h-px bg-white/[0.03]">
+                        <motion.div
+                            animate={{
+                                width:
+                                    numPages >
+                                    0
+                                        ? `${
+                                              (pageNumber /
+                                                  numPages) *
+                                              100
+                                          }%`
+                                        : "0%",
+                            }}
+                            transition={{
+                                duration: 0.35,
+                            }}
+                            className="h-full bg-gradient-to-r from-violet-500 via-indigo-400 to-cyan-400 shadow-[0_0_12px_rgba(139,92,246,.6)]"
+                        />
+                    </div>
+                )}
+            </div>
+        </motion.div>
     );
 };
 

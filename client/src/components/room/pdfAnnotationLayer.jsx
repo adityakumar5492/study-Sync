@@ -5,6 +5,21 @@ import {
     useState,
 } from "react";
 import { createPortal } from "react-dom";
+import {
+    FaPen,
+    FaHighlighter,
+    FaMinus,
+    FaEraser,
+    FaMousePointer,
+    FaUndo,
+    FaRedo,
+    FaTrash,
+    FaTimes,
+    FaDrawPolygon,
+    FaCircle,
+} from "react-icons/fa";
+import { motion, AnimatePresence } from "framer-motion";
+
 import socket from "../../socket/socket";
 
 // ===========================
@@ -72,29 +87,23 @@ const PdfAnnotationLayer = ({
     const currentStrokeRef = useRef(null);
     const lineStartRef = useRef(null);
     const currentUserId =
-    currentUser?._id?.toString();
+        currentUser?._id?.toString();
 
-    // Real-time drawing
     const remoteStrokesRef = useRef(new Map());
     const strokeIdRef = useRef(null);
     const syncTimerRef = useRef(null);
 
-    // Drag-erase
     const erasingRef = useRef(false);
     const erasedInDragRef = useRef(new Set());
-
-    // ===========================
-    // Toolbar
-    // ===========================
 
     const [annotationToolbarOpen, setAnnotationToolbarOpen] =
         useState(false);
 
-    const [activeTool, setActiveTool] = useState(null);
+    const [activeTool, setActiveTool] =
+        useState(null);
 
-    // Portal target.
-    // This is the NON-SCROLLING PDF viewer wrapper.
-    const [portalNode, setPortalNode] = useState(null);
+    const [portalNode, setPortalNode] =
+        useState(null);
 
     useEffect(() => {
         if (containerRef?.current) {
@@ -102,30 +111,17 @@ const PdfAnnotationLayer = ({
         }
     }, [containerRef]);
 
-    // ===========================
-    // PDF page size
-    // ===========================
-
     const [size, setSize] = useState({
         width: 0,
         height: 0,
     });
 
-    // ===========================
-    // Annotation storage
-    // ===========================
-
     const annotationsRef = useRef({});
-
     const [, bumpTick] = useState(0);
 
     const bump = () => {
         bumpTick((n) => n + 1);
     };
-
-    // ===========================
-    // Page data
-    // ===========================
 
     const getPageData = useCallback((page) => {
         if (!annotationsRef.current[page]) {
@@ -138,7 +134,8 @@ const PdfAnnotationLayer = ({
         return annotationsRef.current[page];
     }, []);
 
-    const pageData = getPageData(pageNumber);
+    const pageData =
+        getPageData(pageNumber);
 
     // ===========================
     // Measure page
@@ -197,9 +194,14 @@ const PdfAnnotationLayer = ({
             ctx.globalCompositeOperation =
                 "source-over";
 
-            ctx.strokeStyle = stroke.color;
-            ctx.globalAlpha = stroke.opacity;
-            ctx.lineWidth = stroke.lineWidth;
+            ctx.strokeStyle =
+                stroke.color;
+
+            ctx.globalAlpha =
+                stroke.opacity;
+
+            ctx.lineWidth =
+                stroke.lineWidth;
         }
 
         ctx.beginPath();
@@ -211,7 +213,11 @@ const PdfAnnotationLayer = ({
             points[0].y * height
         );
 
-        for (let i = 1; i < points.length; i++) {
+        for (
+            let i = 1;
+            i < points.length;
+            i++
+        ) {
             ctx.lineTo(
                 points[i].x * width,
                 points[i].y * height
@@ -228,7 +234,8 @@ const PdfAnnotationLayer = ({
     // ===========================
 
     const redraw = useCallback(() => {
-        const canvas = canvasRef.current;
+        const canvas =
+            canvasRef.current;
 
         if (
             !canvas ||
@@ -238,7 +245,8 @@ const PdfAnnotationLayer = ({
             return;
         }
 
-        const ctx = canvas.getContext("2d");
+        const ctx =
+            canvas.getContext("2d");
 
         if (!ctx) return;
 
@@ -264,7 +272,8 @@ const PdfAnnotationLayer = ({
         ctx.scale(dpr, dpr);
 
         const strokes =
-            getPageData(pageNumber).strokes;
+            getPageData(pageNumber)
+                .strokes;
 
         strokes.forEach((stroke) => {
             drawStroke(
@@ -275,8 +284,9 @@ const PdfAnnotationLayer = ({
             );
         });
 
-        // Local stroke currently being drawn
-        if (currentStrokeRef.current) {
+        if (
+            currentStrokeRef.current
+        ) {
             drawStroke(
                 ctx,
                 currentStrokeRef.current,
@@ -285,10 +295,17 @@ const PdfAnnotationLayer = ({
             );
         }
 
-        // Remote strokes currently being drawn
         remoteStrokesRef.current.forEach(
-            ({ pageNumber: remotePage, stroke }) => {
-                if (remotePage !== pageNumber) return;
+            ({
+                pageNumber: remotePage,
+                stroke,
+            }) => {
+                if (
+                    remotePage !==
+                    pageNumber
+                ) {
+                    return;
+                }
 
                 drawStroke(
                     ctx,
@@ -306,15 +323,15 @@ const PdfAnnotationLayer = ({
     ]);
 
     // ===========================
-    // REAL-TIME PDF ANNOTATIONS
+    // Real-time annotations
     // ===========================
 
     useEffect(() => {
         if (!roomId) return;
 
-        // Progressive remote drawing
-        const handleRemoteDrawing = (annotation) => {
-            
+        const handleRemoteDrawing = (
+            annotation
+        ) => {
             if (
                 !annotation ||
                 !annotation.strokeId ||
@@ -334,34 +351,43 @@ const PdfAnnotationLayer = ({
                 remoteStrokesRef.current.delete(
                     strokeId
                 );
-                if (remotePage === pageNumber) {
+
+                if (
+                    remotePage ===
+                    pageNumber
+                ) {
                     redraw();
-            }
+                }
+
                 return;
             } else if (stroke) {
                 remoteStrokesRef.current.set(
                     strokeId,
                     {
-                        pageNumber: remotePage,
+                        pageNumber:
+                            remotePage,
                         stroke,
                     }
                 );
             }
 
-            if (remotePage === pageNumber) {
+            if (
+                remotePage ===
+                pageNumber
+            ) {
                 redraw();
             }
         };
 
-        // Completed remote annotation
         const handleRemoteAnnotation = (
             annotation
         ) => {
             if (!annotation) return;
 
-            const data = getPageData(
-                annotation.pageNumber
-            );
+            const data =
+                getPageData(
+                    annotation.pageNumber
+                );
 
             if (!annotation.stroke) {
                 return;
@@ -381,25 +407,111 @@ const PdfAnnotationLayer = ({
             bump();
         };
 
-        // Remote clear
         const handleRemoteClear = ({
-    pageNumber: clearedPage,
-}) => {
-    if (!clearedPage) return;
+            pageNumber: clearedPage,
+        }) => {
+            if (!clearedPage) return;
 
-    const data = getPageData(clearedPage);
+            const data =
+                getPageData(clearedPage);
 
-    data.strokes = [];
-    data.redo = [];
+            data.strokes = [];
+            data.redo = [];
 
-    remoteStrokesRef.current.clear();
+            remoteStrokesRef.current.clear();
 
-    if (clearedPage === pageNumber) {
-        redraw();
-    }
+            if (
+                clearedPage ===
+                pageNumber
+            ) {
+                redraw();
+            }
 
-    bump();
-};
+            bump();
+        };
+
+        const handleRemoteAnnotationsUpdate =
+            ({
+                pageNumber: updatedPage,
+                action,
+                strokeId,
+                stroke,
+            }) => {
+                if (
+                    !updatedPage ||
+                    !action
+                ) {
+                    return;
+                }
+
+                const data =
+                    getPageData(
+                        updatedPage
+                    );
+
+                if (
+                    action === "remove"
+                ) {
+                    data.strokes =
+                        data.strokes.filter(
+                            (item) =>
+                                item.id !==
+                                strokeId
+                        );
+
+                    data.redo = [];
+                }
+
+                if (
+                    action === "undo" &&
+                    stroke
+                ) {
+                    data.strokes =
+                        data.strokes.filter(
+                            (item) =>
+                                item.id !==
+                                stroke.id
+                        );
+
+                    data.redo.push(
+                        stroke
+                    );
+                }
+
+                if (
+                    action === "redo" &&
+                    stroke
+                ) {
+                    const exists =
+                        data.strokes.some(
+                            (item) =>
+                                item.id ===
+                                stroke.id
+                        );
+
+                    if (!exists) {
+                        data.strokes.push(
+                            stroke
+                        );
+                    }
+
+                    data.redo =
+                        data.redo.filter(
+                            (item) =>
+                                item.id !==
+                                stroke.id
+                        );
+                }
+
+                if (
+                    updatedPage ===
+                    pageNumber
+                ) {
+                    redraw();
+                }
+
+                bump();
+            };
 
         socket.on(
             "pdf:annotation",
@@ -415,67 +527,11 @@ const PdfAnnotationLayer = ({
             "pdf:clear-annotations",
             handleRemoteClear
         );
-    const handleRemoteAnnotationsUpdate = ({
-    pageNumber: updatedPage,
-    action,
-    strokeId,
-    stroke,
-}) => {
-    if (!updatedPage || !action) {
-        return;
-    }
 
-    const data =
-        getPageData(updatedPage);
-
-    if (action === "remove") {
-        data.strokes =
-            data.strokes.filter(
-                (item) =>
-                    item.id !== strokeId
-            );
-
-        data.redo = [];
-    }
-
-    if (action === "undo" && stroke) {
-        data.strokes =
-            data.strokes.filter(
-                (item) =>
-                    item.id !== stroke.id
-            );
-
-        data.redo.push(stroke);
-    }
-
-    if (action === "redo" && stroke) {
-        const exists =
-            data.strokes.some(
-                (item) =>
-                    item.id === stroke.id
-            );
-
-        if (!exists) {
-            data.strokes.push(stroke);
-        }
-
-        data.redo =
-            data.redo.filter(
-                (item) =>
-                    item.id !== stroke.id
-            );
-    }
-
-    if (updatedPage === pageNumber) {
-        redraw();
-    }
-
-    bump();
-};
-    socket.on(
-    "pdf:annotations-update",
-    handleRemoteAnnotationsUpdate
-);
+        socket.on(
+            "pdf:annotations-update",
+            handleRemoteAnnotationsUpdate
+        );
 
         return () => {
             socket.off(
@@ -492,6 +548,7 @@ const PdfAnnotationLayer = ({
                 "pdf:clear-annotations",
                 handleRemoteClear
             );
+
             socket.off(
                 "pdf:annotations-update",
                 handleRemoteAnnotationsUpdate
@@ -509,7 +566,8 @@ const PdfAnnotationLayer = ({
     // ===========================
 
     useEffect(() => {
-        const canvas = canvasRef.current;
+        const canvas =
+            canvasRef.current;
 
         if (
             !canvas ||
@@ -559,7 +617,8 @@ const PdfAnnotationLayer = ({
     const getNormalizedPosition = (
         event
     ) => {
-        const canvas = canvasRef.current;
+        const canvas =
+            canvasRef.current;
 
         if (!canvas) {
             return {
@@ -573,54 +632,73 @@ const PdfAnnotationLayer = ({
 
         return {
             x:
-                (event.clientX - rect.left) /
+                (event.clientX -
+                    rect.left) /
                 rect.width,
 
             y:
-                (event.clientY - rect.top) /
+                (event.clientY -
+                    rect.top) /
                 rect.height,
         };
     };
 
     // ===========================
-    // Erase at a given normalized position.
-    // Used on pointer down AND while dragging,
-    // so the eraser removes every eligible
-    // stroke it passes over, not just the first.
+    // Erase
     // ===========================
 
-    const eraseAtPosition = (position) => {
-        const data = getPageData(pageNumber);
+    const eraseAtPosition = (
+        position
+    ) => {
+        const data =
+            getPageData(pageNumber);
 
         let targetIndex = -1;
 
         for (
-            let i = data.strokes.length - 1;
+            let i =
+                data.strokes.length - 1;
             i >= 0;
             i--
         ) {
-            const stroke = data.strokes[i];
+            const stroke =
+                data.strokes[i];
 
-            // Already removed earlier in this drag.
-            if (erasedInDragRef.current.has(stroke.id)) {
-                continue;
-            }
-
-            // Member can erase only own stroke.
-            // Host can erase any stroke.
             if (
-                !isHost &&
-                stroke.userId !== currentUserId
+                erasedInDragRef.current.has(
+                    stroke.id
+                )
             ) {
                 continue;
             }
 
-            const hit = stroke.points?.some((point) => {
-                const dx = point.x - position.x;
-                const dy = point.y - position.y;
+            if (
+                !isHost &&
+                stroke.userId !==
+                    currentUserId
+            ) {
+                continue;
+            }
 
-                return Math.sqrt(dx * dx + dy * dy) < 0.04;
-            });
+            const hit =
+                stroke.points?.some(
+                    (point) => {
+                        const dx =
+                            point.x -
+                            position.x;
+
+                        const dy =
+                            point.y -
+                            position.y;
+
+                        return (
+                            Math.sqrt(
+                                dx * dx +
+                                    dy * dy
+                            ) < 0.04
+                        );
+                    }
+                );
 
             if (hit) {
                 targetIndex = i;
@@ -632,22 +710,33 @@ const PdfAnnotationLayer = ({
             return;
         }
 
-        const [removedStroke] = data.strokes.splice(
+        const [
+            removedStroke,
+        ] = data.strokes.splice(
             targetIndex,
             1
         );
 
-        erasedInDragRef.current.add(removedStroke.id);
+        erasedInDragRef.current.add(
+            removedStroke.id
+        );
 
         data.redo = [];
 
-        if (roomId && socket.connected) {
-            socket.emit("pdf:annotations-update", {
-                roomId,
-                pageNumber,
-                action: "remove",
-                strokeId: removedStroke.id,
-            });
+        if (
+            roomId &&
+            socket.connected
+        ) {
+            socket.emit(
+                "pdf:annotations-update",
+                {
+                    roomId,
+                    pageNumber,
+                    action: "remove",
+                    strokeId:
+                        removedStroke.id,
+                }
+            );
         }
 
         redraw();
@@ -658,108 +747,125 @@ const PdfAnnotationLayer = ({
     // Pointer Down
     // ===========================
 
-    const handlePointerDown = (event) => {
-    if (
-        !enabled ||
-        !canDraw ||
-        !activeTool ||
-        activeTool === TOOLS.SELECT
-    ) {
-        return;
-    }
-
-    const canvas = canvasRef.current;
-
-    if (!canvas) return;
-
-    const position =
-        getNormalizedPosition(event);
-
-    // =========================================
-    // Eraser
-    // =========================================
-
-    if (activeTool === TOOLS.ERASER) {
-        erasingRef.current = true;
-        erasedInDragRef.current = new Set();
-
-        canvas.setPointerCapture?.(event.pointerId);
-
-        eraseAtPosition(position);
-
-        return;
-    }
-
-    // =========================================
-    // Normal Drawing
-    // =========================================
-
-    drawingRef.current = true;
-
-    const config =
-        getToolConfig(activeTool);
-
-    const strokeId =
-    `${socket.id}-${Date.now()}-${Math.random()}`;
-
-strokeIdRef.current = strokeId;
-
-if (activeTool === TOOLS.LINE) {
-    lineStartRef.current = position;
-
-    currentStrokeRef.current = {
-        id: strokeId,
-        userId: currentUserId,
-        tool: TOOLS.LINE,
-        points: [
-            position,
-            position,
-        ],
-        ...config,
-    };
-} else {
-    currentStrokeRef.current = {
-        id: strokeId,
-        userId: currentUserId,
-        tool: activeTool,
-        points: [position],
-        ...config,
-    };
-}
-
-canvas.setPointerCapture?.(
-    event.pointerId
-);
-
-// Send initial stroke
-if (
-    roomId &&
-    socket.connected
-) {
-    socket.emit(
-        "pdf:annotation-drawing",
-        {
-            roomId,
-            annotation: {
-                strokeId:
-                    strokeIdRef.current,
-                pageNumber,
-                phase: "start",
-                stroke: {
-                    ...currentStrokeRef.current,
-                    points: [
-                        ...currentStrokeRef
-                            .current
-                            .points,
-                    ],
-                },
-            },
+    const handlePointerDown = (
+        event
+    ) => {
+        if (
+            !enabled ||
+            !canDraw ||
+            !activeTool ||
+            activeTool ===
+                TOOLS.SELECT
+        ) {
+            return;
         }
-    );
-}
 
-redraw();
-};
+        const canvas =
+            canvasRef.current;
+
+        if (!canvas) return;
+
+        const position =
+            getNormalizedPosition(
+                event
+            );
+
+        if (
+            activeTool ===
+            TOOLS.ERASER
+        ) {
+            erasingRef.current = true;
+
+            erasedInDragRef.current =
+                new Set();
+
+            canvas.setPointerCapture?.(
+                event.pointerId
+            );
+
+            eraseAtPosition(
+                position
+            );
+
+            return;
+        }
+
+        drawingRef.current = true;
+
+        const config =
+            getToolConfig(
+                activeTool
+            );
+
+        const strokeId =
+            `${socket.id}-${Date.now()}-${Math.random()}`;
+
+        strokeIdRef.current =
+            strokeId;
+
+        if (
+            activeTool ===
+            TOOLS.LINE
+        ) {
+            lineStartRef.current =
+                position;
+
+            currentStrokeRef.current =
+                {
+                    id: strokeId,
+                    userId:
+                        currentUserId,
+                    tool: TOOLS.LINE,
+                    points: [
+                        position,
+                        position,
+                    ],
+                    ...config,
+                };
+        } else {
+            currentStrokeRef.current =
+                {
+                    id: strokeId,
+                    userId:
+                        currentUserId,
+                    tool: activeTool,
+                    points: [position],
+                    ...config,
+                };
+        }
+
+        canvas.setPointerCapture?.(
+            event.pointerId
+        );
+
+        if (
+            roomId &&
+            socket.connected
+        ) {
+            socket.emit(
+                "pdf:annotation-drawing",
+                {
+                    roomId,
+                    annotation: {
+                        strokeId:
+                            strokeIdRef.current,
+                        pageNumber,
+                        phase: "start",
+                        stroke: {
+                            ...currentStrokeRef.current,
+                            points: [
+                                ...currentStrokeRef
+                                    .current
+                                    .points,
+                            ],
+                        },
+                    },
+                }
+            );
+        }
+
+        redraw();
+    };
 
     // ===========================
     // Pointer Move
@@ -769,7 +875,10 @@ redraw();
         event
     ) => {
         if (erasingRef.current) {
-            const position = getNormalizedPosition(event);
+            const position =
+                getNormalizedPosition(
+                    event
+                );
 
             eraseAtPosition(position);
 
@@ -784,55 +893,66 @@ redraw();
         }
 
         const position =
-            getNormalizedPosition(event);
+            getNormalizedPosition(
+                event
+            );
 
-        if (activeTool === TOOLS.LINE) {
-            currentStrokeRef.current.points = [
-                lineStartRef.current,
-                position,
-            ];
+        if (
+            activeTool ===
+            TOOLS.LINE
+        ) {
+            currentStrokeRef.current.points =
+                [
+                    lineStartRef.current,
+                    position,
+                ];
         } else {
             currentStrokeRef.current.points.push(
                 position
             );
         }
 
-        // Throttle realtime updates
         if (
-    roomId &&
-    socket.connected
-) {
-    if (!syncTimerRef.current) {
-        syncTimerRef.current = setTimeout(() => {
-            syncTimerRef.current = null;
+            roomId &&
+            socket.connected
+        ) {
+            if (
+                !syncTimerRef.current
+            ) {
+                syncTimerRef.current =
+                    setTimeout(() => {
+                        syncTimerRef.current =
+                            null;
 
-            if (!currentStrokeRef.current) {
-                return;
+                        if (
+                            !currentStrokeRef.current
+                        ) {
+                            return;
+                        }
+
+                        socket.emit(
+                            "pdf:annotation-drawing",
+                            {
+                                roomId,
+                                annotation: {
+                                    strokeId:
+                                        strokeIdRef.current,
+                                    pageNumber,
+                                    phase: "move",
+                                    stroke: {
+                                        ...currentStrokeRef.current,
+                                        points: [
+                                            ...currentStrokeRef
+                                                .current
+                                                .points,
+                                        ],
+                                    },
+                                },
+                            }
+                        );
+                    }, 30);
             }
-
-            socket.emit(
-                "pdf:annotation-drawing",
-                {
-                    roomId,
-                    annotation: {
-                        strokeId:
-                            strokeIdRef.current,
-                        pageNumber,
-                        phase: "move",
-                        stroke: {
-                            ...currentStrokeRef.current,
-                            points: [
-                                ...currentStrokeRef
-                                    .current
-                                    .points,
-                            ],
-                        },
-                    },
-                }
-            );
-        }, 30);
-    }
-}
+        }
 
         redraw();
     };
@@ -846,7 +966,9 @@ redraw();
     ) => {
         if (erasingRef.current) {
             erasingRef.current = false;
-            erasedInDragRef.current = new Set();
+
+            erasedInDragRef.current =
+                new Set();
 
             canvasRef.current?.releasePointerCapture?.(
                 event.pointerId
@@ -861,18 +983,20 @@ redraw();
 
         drawingRef.current = false;
 
-        // Send the latest points before ending
         if (
             roomId &&
             socket.connected &&
             currentStrokeRef.current
         ) {
-            if (syncTimerRef.current) {
+            if (
+                syncTimerRef.current
+            ) {
                 clearTimeout(
                     syncTimerRef.current
                 );
 
-                syncTimerRef.current = null;
+                syncTimerRef.current =
+                    null;
             }
 
             socket.emit(
@@ -917,18 +1041,25 @@ redraw();
         const stroke =
             currentStrokeRef.current;
 
-        currentStrokeRef.current = null;
-        lineStartRef.current = null;
+        currentStrokeRef.current =
+            null;
+
+        lineStartRef.current =
+            null;
 
         if (
             !stroke ||
-            stroke.points.length === 0
+            stroke.points.length ===
+                0
         ) {
             redraw();
             return;
         }
 
-        if (stroke.points.length === 1) {
+        if (
+            stroke.points.length ===
+            1
+        ) {
             stroke.points.push({
                 ...stroke.points[0],
             });
@@ -941,7 +1072,6 @@ redraw();
 
         data.redo = [];
 
-        // Existing completed annotation sync
         if (
             roomId &&
             socket.connected
@@ -966,157 +1096,205 @@ redraw();
     // Undo
     // ===========================
 
-const undo = () => {
-    const data = getPageData(pageNumber);
+    const undo = () => {
+        const data =
+            getPageData(pageNumber);
 
-    if (data.strokes.length === 0) {
-        return;
-    }
+        if (
+            data.strokes.length ===
+            0
+        ) {
+            return;
+        }
 
-    let index = -1;
+        let index = -1;
 
-    if (isHost) {
-        index = data.strokes.length - 1;
-    } else {
-        for (let i = data.strokes.length - 1; i >= 0; i--) {
-            if (
-                data.strokes[i]?.userId ===
-                currentUserId
+        if (isHost) {
+            index =
+                data.strokes.length - 1;
+        } else {
+            for (
+                let i =
+                    data.strokes.length -
+                    1;
+                i >= 0;
+                i--
             ) {
-                index = i;
-                break;
+                if (
+                    data.strokes[i]
+                        ?.userId ===
+                    currentUserId
+                ) {
+                    index = i;
+                    break;
+                }
             }
         }
-    }
 
-    if (index === -1) {
-        return;
-    }
+        if (index === -1) {
+            return;
+        }
 
-    const [removedStroke] =
-        data.strokes.splice(index, 1);
+        const [
+            removedStroke,
+        ] = data.strokes.splice(
+            index,
+            1
+        );
 
-    data.redo.push(removedStroke);
+        data.redo.push(
+            removedStroke
+        );
 
-    if (roomId && socket.connected) {
-        socket.emit(
-    "pdf:annotations-update",
-    {
-        roomId,
-        pageNumber,
-        action: "undo",
-        strokeId: removedStroke.id,
-    }
-);
-    }
+        if (
+            roomId &&
+            socket.connected
+        ) {
+            socket.emit(
+                "pdf:annotations-update",
+                {
+                    roomId,
+                    pageNumber,
+                    action: "undo",
+                    strokeId:
+                        removedStroke.id,
+                }
+            );
+        }
 
-    redraw();
-    bump();
-};
+        redraw();
+        bump();
+    };
 
     // ===========================
     // Redo
     // ===========================
 
-const redo = () => {
-    const data = getPageData(pageNumber);
+    const redo = () => {
+        const data =
+            getPageData(pageNumber);
 
-    if (data.redo.length === 0) {
-        return;
-    }
+        if (
+            data.redo.length === 0
+        ) {
+            return;
+        }
 
-    let index = -1;
+        let index = -1;
 
-    if (isHost) {
-        index = data.redo.length - 1;
-    } else {
-        for (let i = data.redo.length - 1; i >= 0; i--) {
-            if (
-                data.redo[i]?.userId ===
-                currentUserId
+        if (isHost) {
+            index =
+                data.redo.length - 1;
+        } else {
+            for (
+                let i =
+                    data.redo.length - 1;
+                i >= 0;
+                i--
             ) {
-                index = i;
-                break;
+                if (
+                    data.redo[i]
+                        ?.userId ===
+                    currentUserId
+                ) {
+                    index = i;
+                    break;
+                }
             }
         }
-    }
 
-    if (index === -1) {
-        return;
-    }
+        if (index === -1) {
+            return;
+        }
 
-    const [stroke] =
-        data.redo.splice(index, 1);
+        const [stroke] =
+            data.redo.splice(
+                index,
+                1
+            );
 
-    data.strokes.push(stroke);
+        data.strokes.push(stroke);
 
-    if (roomId && socket.connected) {
-        socket.emit(
-    "pdf:annotations-update",
-    {
-        roomId,
-        pageNumber,
-        action: "redo",
-        strokeId: stroke.id,
-    }
-);
-    }
+        if (
+            roomId &&
+            socket.connected
+        ) {
+            socket.emit(
+                "pdf:annotations-update",
+                {
+                    roomId,
+                    pageNumber,
+                    action: "redo",
+                    strokeId:
+                        stroke.id,
+                }
+            );
+        }
 
-    redraw();
-    bump();
-};
+        redraw();
+        bump();
+    };
 
     // ===========================
     // Clear
     // ===========================
 
-const clearAnnotations = () => {
-    // Only host can clear everyone's annotations.
-    if (!isHost) {
-        return;
-    }
+    const clearAnnotations = () => {
+        if (!isHost) {
+            return;
+        }
 
-    const data =
-        getPageData(pageNumber);
+        const data =
+            getPageData(pageNumber);
 
-    if (data.strokes.length === 0) {
-        return;
-    }
+        if (
+            data.strokes.length ===
+            0
+        ) {
+            return;
+        }
 
-    data.strokes = [];
-    data.redo = [];
+        data.strokes = [];
+        data.redo = [];
 
-    currentStrokeRef.current = null;
-    lineStartRef.current = null;
-    drawingRef.current = false;
+        currentStrokeRef.current =
+            null;
 
-    if (syncTimerRef.current) {
-        clearTimeout(
+        lineStartRef.current =
+            null;
+
+        drawingRef.current = false;
+
+        if (
             syncTimerRef.current
-        );
+        ) {
+            clearTimeout(
+                syncTimerRef.current
+            );
 
-        syncTimerRef.current = null;
-    }
+            syncTimerRef.current =
+                null;
+        }
 
-    if (
-        roomId &&
-        socket.connected
-    ) {
-        socket.emit(
-            "pdf:clear-annotations",
-            {
-                roomId,
-                pageNumber,
-            }
-        );
-    }
+        if (
+            roomId &&
+            socket.connected
+        ) {
+            socket.emit(
+                "pdf:clear-annotations",
+                {
+                    roomId,
+                    pageNumber,
+                }
+            );
+        }
 
-    redraw();
-    bump();
-};
+        redraw();
+        bump();
+    };
 
     // ===========================
-    // Toolbar toggle
+    // Toolbar
     // ===========================
 
     const toggleToolbar = () => {
@@ -1133,11 +1311,9 @@ const clearAnnotations = () => {
         );
     };
 
-    // ===========================
-    // Select tool
-    // ===========================
-
-    const selectTool = (toolName) => {
+    const selectTool = (
+        toolName
+    ) => {
         setActiveTool((current) =>
             current === toolName
                 ? null
@@ -1145,175 +1321,344 @@ const clearAnnotations = () => {
         );
     };
 
-    // ===========================
-    // Button state
-    // ===========================
+    const canUndo =
+        isHost ||
+        pageData.strokes.some(
+            (stroke) =>
+                stroke.userId ===
+                currentUserId
+        );
 
-const canUndo =
-    isHost ||
-    pageData.strokes.some(
-        (stroke) =>
-            stroke.userId === currentUserId
-    );
-
-const canRedo =
-    isHost ||
-    pageData.redo.some(
-        (stroke) =>
-            stroke.userId === currentUserId
-    );
+    const canRedo =
+        isHost ||
+        pageData.redo.some(
+            (stroke) =>
+                stroke.userId ===
+                currentUserId
+        );
 
     // ===========================
-    // Button style
+    // Premium tool button
     // ===========================
 
     const toolButtonClass = (
         toolName
     ) =>
-        `flex h-9 w-9 items-center justify-center rounded-lg text-base transition ${
+        `group relative flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl border text-sm transition-all duration-300 ${
             activeTool === toolName
-                ? "bg-green-500 text-white"
-                : "bg-slate-800 text-slate-300 hover:bg-slate-700"
+                ? "border-violet-400/30 bg-gradient-to-br from-violet-500 to-cyan-400 text-white shadow-[0_8px_25px_rgba(139,92,246,.25)]"
+                : "border-white/[0.07] bg-white/[0.04] text-zinc-400 hover:border-white/[0.14] hover:bg-white/[0.08] hover:text-white"
         }`;
+
+    const toolIcon = (tool) => {
+        if (tool === TOOLS.SELECT)
+            return <FaMousePointer />;
+
+        if (tool === TOOLS.PEN)
+            return <FaPen />;
+
+        if (
+            tool ===
+            TOOLS.HIGHLIGHTER
+        )
+            return <FaHighlighter />;
+
+        if (tool === TOOLS.LINE)
+            return <FaMinus />;
+
+        return <FaEraser />;
+    };
 
     // ===========================
     // Toolbar
     // ===========================
 
     const toolbar = (
-        <div className="pointer-events-auto absolute right-4 top-3 z-[100] flex items-start gap-1.5">
+        <div className="pointer-events-auto absolute right-4 top-3 z-[100] flex items-start gap-2">
 
-            {/* Expanded tools */}
-            {annotationToolbarOpen && (
-                <div className="flex items-center gap-1.5 rounded-xl border border-slate-700 bg-slate-900/95 p-1.5 shadow-2xl backdrop-blur-sm">
+            <AnimatePresence>
+                {annotationToolbarOpen && (
+                    <motion.div
+                        initial={{
+                            opacity: 0,
+                            x: 20,
+                            scale: 0.92,
+                            filter: "blur(6px)",
+                        }}
+                        animate={{
+                            opacity: 1,
+                            x: 0,
+                            scale: 1,
+                            filter: "blur(0px)",
+                        }}
+                        exit={{
+                            opacity: 0,
+                            x: 20,
+                            scale: 0.92,
+                            filter: "blur(6px)",
+                        }}
+                        transition={{
+                            duration: 0.25,
+                            ease: [
+                                0.22,
+                                1,
+                                0.36,
+                                1,
+                            ],
+                        }}
+                        className="flex items-center gap-1.5 rounded-2xl border border-white/[0.09] bg-[#09090f]/90 p-1.5 shadow-[0_20px_70px_rgba(0,0,0,.45)] backdrop-blur-2xl"
+                    >
+                        {/* SELECT */}
 
-                    {/* Select */}
-                    <button
-                        type="button"
-                        onClick={() =>
-                            selectTool(
+                        <motion.button
+                            type="button"
+                            whileHover={{
+                                scale: 1.08,
+                                y: -2,
+                            }}
+                            whileTap={{
+                                scale: 0.92,
+                            }}
+                            onClick={() =>
+                                selectTool(
+                                    TOOLS.SELECT
+                                )
+                            }
+                            title="Select / normal PDF mode"
+                            aria-label="Select / normal PDF mode"
+                            className={toolButtonClass(
                                 TOOLS.SELECT
-                            )
-                        }
-                        title="Select / normal PDF mode"
-                        aria-label="Select / normal PDF mode"
-                        className={toolButtonClass(
-                            TOOLS.SELECT
-                        )}
-                    >
-                        🖱️
-                    </button>
+                            )}
+                        >
+                            {toolIcon(
+                                TOOLS.SELECT
+                            )}
+                        </motion.button>
 
-                    {/* Pen */}
-                    <button
-                        type="button"
-                        onClick={() =>
-                            selectTool(
+                        {/* PEN */}
+
+                        <motion.button
+                            type="button"
+                            whileHover={{
+                                scale: 1.08,
+                                y: -2,
+                            }}
+                            whileTap={{
+                                scale: 0.92,
+                            }}
+                            onClick={() =>
+                                selectTool(
+                                    TOOLS.PEN
+                                )
+                            }
+                            title="Pen"
+                            aria-label="Pen"
+                            className={toolButtonClass(
                                 TOOLS.PEN
-                            )
-                        }
-                        title="Pen"
-                        aria-label="Pen"
-                        className={toolButtonClass(
-                            TOOLS.PEN
-                        )}
-                    >
-                        ✏️
-                    </button>
+                            )}
+                        >
+                            {toolIcon(
+                                TOOLS.PEN
+                            )}
 
-                    {/* Highlighter */}
-                    <button
-                        type="button"
-                        onClick={() =>
-                            selectTool(
+                            {activeTool ===
+                                TOOLS.PEN && (
+                                <motion.span
+                                    layoutId="active-tool"
+                                    className="absolute bottom-1 h-0.5 w-3 rounded-full bg-white"
+                                />
+                            )}
+                        </motion.button>
+
+                        {/* HIGHLIGHTER */}
+
+                        <motion.button
+                            type="button"
+                            whileHover={{
+                                scale: 1.08,
+                                y: -2,
+                            }}
+                            whileTap={{
+                                scale: 0.92,
+                            }}
+                            onClick={() =>
+                                selectTool(
+                                    TOOLS.HIGHLIGHTER
+                                )
+                            }
+                            title="Highlighter"
+                            aria-label="Highlighter"
+                            className={toolButtonClass(
                                 TOOLS.HIGHLIGHTER
-                            )
-                        }
-                        title="Highlighter"
-                        aria-label="Highlighter"
-                        className={toolButtonClass(
-                            TOOLS.HIGHLIGHTER
-                        )}
-                    >
-                        🖍️
-                    </button>
+                            )}
+                        >
+                            {toolIcon(
+                                TOOLS.HIGHLIGHTER
+                            )}
 
-                    {/* Line */}
-                    <button
-                        type="button"
-                        onClick={() =>
-                            selectTool(
+                            {activeTool ===
+                                TOOLS.HIGHLIGHTER && (
+                                <motion.span
+                                    layoutId="active-tool"
+                                    className="absolute bottom-1 h-0.5 w-3 rounded-full bg-white"
+                                />
+                            )}
+                        </motion.button>
+
+                        {/* LINE */}
+
+                        <motion.button
+                            type="button"
+                            whileHover={{
+                                scale: 1.08,
+                                y: -2,
+                            }}
+                            whileTap={{
+                                scale: 0.92,
+                            }}
+                            onClick={() =>
+                                selectTool(
+                                    TOOLS.LINE
+                                )
+                            }
+                            title="Line"
+                            aria-label="Line"
+                            className={toolButtonClass(
                                 TOOLS.LINE
-                            )
-                        }
-                        title="Line"
-                        aria-label="Line"
-                        className={toolButtonClass(
-                            TOOLS.LINE
-                        )}
-                    >
-                        📏
-                    </button>
+                            )}
+                        >
+                            {toolIcon(
+                                TOOLS.LINE
+                            )}
 
-                    {/* Eraser */}
-                    <button
-                        type="button"
-                        onClick={() =>
-                            selectTool(
+                            {activeTool ===
+                                TOOLS.LINE && (
+                                <motion.span
+                                    layoutId="active-tool"
+                                    className="absolute bottom-1 h-0.5 w-3 rounded-full bg-white"
+                                />
+                            )}
+                        </motion.button>
+
+                        {/* ERASER */}
+
+                        <motion.button
+                            type="button"
+                            whileHover={{
+                                scale: 1.08,
+                                y: -2,
+                            }}
+                            whileTap={{
+                                scale: 0.92,
+                            }}
+                            onClick={() =>
+                                selectTool(
+                                    TOOLS.ERASER
+                                )
+                            }
+                            title="Eraser"
+                            aria-label="Eraser"
+                            className={toolButtonClass(
                                 TOOLS.ERASER
-                            )
-                        }
-                        title="Eraser"
-                        aria-label="Eraser"
-                        className={toolButtonClass(
-                            TOOLS.ERASER
-                        )}
-                    >
-                        🧹
-                    </button>
+                            )}
+                        >
+                            {toolIcon(
+                                TOOLS.ERASER
+                            )}
 
-                    <span className="mx-1 h-6 w-px bg-slate-700" />
+                            {activeTool ===
+                                TOOLS.ERASER && (
+                                <motion.span
+                                    layoutId="active-tool"
+                                    className="absolute bottom-1 h-0.5 w-3 rounded-full bg-white"
+                                />
+                            )}
+                        </motion.button>
 
-                    {/* Undo */}
-                    <button
-                        type="button"
-                        onClick={undo}
-                        disabled={!canUndo}
-                        title="Undo"
-                        aria-label="Undo"
-                        className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-800 text-base text-slate-300 transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-40"
-                    >
-                        ↩️
-                    </button>
+                        <span className="mx-1 h-7 w-px bg-white/[0.07]" />
 
-                    {/* Redo */}
-                    <button
-                        type="button"
-                        onClick={redo}
-                        disabled={!canRedo}
-                        title="Redo"
-                        aria-label="Redo"
-                        className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-800 text-base text-slate-300 transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-40"
-                    >
-                        ↪️
-                    </button>
+                        {/* UNDO */}
 
-                    {/* Clear */}
-                    <button
-                        type="button"
-                        onClick={clearAnnotations}
-                        title="Clear annotations"
-                        aria-label="Clear annotations"
-                        className="flex h-9 w-9 items-center justify-center rounded-lg bg-red-500/20 text-base text-red-400 transition hover:bg-red-500/30"
-                    >
-                        🗑️
-                    </button>
-                </div>
-            )}
+                        <motion.button
+                            type="button"
+                            whileHover={{
+                                scale: 1.08,
+                                y: -2,
+                            }}
+                            whileTap={{
+                                scale: 0.92,
+                            }}
+                            onClick={undo}
+                            disabled={!canUndo}
+                            title="Undo"
+                            aria-label="Undo"
+                            className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/[0.07] bg-white/[0.04] text-sm text-zinc-400 transition hover:border-violet-400/20 hover:bg-violet-500/10 hover:text-violet-300 disabled:cursor-not-allowed disabled:opacity-25"
+                        >
+                            <FaUndo />
+                        </motion.button>
 
-            {/* Toggle */}
-            <button
+                        {/* REDO */}
+
+                        <motion.button
+                            type="button"
+                            whileHover={{
+                                scale: 1.08,
+                                y: -2,
+                            }}
+                            whileTap={{
+                                scale: 0.92,
+                            }}
+                            onClick={redo}
+                            disabled={!canRedo}
+                            title="Redo"
+                            aria-label="Redo"
+                            className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/[0.07] bg-white/[0.04] text-sm text-zinc-400 transition hover:border-cyan-400/20 hover:bg-cyan-500/10 hover:text-cyan-300 disabled:cursor-not-allowed disabled:opacity-25"
+                        >
+                            <FaRedo />
+                        </motion.button>
+
+                        {/* CLEAR */}
+
+                        <motion.button
+                            type="button"
+                            whileHover={{
+                                scale: 1.08,
+                                y: -2,
+                            }}
+                            whileTap={{
+                                scale: 0.92,
+                            }}
+                            onClick={
+                                clearAnnotations
+                            }
+                            disabled={!isHost}
+                            title={
+                                isHost
+                                    ? "Clear annotations"
+                                    : "Only the host can clear annotations"
+                            }
+                            aria-label="Clear annotations"
+                            className="flex h-10 w-10 items-center justify-center rounded-xl border border-red-400/10 bg-red-500/[0.06] text-sm text-red-400 transition hover:border-red-400/20 hover:bg-red-500/15 hover:text-red-300 disabled:cursor-not-allowed disabled:opacity-20"
+                        >
+                            <FaTrash />
+                        </motion.button>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* ==========================================
+                TOOLBAR TOGGLE
+            ========================================== */}
+
+            <motion.button
                 type="button"
+                whileHover={{
+                    scale: 1.08,
+                    y: -2,
+                }}
+                whileTap={{
+                    scale: 0.92,
+                }}
                 onClick={toggleToolbar}
                 title={
                     annotationToolbarOpen
@@ -1328,16 +1673,55 @@ const canRedo =
                 aria-expanded={
                     annotationToolbarOpen
                 }
-                className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-700 text-base shadow-xl transition ${
+                className={`relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-2xl border shadow-[0_12px_40px_rgba(0,0,0,.35)] backdrop-blur-2xl transition-all duration-300 ${
                     annotationToolbarOpen
-                        ? "bg-green-500 text-white"
-                        : "bg-slate-900/95 text-slate-300 hover:bg-slate-800"
+                        ? "border-violet-400/30 bg-gradient-to-br from-violet-500 to-cyan-400 text-white"
+                        : "border-white/[0.09] bg-[#09090f]/90 text-zinc-300 hover:border-white/[0.15] hover:bg-[#11111a]"
                 }`}
             >
-                {annotationToolbarOpen
-                    ? "✕"
-                    : "✏️"}
-            </button>
+                <motion.span
+                    animate={
+                        annotationToolbarOpen
+                            ? {
+                                  rotate: 180,
+                              }
+                            : {
+                                  rotate: 0,
+                              }
+                    }
+                    transition={{
+                        duration: 0.35,
+                    }}
+                >
+                    {annotationToolbarOpen ? (
+                        <FaTimes />
+                    ) : (
+                        <FaDrawPolygon />
+                    )}
+                </motion.span>
+
+                {!annotationToolbarOpen && (
+                    <motion.span
+                        animate={{
+                            scale: [
+                                1,
+                                1.5,
+                                1,
+                            ],
+                            opacity: [
+                                0.5,
+                                0,
+                                0.5,
+                            ],
+                        }}
+                        transition={{
+                            duration: 2.5,
+                            repeat: Infinity,
+                        }}
+                        className="absolute inset-0 rounded-2xl border border-violet-400/20"
+                    />
+                )}
+            </motion.button>
         </div>
     );
 
@@ -1348,15 +1732,150 @@ const canRedo =
     return (
         <div
             ref={rootRef}
-            className="pointer-events-none absolute inset-0"
+            className="pointer-events-none absolute inset-0 overflow-hidden"
         >
-            {/* Annotation canvas */}
+            {/* ==========================================
+                PREMIUM ANNOTATION ATMOSPHERE
+            ========================================== */}
+
+            <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
+                <motion.div
+                    animate={{
+                        x: [0, 20, -15, 0],
+                        y: [0, -15, 20, 0],
+                        scale: [
+                            1,
+                            1.08,
+                            0.96,
+                            1,
+                        ],
+                    }}
+                    transition={{
+                        duration: 16,
+                        repeat: Infinity,
+                        ease: "easeInOut",
+                    }}
+                    className="absolute -left-28 -top-28 h-64 w-64 rounded-full bg-violet-500/[0.035] blur-[100px]"
+                />
+
+                <motion.div
+                    animate={{
+                        x: [0, -20, 15, 0],
+                        y: [0, 20, -15, 0],
+                        scale: [
+                            1,
+                            0.94,
+                            1.08,
+                            1,
+                        ],
+                    }}
+                    transition={{
+                        duration: 18,
+                        repeat: Infinity,
+                        ease: "easeInOut",
+                    }}
+                    className="absolute -bottom-28 -right-28 h-64 w-64 rounded-full bg-cyan-400/[0.025] blur-[100px]"
+                />
+
+                <div
+                    className="absolute inset-0 opacity-[0.018]"
+                    style={{
+                        backgroundImage:
+                            "radial-gradient(rgba(139,92,246,.8) 1px, transparent 1px)",
+                        backgroundSize:
+                            "24px 24px",
+                    }}
+                />
+            </div>
+
+            {/* ==========================================
+                LIVE ANNOTATION STATUS
+            ========================================== */}
+
+            <AnimatePresence>
+                {activeTool &&
+                    activeTool !==
+                        TOOLS.SELECT && (
+                        <motion.div
+                            initial={{
+                                opacity: 0,
+                                x: -15,
+                                y: -8,
+                            }}
+                            animate={{
+                                opacity: 1,
+                                x: 0,
+                                y: 0,
+                            }}
+                            exit={{
+                                opacity: 0,
+                                x: -10,
+                            }}
+                            className="pointer-events-none absolute left-4 top-3 z-[80] flex items-center gap-2 rounded-xl border border-white/[0.08] bg-[#08080d]/85 px-3 py-2 shadow-[0_12px_40px_rgba(0,0,0,.3)] backdrop-blur-2xl"
+                        >
+                            <span className="relative flex h-2 w-2">
+                                <motion.span
+                                    animate={{
+                                        scale: [
+                                            1,
+                                            1.7,
+                                            1,
+                                        ],
+                                        opacity: [
+                                            0.7,
+                                            0,
+                                            0.7,
+                                        ],
+                                    }}
+                                    transition={{
+                                        duration: 1.8,
+                                        repeat: Infinity,
+                                    }}
+                                    className="absolute inset-0 rounded-full bg-violet-400"
+                                />
+
+                                <span className="relative h-2 w-2 rounded-full bg-violet-400 shadow-[0_0_10px_rgba(167,139,250,.8)]" />
+                            </span>
+
+                            <span className="text-[9px] font-bold text-zinc-300">
+                                {activeTool ===
+                                    TOOLS.PEN &&
+                                    "Pen active"}
+
+                                {activeTool ===
+                                    TOOLS.HIGHLIGHTER &&
+                                    "Highlighter active"}
+
+                                {activeTool ===
+                                    TOOLS.LINE &&
+                                    "Line tool active"}
+
+                                {activeTool ===
+                                    TOOLS.ERASER &&
+                                    "Eraser active"}
+                            </span>
+
+                            <span className="text-zinc-700">
+                                •
+                            </span>
+
+                            <span className="text-[8px] text-zinc-600">
+                                Page{" "}
+                                {pageNumber}
+                            </span>
+                        </motion.div>
+                    )}
+            </AnimatePresence>
+
+            {/* ==========================================
+                ANNOTATION CANVAS
+            ========================================== */}
+
             <canvas
                 ref={canvasRef}
                 className="absolute left-0 top-0 z-20"
                 style={{
                     touchAction: "none",
-
                     pointerEvents:
                         enabled &&
                         canDraw &&
@@ -1380,13 +1899,60 @@ const canRedo =
                 }
             />
 
-            {/* Toolbar stays in the
-                non-scrolling viewer wrapper */}
+            {/* ==========================================
+                PORTALED TOOLBAR
+            ========================================== */}
+
             {portalNode &&
                 createPortal(
                     toolbar,
                     portalNode
                 )}
+
+            {/* ==========================================
+                LIVE SYNC INDICATOR
+            ========================================== */}
+
+            <div className="pointer-events-none absolute bottom-4 left-4 z-[60] hidden items-center gap-2 rounded-full border border-white/[0.06] bg-[#08080d]/75 px-3 py-1.5 text-[8px] text-zinc-600 backdrop-blur-xl sm:flex">
+                <motion.span
+                    animate={{
+                        opacity: [
+                            0.35,
+                            1,
+                            0.35,
+                        ],
+                    }}
+                    transition={{
+                        duration: 2,
+                        repeat: Infinity,
+                    }}
+                    className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_#34d399]"
+                />
+
+                <span>
+                    Real-time annotations
+                </span>
+
+                <span className="text-zinc-800">
+                    •
+                </span>
+
+                <span>
+                    {pageData.strokes.length}{" "}
+                    strokes
+                </span>
+            </div>
+
+            {/* ==========================================
+                HOST BADGE
+            ========================================== */}
+
+            {isHost && (
+                <div className="pointer-events-none absolute bottom-4 right-4 z-[60] hidden items-center gap-2 rounded-full border border-yellow-400/10 bg-[#08080d]/75 px-3 py-1.5 text-[8px] text-yellow-400/60 backdrop-blur-xl sm:flex">
+                    <FaCircle className="text-[4px]" />
+                    Host controls enabled
+                </div>
+            )}
         </div>
     );
 };
