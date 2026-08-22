@@ -251,7 +251,7 @@ const PdfViewer = ({
             if (!pdfUrl) return;
 
             const newUrl =
-                `http://localhost:5000${pdfUrl}`;
+                `${import.meta.env.VITE_API_URL}${pdfUrl}`;
 
             setPdfUrl(newUrl);
 
@@ -600,7 +600,7 @@ useEffect(() => {
     useEffect(() => {
         if (currentRoom?.pdfUrl) {
             const url =
-                `http://localhost:5000${currentRoom.pdfUrl}`;
+                `${import.meta.env.VITE_API_URL}${currentRoom.pdfUrl}`;
 
             setPdfUrl(url);
 

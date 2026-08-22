@@ -929,7 +929,7 @@ const RoomCommunication = ({
                                                                                                 "http"
                                                                                             )
                                                                                                 ? member.avatar
-                                                                                                : `http://localhost:5000${member.avatar}`
+                                                                                               : `${import.meta.env.VITE_API_URL}${member.avatar}`
                                                                                         }
                                                                                         alt=""
                                                                                         className="h-full w-full object-cover"

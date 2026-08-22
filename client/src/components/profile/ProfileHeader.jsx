@@ -10,7 +10,7 @@ import {
 
 import { useAppSelector } from "../../redux/hooks";
 
-const API_URL = "http://localhost:5000";
+const API_URL = import.meta.env.VITE_API_URL;
 
 const ProfileHeader = ({ onEdit }) => {
     const { user } = useAppSelector(

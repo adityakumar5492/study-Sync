@@ -16,7 +16,7 @@ const VoiceParticipant = ({
     const avatarUrl = participant.avatar
         ? participant.avatar.startsWith("http")
             ? participant.avatar
-            : `http://localhost:5000${participant.avatar}`
+            : `${import.meta.env.VITE_API_URL}${participant.avatar}`
         : null;
 
     return (
