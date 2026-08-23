@@ -52,20 +52,20 @@ const login = async (req, res) => {
 
         const user = await loginUser(req.body);
 
-            const token = generateToken(user._id);
+        const token = generateToken(user._id);
 
-            res.cookie("token", token, {
+        res.cookie("token", token, {
             httpOnly: true,
-            secure: false,
-            sameSite: "lax",
+            secure: true,
+            sameSite: "none",
             maxAge: 7 * 24 * 60 * 60 * 1000,
         });
 
         res.status(200).json({
-        success: true,
-        message: "Login successful.",
-        user: formatUserResponse(user),
-    });
+            success: true,
+            message: "Login successful.",
+            user: formatUserResponse(user),
+        });
 
     } catch (error) {
         res.status(401).json({
@@ -74,6 +74,7 @@ const login = async (req, res) => {
         });
     }
 };
+
 const getCurrentUser = async (req, res) => {
     res.status(200).json({
         success: true,
