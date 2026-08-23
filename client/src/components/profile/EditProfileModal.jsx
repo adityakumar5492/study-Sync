@@ -29,7 +29,7 @@ import { updateUser } from "../../redux/auth/authSlice";
 
 import api from "../../api/axios";
 
-const API_URL = import.meta.env.VITE_API_URL;
+
 
 const EditProfileModal = ({
     open,

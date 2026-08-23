@@ -10,7 +10,7 @@ import {
 
 import { useAppSelector } from "../../redux/hooks";
 
-const API_URL = import.meta.env.VITE_API_URL;
+
 
 const ProfileHeader = ({ onEdit }) => {
     const { user } = useAppSelector(
@@ -19,9 +19,7 @@ const ProfileHeader = ({ onEdit }) => {
 
     const shouldReduceMotion = useReducedMotion();
 
-    const avatarUrl = user?.avatar
-        ? `${API_URL}${user.avatar}`
-        : null;
+    const avatarUrl = user?.avatar || null;
 
     return (
         <section className="group relative overflow-hidden rounded-[24px] border border-slate-800/80 bg-[#0a0f17] p-4 shadow-[0_20px_60px_rgba(0,0,0,0.2)] sm:p-6 lg:p-7">
