@@ -17,6 +17,7 @@ const ProfileHeader = ({ onEdit }) => {
         (state) => state.auth
     );
 
+
     const shouldReduceMotion = useReducedMotion();
 
     const avatarUrl = user?.avatar || null;
