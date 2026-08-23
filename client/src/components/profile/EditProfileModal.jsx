@@ -287,9 +287,7 @@ const EditProfileModal = ({
 
     if (!open) return null;
 
-    const currentAvatar = user?.avatar
-        ? `${API_URL}${user.avatar}`
-        : null;
+    const currentAvatar = user?.avatar || null;
 
     const displayedAvatar =
         previewUrl || currentAvatar;
