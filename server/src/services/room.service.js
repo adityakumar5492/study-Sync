@@ -1,39 +1,38 @@
 const crypto = require("crypto");
-const fs = require("fs");
-const path = require("path");
 
 const Room = require("../models/room.model");
 const Message = require("../models/message.model");
+
 const {
     createActivity,
 } = require("./activity.service");
+
+const cloudinary = require("../config/cloudinary");
 
 const generateInviteCode = () => {
     return crypto.randomBytes(4).toString("hex").toUpperCase();
 };
 
 /**
- * Delete a PDF file from the server.
+ * Delete PDF from Cloudinary.
  */
-const deletePdfFile = async (pdfUrl) => {
-    if (!pdfUrl) {
+const deletePdfFromCloudinary = async (publicId) => {
+    if (!publicId) {
         return;
     }
 
-    const relativePath = pdfUrl.replace(/^\/+/, "");
-
-    const filePath = path.join(
-        __dirname,
-        "../..",
-        relativePath
-    );
-
     try {
-        await fs.promises.unlink(filePath);
+        await cloudinary.uploader.destroy(
+            publicId,
+            {
+                resource_type: "raw",
+            }
+        );
     } catch (error) {
-        if (error.code === "ENOENT") {
-            return;
-        }
+        console.error(
+            "Failed to delete PDF from Cloudinary:",
+            error
+        );
 
         throw error;
     }
@@ -90,27 +89,27 @@ const createRoom = async (userId, data) => {
         isPrivate,
         maxMembers,
     });
+
     await createActivity(
         userId,
         "room_created",
         room._id
     );
 
-    const populatedRoom = await Room.findById(
-        room._id
-    )
-        .populate(
-            "host",
-            "name email avatar"
-        )
-        .populate(
-            "members",
-            "name email avatar"
-        )
-        .populate(
-            "removedMembers.user",
-            "name email avatar"
-        );
+    const populatedRoom =
+        await Room.findById(room._id)
+            .populate(
+                "host",
+                "name email avatar"
+            )
+            .populate(
+                "members",
+                "name email avatar"
+            )
+            .populate(
+                "removedMembers.user",
+                "name email avatar"
+            );
 
     return formatRoomResponse(
         populatedRoom,
@@ -161,18 +160,19 @@ const getRoomById = async (
             "rejoinRequests.user",
             "name email avatar"
         );
-    
+
     if (!room) {
         throw new Error("Room not found.");
     }
 
     // Public room → everyone can access
-        if (!room.isPrivate) {
-            return formatRoomResponse(
-                room,
-                userId
-            );
-        }
+    if (!room.isPrivate) {
+        return formatRoomResponse(
+            room,
+            userId
+        );
+    }
+
     // Host can access
     const isHost =
         room.host._id.toString() ===
@@ -267,7 +267,8 @@ const joinRoom = async (
     room.members.push(userId);
 
     await room.save();
-        await createActivity(
+
+    await createActivity(
         userId,
         "room_joined",
         room._id
@@ -387,10 +388,18 @@ const deleteRoom = async (
         );
     }
 
-    if (room.pdfUrl) {
-        await deletePdfFile(
-            room.pdfUrl
-        );
+    // Delete PDF from Cloudinary
+    if (room.pdfPublicId) {
+        try {
+            await deletePdfFromCloudinary(
+                room.pdfPublicId
+            );
+        } catch (error) {
+            console.error(
+                "Failed to delete room PDF:",
+                error
+            );
+        }
     }
 
     await Room.findByIdAndDelete(
@@ -477,6 +486,9 @@ const updateRoom = async (
     );
 };
 
+/**
+ * Upload PDF to Cloudinary.
+ */
 const uploadRoomPdf = async (
     userId,
     roomId,
@@ -506,18 +518,43 @@ const uploadRoomPdf = async (
         );
     }
 
-    const oldPdfUrl =
-        room.pdfUrl;
+    // Upload new PDF to Cloudinary
+    const result = await new Promise(
+        (resolve, reject) => {
+            const stream =
+                cloudinary.uploader.upload_stream(
+                    {
+                        folder: "studysync/pdfs",
+                        resource_type: "raw",
+                    },
+                    (error, result) => {
+                        if (error) {
+                            reject(error);
+                        } else {
+                            resolve(result);
+                        }
+                    }
+                );
 
-    room.pdfUrl =
-        `/uploads/pdfs/${file.filename}`;
+            stream.end(file.buffer);
+        }
+    );
+
+    // Save old Cloudinary ID
+    const oldPdfPublicId =
+        room.pdfPublicId;
+
+    // Save new PDF information
+    room.pdfUrl = result.secure_url;
+    room.pdfPublicId = result.public_id;
 
     await room.save();
 
-    if (oldPdfUrl) {
+    // Delete previous PDF after new one is saved
+    if (oldPdfPublicId) {
         try {
-            await deletePdfFile(
-                oldPdfUrl
+            await deletePdfFromCloudinary(
+                oldPdfPublicId
             );
         } catch (error) {
             console.error(
@@ -548,6 +585,10 @@ const uploadRoomPdf = async (
     );
 };
 
+/**
+ * Delete PDF from room.
+ * Called when host clicks Delete PDF.
+ */
 const deleteRoomPdf = async (
     userId,
     roomId
@@ -576,22 +617,27 @@ const deleteRoomPdf = async (
         );
     }
 
-    const oldPdfUrl =
-        room.pdfUrl;
+    const oldPdfPublicId =
+        room.pdfPublicId;
 
+    // Remove PDF information from database
     room.pdfUrl = "";
+    room.pdfPublicId = "";
 
     await room.save();
 
-    try {
-        await deletePdfFile(
-            oldPdfUrl
-        );
-    } catch (error) {
-        console.error(
-            "Failed to delete PDF file:",
-            error
-        );
+    // Delete actual PDF from Cloudinary
+    if (oldPdfPublicId) {
+        try {
+            await deletePdfFromCloudinary(
+                oldPdfPublicId
+            );
+        } catch (error) {
+            console.error(
+                "Failed to delete PDF from Cloudinary:",
+                error
+            );
+        }
     }
 
     const populatedRoom =
@@ -661,17 +707,25 @@ const getRoomMessages = async (
     return messages;
 };
 
-const requestRejoin = async (userId, roomId) => {
-    const room = await Room.findById(roomId);
+const requestRejoin = async (
+    userId,
+    roomId
+) => {
+    const room =
+        await Room.findById(roomId);
 
     if (!room) {
-        throw new Error("Room not found.");
+        throw new Error(
+            "Room not found."
+        );
     }
 
-    const isMember = room.members.some(
-        (member) =>
-            member.toString() === userId.toString()
-    );
+    const isMember =
+        room.members.some(
+            (member) =>
+                member.toString() ===
+                userId.toString()
+        );
 
     if (isMember) {
         throw new Error(
@@ -679,10 +733,12 @@ const requestRejoin = async (userId, roomId) => {
         );
     }
 
-    const removedEntry = room.removedMembers?.find(
-        (entry) =>
-            entry.user.toString() === userId.toString()
-    );
+    const removedEntry =
+        room.removedMembers?.find(
+            (entry) =>
+                entry.user.toString() ===
+                userId.toString()
+        );
 
     if (!removedEntry) {
         throw new Error(
@@ -714,32 +770,36 @@ const requestRejoin = async (userId, roomId) => {
     return true;
 };
 
-
 const approveRejoinRequest = async (
     hostId,
     roomId,
     userId
 ) => {
-    const room = await Room.findById(roomId);
+    const room =
+        await Room.findById(roomId);
 
     if (!room) {
-        throw new Error("Room not found.");
+        throw new Error(
+            "Room not found."
+        );
     }
 
     if (
-        room.host.toString() !== hostId.toString()
+        room.host.toString() !==
+        hostId.toString()
     ) {
         throw new Error(
             "Only the host can approve rejoin requests."
         );
     }
 
-    const request = room.rejoinRequests?.find(
-        (item) =>
-            item.user.toString() ===
-                userId.toString() &&
-            item.status === "pending"
-    );
+    const request =
+        room.rejoinRequests?.find(
+            (item) =>
+                item.user.toString() ===
+                    userId.toString() &&
+                item.status === "pending"
+        );
 
     if (!request) {
         throw new Error(
@@ -747,17 +807,21 @@ const approveRejoinRequest = async (
         );
     }
 
-    const alreadyMember = room.members.some(
-        (member) =>
-            member.toString() === userId.toString()
-    );
+    const alreadyMember =
+        room.members.some(
+            (member) =>
+                member.toString() ===
+                userId.toString()
+        );
 
     if (!alreadyMember) {
         if (
             room.members.length >=
             room.maxMembers
         ) {
-            throw new Error("Room is full.");
+            throw new Error(
+                "Room is full."
+            );
         }
 
         room.members.push(userId);
@@ -776,32 +840,36 @@ const approveRejoinRequest = async (
     return true;
 };
 
-
 const rejectRejoinRequest = async (
     hostId,
     roomId,
     userId
 ) => {
-    const room = await Room.findById(roomId);
+    const room =
+        await Room.findById(roomId);
 
     if (!room) {
-        throw new Error("Room not found.");
+        throw new Error(
+            "Room not found."
+        );
     }
 
     if (
-        room.host.toString() !== hostId.toString()
+        room.host.toString() !==
+        hostId.toString()
     ) {
         throw new Error(
             "Only the host can reject rejoin requests."
         );
     }
 
-    const request = room.rejoinRequests?.find(
-        (item) =>
-            item.user.toString() ===
-                userId.toString() &&
-            item.status === "pending"
-    );
+    const request =
+        room.rejoinRequests?.find(
+            (item) =>
+                item.user.toString() ===
+                    userId.toString() &&
+                item.status === "pending"
+        );
 
     if (!request) {
         throw new Error(

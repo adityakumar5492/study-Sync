@@ -63,7 +63,14 @@ const roomSchema = new mongoose.Schema(
             },
         ],
 
+        // Cloudinary PDF URL
         pdfUrl: {
+            type: String,
+            default: "",
+        },
+
+        // Cloudinary public ID used to delete the PDF
+        pdfPublicId: {
             type: String,
             default: "",
         },
