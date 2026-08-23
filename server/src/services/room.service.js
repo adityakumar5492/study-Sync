@@ -121,9 +121,17 @@ const createRoom = async (userId, data) => {
 const getAllRooms = async (userId) => {
     const rooms = await Room.find({
         isActive: true,
+        $or: [
+            { host: userId },
+            { members: userId },
+        ],
     })
         .populate(
             "host",
+            "name email avatar"
+        )
+        .populate(
+            "members",
             "name email avatar"
         )
         .select("-__v -inviteCode")
