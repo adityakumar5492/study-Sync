@@ -599,8 +599,9 @@ useEffect(() => {
 
     useEffect(() => {
         if (currentRoom?.pdfUrl) {
-            const url =
-                `${import.meta.env.VITE_API_URL}${currentRoom.pdfUrl}`;
+           const url = currentRoom.pdfUrl.startsWith("http")
+                ? currentRoom.pdfUrl
+                : `${import.meta.env.VITE_API_URL}${currentRoom.pdfUrl}`;
 
             setPdfUrl(url);
 
