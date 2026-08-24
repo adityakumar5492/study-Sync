@@ -246,33 +246,43 @@ const PdfViewer = ({
         if (!roomId) return;
 
         const handlePdfUpdated = ({
-            pdfUrl,
-        }) => {
-            if (!pdfUrl) return;
+    pdfUrl,
+}) => {
+    if (!pdfUrl) return;
 
-            const newUrl = pdfUrl.startsWith("http")
-                ? pdfUrl
-                : `${import.meta.env.VITE_API_URL}${pdfUrl}`;
+    console.log(
+        "RAW pdfUrl from socket:",
+        pdfUrl
+    );
 
-            setPdfUrl(newUrl);
+    const newUrl = pdfUrl.startsWith("http")
+        ? pdfUrl
+        : `${import.meta.env.VITE_API_URL}${pdfUrl}`;
 
-            setPdfName(
-                pdfUrl
-                    .split("/")
-                    .pop()
-            );
+    console.log(
+        "COMPUTED newUrl:",
+        newUrl
+    );
 
-            setPageNumber(1);
-            setPageInput("1");
-            setNumPages(0);
+    setPdfUrl(newUrl);
 
-            setZoom(1);
-            setRenderZoom(1);
+    setPdfName(
+        pdfUrl
+            .split("/")
+            .pop()
+    );
 
-            if (viewerRef.current) {
-                viewerRef.current.scrollTop = 0;
-            }
-        };
+    setPageNumber(1);
+    setPageInput("1");
+    setNumPages(0);
+
+    setZoom(1);
+    setRenderZoom(1);
+
+    if (viewerRef.current) {
+        viewerRef.current.scrollTop = 0;
+    }
+};
 
         socket.on(
             "pdf:updated",
