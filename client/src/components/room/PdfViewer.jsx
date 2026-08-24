@@ -602,7 +602,6 @@ useEffect(() => {
            const url = currentRoom.pdfUrl.startsWith("http")
                 ? currentRoom.pdfUrl
                 : `${import.meta.env.VITE_API_URL}${currentRoom.pdfUrl}`;
-                console.log("PDF URL:", url);
             setPdfUrl(url);
 
             setPdfName(
