@@ -250,8 +250,9 @@ const PdfViewer = ({
         }) => {
             if (!pdfUrl) return;
 
-            const newUrl =
-                `${import.meta.env.VITE_API_URL}${pdfUrl}`;
+            const newUrl = pdfUrl.startsWith("http")
+                ? pdfUrl
+                : `${import.meta.env.VITE_API_URL}${pdfUrl}`;
 
             setPdfUrl(newUrl);
 
