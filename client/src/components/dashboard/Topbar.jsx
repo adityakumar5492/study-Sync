@@ -62,8 +62,11 @@ const Topbar = ({ onMenuClick }) => {
     navigate("/login");
   };
 
-  const avatarUrl = user?.avatar ? `${API_URL}${user.avatar}` : null;
-
+  const avatarUrl = user?.avatar
+    ? /^https?:\/\//i.test(user.avatar)
+        ? user.avatar
+        : `${API_URL}${user.avatar.startsWith("/") ? "" : "/"}${user.avatar}`
+    : null;
   // ===========================
   // Motion Variants
   // ===========================
