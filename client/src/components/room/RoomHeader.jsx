@@ -588,7 +588,7 @@ const RoomHeader = ({
                                 transition={{
                                     duration: 0.18,
                                 }}
-                                className="absolute right-0 z-20 mt-2 w-56 overflow-hidden rounded-2xl border border-white/[0.08] bg-[#0b0b11]/95 p-1.5 shadow-[0_25px_80px_rgba(0,0,0,.55)] backdrop-blur-2xl"
+                                className="fixed right-3 top-[58px] z-[9999] w-56 overflow-hidden rounded-2xl border border-white/[0.08] bg-[#0b0b11]/95 p-1.5 shadow-[0_25px_80px_rgba(0,0,0,.55)] backdrop-blur-2xl"
                             >
                                 {/* Menu header */}
 
