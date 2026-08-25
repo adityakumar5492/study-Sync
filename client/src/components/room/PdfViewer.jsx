@@ -250,20 +250,12 @@ const PdfViewer = ({
 }) => {
     if (!pdfUrl) return;
 
-    console.log(
-        "RAW pdfUrl from socket:",
-        pdfUrl
-    );
 
     const isExternal = /^https?:\/\//i.test(pdfUrl);
 const newUrl = isExternal
     ? pdfUrl
     : `${import.meta.env.VITE_API_URL}${pdfUrl.startsWith('/') ? '' : '/'}${pdfUrl}`;
 
-    console.log(
-        "COMPUTED newUrl:",
-        newUrl
-    );
 
     setPdfUrl(newUrl);
 
