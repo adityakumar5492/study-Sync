@@ -453,11 +453,11 @@ const RoomHeader = ({
                                         opacity: 1,
                                         scale: 1,
                                     }}
-                                    className="ml-1 hidden items-center gap-1.5 lg:flex"
+                                    className="ml-1 flex shrink-0 items-center gap-1 sm:gap-1.5"
                                 >
                                     <div className="flex items-center gap-1.5 rounded-xl border border-white/[0.06] bg-white/[0.025] px-2 py-1.5">
                                         <span className="text-[7px] font-bold uppercase tracking-wider text-zinc-700">
-                                            Code
+                                           Invite Code
                                         </span>
 
                                         <span className="font-mono text-[9px] font-bold tracking-[0.18em] text-violet-300">
