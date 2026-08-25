@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
     FaArrowLeft,
@@ -542,153 +543,136 @@ const RoomHeader = ({
                     </motion.div>
                 </motion.button>
 
-                <AnimatePresence>
-                    {menuOpen && (
-                        <>
-                            {/* Outside click */}
+                {createPortal(
+    <AnimatePresence>
+        {menuOpen && (
+            <>
+                {/* Outside click */}
+                <motion.div
+                    initial={{
+                        opacity: 0,
+                    }}
+                    animate={{
+                        opacity: 1,
+                    }}
+                    exit={{
+                        opacity: 0,
+                    }}
+                    className="fixed inset-0 z-[9998]"
+                    onClick={() =>
+                        setMenuOpen(false)
+                    }
+                />
 
-                            <motion.div
-                                initial={{
-                                    opacity: 0,
-                                }}
-                                animate={{
-                                    opacity: 1,
-                                }}
-                                exit={{
-                                    opacity: 0,
-                                }}
-                                className="fixed inset-0 z-10"
-                                onClick={() =>
-                                    setMenuOpen(
-                                        false
-                                    )
-                                }
-                            />
+                {/* Room Options Menu */}
+                <motion.div
+                    initial={{
+                        opacity: 0,
+                        y: -8,
+                        scale: 0.96,
+                    }}
+                    animate={{
+                        opacity: 1,
+                        y: 0,
+                        scale: 1,
+                    }}
+                    exit={{
+                        opacity: 0,
+                        y: -6,
+                        scale: 0.97,
+                    }}
+                    transition={{
+                        duration: 0.18,
+                    }}
+                    className="fixed right-3 top-[58px] z-[9999] w-56 overflow-hidden rounded-2xl border border-white/[0.08] bg-[#0b0b11]/95 p-1.5 shadow-[0_25px_80px_rgba(0,0,0,.55)] backdrop-blur-2xl"
+                >
+                    {/* Menu header */}
+                    <div className="border-b border-white/[0.05] px-3 py-2.5">
+                        <p className="text-[9px] font-bold uppercase tracking-[0.15em] text-zinc-700">
+                            Room options
+                        </p>
+                    </div>
 
-                            {/* =================================================
-                                PREMIUM MENU
-                            ================================================== */}
+                    {/* Delete */}
+                    {isHost && (
+                        <motion.button
+                            type="button"
+                            onClick={handleDeleteRoom}
+                            disabled={deleting}
+                            whileHover={{
+                                x: 2,
+                            }}
+                            whileTap={{
+                                scale: 0.98,
+                            }}
+                            className="group mt-1 flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition hover:bg-red-500/[0.08] disabled:opacity-50"
+                        >
+                            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-500/[0.07] text-red-400 transition group-hover:bg-red-500/10">
+                                <FaTrash className="text-[10px]" />
+                            </span>
 
-                            <motion.div
-                                initial={{
-                                    opacity: 0,
-                                    y: -8,
-                                    scale: 0.96,
-                                }}
-                                animate={{
-                                    opacity: 1,
-                                    y: 0,
-                                    scale: 1,
-                                }}
-                                exit={{
-                                    opacity: 0,
-                                    y: -6,
-                                    scale: 0.97,
-                                }}
-                                transition={{
-                                    duration: 0.18,
-                                }}
-                                className="fixed right-3 top-[58px] z-[9999] w-56 overflow-hidden rounded-2xl border border-white/[0.08] bg-[#0b0b11]/95 p-1.5 shadow-[0_25px_80px_rgba(0,0,0,.55)] backdrop-blur-2xl"
-                            >
-                                {/* Menu header */}
+                            <span className="min-w-0 flex-1">
+                                <span className="block text-[10px] font-bold text-zinc-300 group-hover:text-red-300">
+                                    {deleting
+                                        ? "Deleting..."
+                                        : "Delete Room"}
+                                </span>
 
-                                <div className="border-b border-white/[0.05] px-3 py-2.5">
-                                    <p className="text-[9px] font-bold uppercase tracking-[0.15em] text-zinc-700">
-                                        Room options
-                                    </p>
-                                </div>
-
-                                {/* Delete */}
-
-                                {isHost && (
-                                    <motion.button
-                                        type="button"
-                                        onClick={
-                                            handleDeleteRoom
-                                        }
-                                        disabled={
-                                            deleting
-                                        }
-                                        whileHover={{
-                                            x: 2,
-                                        }}
-                                        whileTap={{
-                                            scale: 0.98,
-                                        }}
-                                        className="group mt-1 flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition hover:bg-red-500/[0.08] disabled:opacity-50"
-                                    >
-                                        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-500/[0.07] text-red-400 transition group-hover:bg-red-500/10">
-                                            <FaTrash className="text-[10px]" />
-                                        </span>
-
-                                        <span className="min-w-0 flex-1">
-                                            <span className="block text-[10px] font-bold text-zinc-300 group-hover:text-red-300">
-                                                {deleting
-                                                    ? "Deleting..."
-                                                    : "Delete Room"}
-                                            </span>
-
-                                            <span className="mt-0.5 block text-[7px] text-zinc-700">
-                                                Permanently remove this room
-                                            </span>
-                                        </span>
-                                    </motion.button>
-                                )}
-
-                                {/* Leave */}
-
-                                {!isHost &&
-                                    isMember && (
-                                        <motion.button
-                                            type="button"
-                                            onClick={
-                                                handleLeaveRoom
-                                            }
-                                            disabled={
-                                                leaving
-                                            }
-                                            whileHover={{
-                                                x: 2,
-                                            }}
-                                            whileTap={{
-                                                scale: 0.98,
-                                            }}
-                                            className="group flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition hover:bg-amber-500/[0.07] disabled:opacity-50"
-                                        >
-                                            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-500/[0.07] text-amber-400">
-                                                <FaSignOutAlt className="text-[10px]" />
-                                            </span>
-
-                                            <span className="min-w-0 flex-1">
-                                                <span className="block text-[10px] font-bold text-zinc-300 group-hover:text-amber-300">
-                                                    {leaving
-                                                        ? "Leaving..."
-                                                        : "Leave Room"}
-                                                </span>
-
-                                                <span className="mt-0.5 block text-[7px] text-zinc-700">
-                                                    Exit this study session
-                                                </span>
-                                            </span>
-                                        </motion.button>
-                                    )}
-
-                                {/* No Actions */}
-
-                                {!isHost &&
-                                    !isMember && (
-                                        <div className="px-3 py-4 text-center">
-                                            <FaLock className="mx-auto mb-2 text-xs text-zinc-800" />
-
-                                            <p className="text-[9px] font-semibold text-zinc-600">
-                                                No actions available
-                                            </p>
-                                        </div>
-                                    )}
-                            </motion.div>
-                        </>
+                                <span className="mt-0.5 block text-[7px] text-zinc-700">
+                                    Permanently remove this room
+                                </span>
+                            </span>
+                        </motion.button>
                     )}
-                </AnimatePresence>
+
+                    {/* Leave */}
+                    {!isHost && isMember && (
+                        <motion.button
+                            type="button"
+                            onClick={handleLeaveRoom}
+                            disabled={leaving}
+                            whileHover={{
+                                x: 2,
+                            }}
+                            whileTap={{
+                                scale: 0.98,
+                            }}
+                            className="group flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition hover:bg-amber-500/[0.07] disabled:opacity-50"
+                        >
+                            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-500/[0.07] text-amber-400">
+                                <FaSignOutAlt className="text-[10px]" />
+                            </span>
+
+                            <span className="min-w-0 flex-1">
+                                <span className="block text-[10px] font-bold text-zinc-300 group-hover:text-amber-300">
+                                    {leaving
+                                        ? "Leaving..."
+                                        : "Leave Room"}
+                                </span>
+
+                                <span className="mt-0.5 block text-[7px] text-zinc-700">
+                                    Exit this study session
+                                </span>
+                            </span>
+                        </motion.button>
+                    )}
+
+                    {/* No Actions */}
+                    {!isHost && !isMember && (
+                        <div className="px-3 py-4 text-center">
+                            <FaLock className="mx-auto mb-2 text-xs text-zinc-800" />
+
+                            <p className="text-[9px] font-semibold text-zinc-600">
+                                No actions available
+                            </p>
+                        </div>
+                    )}
+                </motion.div>
+            </>
+        )}
+    </AnimatePresence>,
+    document.body
+)}
             </div>
 
             {/* =====================================================
