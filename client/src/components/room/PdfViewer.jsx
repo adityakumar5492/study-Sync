@@ -255,9 +255,10 @@ const PdfViewer = ({
         pdfUrl
     );
 
-    const newUrl = pdfUrl.startsWith("http")
-        ? pdfUrl
-        : `${import.meta.env.VITE_API_URL}${pdfUrl}`;
+    const isExternal = /^https?:\/\//i.test(pdfUrl);
+const newUrl = isExternal
+    ? pdfUrl
+    : `${import.meta.env.VITE_API_URL}${pdfUrl.startsWith('/') ? '' : '/'}${pdfUrl}`;
 
     console.log(
         "COMPUTED newUrl:",
@@ -610,9 +611,10 @@ useEffect(() => {
 
     useEffect(() => {
         if (currentRoom?.pdfUrl) {
-           const url = currentRoom.pdfUrl.startsWith("http")
+           const isExternal = /^https?:\/\//i.test(currentRoom.pdfUrl);
+            const url = isExternal
                 ? currentRoom.pdfUrl
-                : `${import.meta.env.VITE_API_URL}${currentRoom.pdfUrl}`;
+                : `${import.meta.env.VITE_API_URL}${currentRoom.pdfUrl.startsWith('/') ? '' : '/'}${currentRoom.pdfUrl}`;
             setPdfUrl(url);
 
             setPdfName(
