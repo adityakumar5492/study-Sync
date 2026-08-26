@@ -4,7 +4,6 @@ import {
     motion,
     useReducedMotion,
 } from "framer-motion";
-import { FaBars } from "react-icons/fa";
 
 import Sidebar from "../dashboard/Sidebar";
 
@@ -68,45 +67,6 @@ const DashboardLayout = () => {
                 isOpen={sidebarOpen}
                 onClose={closeSidebar}
             />
-
-            {/* =========================================
-                MOBILE SIDEBAR BUTTON
-            ========================================= */}
-
-            <button
-                type="button"
-                onClick={openSidebar}
-                aria-label="Open navigation menu"
-                className="
-                    fixed
-                    left-4
-                    top-4
-                    z-30
-                    flex
-                    h-10
-                    w-10
-                    items-center
-                    justify-center
-                    rounded-xl
-                    border
-                    border-white/[0.08]
-                    bg-[#0b1019]/95
-                    text-zinc-300
-                    shadow-[0_8px_30px_rgba(0,0,0,0.25)]
-                    backdrop-blur-xl
-                    transition-all
-                    duration-200
-                    hover:border-violet-400/20
-                    hover:bg-[#111725]
-                    hover:text-white
-                    focus:outline-none
-                    focus-visible:ring-2
-                    focus-visible:ring-violet-400/50
-                    lg:hidden
-                "
-            >
-                <FaBars className="text-sm" />
-            </button>
 
             {/* =========================================
                 MAIN APPLICATION AREA
