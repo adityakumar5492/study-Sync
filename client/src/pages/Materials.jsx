@@ -1,10 +1,14 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
+import { useOutletContext } from "react-router-dom";
 
+import Topbar from "../components/dashboard/Topbar";
 import MaterialUpload from "../components/materials/MaterialUpload";
 import MaterialList from "../components/materials/MaterialList";
 
 const Materials = () => {
+    const { openSidebar } = useOutletContext();
+
     const [materials, setMaterials] = useState([]);
     const [loading, setLoading] = useState(true);
 
@@ -40,7 +44,16 @@ const Materials = () => {
         <div className="min-h-screen bg-[#060a10] px-4 py-6 text-white sm:px-6 lg:px-8">
             <div className="mx-auto max-w-6xl">
 
-                {/* Header */}
+                {/* =========================================
+                    TOPBAR
+                ========================================= */}
+
+                <Topbar onMenuClick={openSidebar} />
+
+                {/* =========================================
+                    HEADER
+                ========================================= */}
+
                 <motion.div
                     initial={{
                         opacity: 0,
@@ -49,6 +62,10 @@ const Materials = () => {
                     animate={{
                         opacity: 1,
                         y: 0,
+                    }}
+                    transition={{
+                        duration: 0.35,
+                        ease: "easeOut",
                     }}
                     className="mb-8"
                 >
@@ -61,12 +78,18 @@ const Materials = () => {
                     </p>
                 </motion.div>
 
-                {/* Upload */}
+                {/* =========================================
+                    UPLOAD
+                ========================================= */}
+
                 <MaterialUpload
                     onUploadSuccess={fetchMaterials}
                 />
 
-                {/* Materials */}
+                {/* =========================================
+                    MATERIAL LIST
+                ========================================= */}
+
                 <div className="mt-8">
                     <MaterialList
                         materials={materials}
