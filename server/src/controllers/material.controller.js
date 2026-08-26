@@ -2,56 +2,66 @@ const Material = require("../models/Material.model");
 const cloudinary = require("../config/cloudinary");
 
 // =========================================
-// Upload Personal Material
+// Upload Personal Material(s)
 // =========================================
 
 const uploadMaterial = async (req, res) => {
     try {
-        if (!req.file) {
+        if (!req.files || req.files.length === 0) {
             return res.status(400).json({
                 success: false,
-                message: "PDF file is required.",
+                message: "At least one PDF file is required.",
             });
         }
 
-        const result = await new Promise(
-            (resolve, reject) => {
-                const stream =
-                    cloudinary.uploader.upload_stream(
-                        {
-                            folder: "studysync/materials",
-                            resource_type: "raw",
-                        },
-                        (error, result) => {
-                            if (error) {
-                                reject(error);
-                            } else {
-                                resolve(result);
+        const uploadedMaterials = [];
+
+        for (const file of req.files) {
+            const result = await new Promise(
+                (resolve, reject) => {
+                    const stream =
+                        cloudinary.uploader.upload_stream(
+                            {
+                                folder: "studysync/materials",
+                                resource_type: "image",
+                            },
+                            (error, result) => {
+                                if (error) {
+                                    reject(error);
+                                } else {
+                                    resolve(result);
+                                }
                             }
-                        }
-                    );
+                        );
 
-                stream.end(req.file.buffer);
-            }
-        );
+                    stream.end(file.buffer);
+                }
+            );
 
-        const material = await Material.create({
-            name:
-                req.body.name ||
-                req.file.originalname,
+            const material = await Material.create({
+                name: file.originalname.replace(
+                    /\.pdf$/i,
+                    ""
+                ),
 
-            owner: req.user._id,
+                owner: req.user._id,
 
-            pdfUrl: result.secure_url,
+                pdfUrl: result.secure_url,
 
-            pdfPublicId: result.public_id,
-        });
+                pdfPublicId: result.public_id,
+            });
+
+            uploadedMaterials.push(material);
+        }
 
         return res.status(201).json({
             success: true,
             message:
-                "Material uploaded successfully.",
-            material,
+                uploadedMaterials.length === 1
+                    ? "Material uploaded successfully."
+                    : `${uploadedMaterials.length} materials uploaded successfully.`,
+
+            materials: uploadedMaterials,
         });
     } catch (error) {
         console.error(
@@ -99,7 +109,34 @@ const getMyMaterials = async (req, res) => {
 };
 
 // =========================================
-// Delete Material
+// Delete Cloudinary Material
+// =========================================
+
+const destroyMaterialFile = async (material) => {
+    // New PDFs are uploaded as image assets.
+    // Existing PDFs may still be raw assets.
+    const imageResult =
+        await cloudinary.uploader.destroy(
+            material.pdfPublicId,
+            {
+                resource_type: "image",
+            }
+        );
+
+    if (
+        imageResult.result === "not found"
+    ) {
+        await cloudinary.uploader.destroy(
+            material.pdfPublicId,
+            {
+                resource_type: "raw",
+            }
+        );
+    }
+};
+
+// =========================================
+// Delete Single Material
 // =========================================
 
 const deleteMaterial = async (req, res) => {
@@ -117,12 +154,7 @@ const deleteMaterial = async (req, res) => {
             });
         }
 
-        await cloudinary.uploader.destroy(
-            material.pdfPublicId,
-            {
-                resource_type: "raw",
-            }
-        );
+        await destroyMaterialFile(material);
 
         await material.deleteOne();
 
@@ -145,8 +177,82 @@ const deleteMaterial = async (req, res) => {
     }
 };
 
+// =========================================
+// Delete Multiple Materials
+// =========================================
+
+const deleteMaterialsBulk = async (
+    req,
+    res
+) => {
+    try {
+        const { ids } = req.body;
+
+        if (
+            !Array.isArray(ids) ||
+            ids.length === 0
+        ) {
+            return res.status(400).json({
+                success: false,
+                message:
+                    "Material IDs are required.",
+            });
+        }
+
+        const materials =
+            await Material.find({
+                _id: {
+                    $in: ids,
+                },
+                owner: req.user._id,
+            });
+
+        if (materials.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message:
+                    "No materials found.",
+            });
+        }
+
+        await Promise.all(
+            materials.map(
+                destroyMaterialFile
+            )
+        );
+
+        await Material.deleteMany({
+            _id: {
+                $in: materials.map(
+                    (material) =>
+                        material._id
+                ),
+            },
+            owner: req.user._id,
+        });
+
+        return res.status(200).json({
+            success: true,
+            message: `${materials.length} materials deleted successfully.`,
+            deletedCount: materials.length,
+        });
+    } catch (error) {
+        console.error(
+            "Bulk delete materials error:",
+            error
+        );
+
+        return res.status(500).json({
+            success: false,
+            message:
+                "Failed to delete materials.",
+        });
+    }
+};
+
 module.exports = {
     uploadMaterial,
     getMyMaterials,
     deleteMaterial,
+    deleteMaterialsBulk,
 };

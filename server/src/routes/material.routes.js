@@ -7,6 +7,7 @@ const {
     uploadMaterial,
     getMyMaterials,
     deleteMaterial,
+    deleteMaterialsBulk,
 } = require("../controllers/material.controller");
 
 const router = express.Router();
@@ -18,15 +19,22 @@ router.get(
     getMyMaterials
 );
 
-// Upload personal PDF
+// Upload one or multiple personal PDFs
 router.post(
     "/",
     auth,
-    uploadPdf.single("pdf"),
+    uploadPdf.array("pdf", 10),
     uploadMaterial
 );
 
-// Delete personal material
+// Delete multiple materials
+router.delete(
+    "/bulk",
+    auth,
+    deleteMaterialsBulk
+);
+
+// Delete single material
 router.delete(
     "/:id",
     auth,
