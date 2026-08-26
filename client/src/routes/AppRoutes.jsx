@@ -5,9 +5,9 @@ import Login from "../pages/Login";
 import Register from "../pages/Register";
 import Dashboard from "../pages/Dashboard";
 import Rooms from "../pages/Rooms";
+import Materials from "../pages/Materials";
 import Room from "../pages/Room";
 import Profile from "../pages/Profile";
-import Materials from "../pages/Materials"; // NEW
 
 import ProtectedRoute from "../components/auth/ProtectedRoute";
 import DashboardLayout from "../components/layout/DashboardLayout";
@@ -17,7 +17,7 @@ const AppRoutes = () => {
         <Routes>
 
             {/* ===========================
-                Public Routes
+                PUBLIC ROUTES
             =========================== */}
 
             <Route
@@ -35,9 +35,15 @@ const AppRoutes = () => {
                 element={<Register />}
             />
 
+
             {/* ===========================
-                Dashboard Layout Routes
-                Sidebar appears here
+                PROTECTED DASHBOARD ROUTES
+
+                DashboardLayout owns:
+                - Sidebar
+                - Mobile sidebar
+                - Sidebar state
+                - Main application area
             =========================== */}
 
             <Route
@@ -57,7 +63,6 @@ const AppRoutes = () => {
                     element={<Rooms />}
                 />
 
-                {/* Personal Materials */}
                 <Route
                     path="/materials"
                     element={<Materials />}
@@ -69,9 +74,12 @@ const AppRoutes = () => {
                 />
             </Route>
 
+
             {/* ===========================
-                Collaborative Room
-                No Sidebar
+                COLLABORATIVE ROOM
+
+                Full-screen page.
+                No Dashboard Sidebar.
             =========================== */}
 
             <Route
