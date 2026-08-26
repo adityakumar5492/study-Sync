@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { useOutletContext } from "react-router-dom";
+import { FaBars } from "react-icons/fa";
 
-import Topbar from "../components/dashboard/Topbar";
 import MaterialUpload from "../components/materials/MaterialUpload";
 import MaterialList from "../components/materials/MaterialList";
 
@@ -45,15 +45,45 @@ const Materials = () => {
             <div className="mx-auto max-w-6xl">
 
                 {/* =========================================
-                    TOPBAR
+                    MOBILE SIDEBAR BUTTON
                 ========================================= */}
-
-                <Topbar onMenuClick={openSidebar} />
+                <motion.button
+                    type="button"
+                    onClick={openSidebar}
+                    whileTap={{ scale: 0.92 }}
+                    className="
+                        mb-5
+                        flex
+                        h-10
+                        w-10
+                        items-center
+                        justify-center
+                        rounded-xl
+                        border
+                        border-slate-800/90
+                        bg-slate-900/90
+                        text-slate-300
+                        shadow-[0_8px_30px_rgba(0,0,0,0.25)]
+                        backdrop-blur-xl
+                        transition-all
+                        duration-200
+                        hover:border-indigo-500/40
+                        hover:bg-slate-800
+                        hover:text-white
+                        focus:outline-none
+                        focus-visible:ring-2
+                        focus-visible:ring-indigo-500/70
+                        lg:hidden
+                    "
+                    aria-label="Open navigation menu"
+                    title="Open navigation menu"
+                >
+                    <FaBars className="text-sm" />
+                </motion.button>
 
                 {/* =========================================
                     HEADER
                 ========================================= */}
-
                 <motion.div
                     initial={{
                         opacity: 0,
@@ -81,7 +111,6 @@ const Materials = () => {
                 {/* =========================================
                     UPLOAD
                 ========================================= */}
-
                 <MaterialUpload
                     onUploadSuccess={fetchMaterials}
                 />
@@ -89,7 +118,6 @@ const Materials = () => {
                 {/* =========================================
                     MATERIAL LIST
                 ========================================= */}
-
                 <div className="mt-8">
                     <MaterialList
                         materials={materials}

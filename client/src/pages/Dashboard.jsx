@@ -24,7 +24,7 @@ const Dashboard = () => {
     };
 
     const handleUploadMaterial = () => {
-        navigate("/rooms");
+        navigate("/materials");
     };
 
     const sectionVariants = {
@@ -32,6 +32,7 @@ const Dashboard = () => {
             opacity: 0,
             y: shouldReduceMotion ? 0 : 12,
         },
+
         visible: {
             opacity: 1,
             y: 0,
@@ -44,6 +45,7 @@ const Dashboard = () => {
 
     return (
         <div className="relative min-h-screen overflow-hidden bg-[#060a10] text-white">
+
             {/* =========================================
                 BACKGROUND ATMOSPHERE
             ========================================= */}
@@ -79,6 +81,7 @@ const Dashboard = () => {
             />
 
             <main className="relative min-w-0 overflow-y-auto">
+
                 <div
                     className="
                         mx-auto
@@ -92,8 +95,9 @@ const Dashboard = () => {
                         lg:px-8
                     "
                 >
+
                     {/* =====================================
-                        TOPBAR
+                        TOPBAR — DASHBOARD ONLY
                     ===================================== */}
 
                     <motion.div
@@ -134,15 +138,9 @@ const Dashboard = () => {
                         className="mb-7 sm:mb-8"
                     >
                         <QuickActions
-                            onCreateRoom={
-                                handleCreateRoom
-                            }
-                            onJoinRoom={
-                                handleJoinRoom
-                            }
-                            onUploadMaterial={
-                                handleUploadMaterial
-                            }
+                            onCreateRoom={handleCreateRoom}
+                            onJoinRoom={handleJoinRoom}
+                            onUploadMaterial={handleUploadMaterial}
                         />
                     </motion.section>
 
@@ -180,6 +178,7 @@ const Dashboard = () => {
                     >
                         <RecentRooms />
                     </motion.section>
+
                 </div>
             </main>
         </div>
