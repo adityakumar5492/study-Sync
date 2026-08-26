@@ -24,6 +24,7 @@ const DashboardLayout = () => {
 
     return (
         <div className="relative flex min-h-screen overflow-hidden bg-[#060a10] text-white">
+
             {/* =========================================
                 GLOBAL AMBIENT BACKGROUND
             ========================================= */}
@@ -72,7 +73,9 @@ const DashboardLayout = () => {
             ========================================= */}
 
             <div className="relative flex min-w-0 flex-1 flex-col">
+
                 {/* Very subtle top application line */}
+
                 <div
                     aria-hidden="true"
                     className="
