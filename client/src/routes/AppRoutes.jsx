@@ -7,6 +7,7 @@ import Dashboard from "../pages/Dashboard";
 import Rooms from "../pages/Rooms";
 import Room from "../pages/Room";
 import Profile from "../pages/Profile";
+import Materials from "../pages/Materials"; // NEW
 
 import ProtectedRoute from "../components/auth/ProtectedRoute";
 import DashboardLayout from "../components/layout/DashboardLayout";
@@ -54,6 +55,12 @@ const AppRoutes = () => {
                 <Route
                     path="/rooms"
                     element={<Rooms />}
+                />
+
+                {/* Personal Materials */}
+                <Route
+                    path="/materials"
+                    element={<Materials />}
                 />
 
                 <Route

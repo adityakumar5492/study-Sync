@@ -1,9 +1,11 @@
 import { NavLink } from "react-router-dom";
+
 import {
     motion,
     AnimatePresence,
     useReducedMotion,
 } from "framer-motion";
+
 import {
     FaHome,
     FaUsers,
@@ -11,6 +13,7 @@ import {
     FaTimes,
     FaBolt,
     FaChevronRight,
+    FaFilePdf,
 } from "react-icons/fa";
 
 const menuItems = [
@@ -25,6 +28,12 @@ const menuItems = [
         icon: FaUsers,
         label: "Study Rooms",
         desc: "Collaborate & learn",
+    },
+    {
+        to: "/materials",
+        icon: FaFilePdf,
+        label: "My Materials",
+        desc: "Personal PDFs",
     },
     {
         to: "/profile",
@@ -42,6 +51,7 @@ const Sidebar = ({ isOpen, onClose }) => {
             opacity: 0,
             x: shouldReduceMotion ? 0 : -10,
         },
+
         visible: (index) => ({
             opacity: 1,
             x: 0,
@@ -107,7 +117,7 @@ const Sidebar = ({ isOpen, onClose }) => {
             >
                 {/* =====================================
                     BACKGROUND ATMOSPHERE
-                ===================================== */}
+                ====================================== */}
 
                 <div className="pointer-events-none absolute inset-0 overflow-hidden">
                     {/* Top indigo atmosphere */}
@@ -122,7 +132,7 @@ const Sidebar = ({ isOpen, onClose }) => {
 
                 {/* =====================================
                     BRAND HEADER
-                ===================================== */}
+                ====================================== */}
 
                 <div className="relative shrink-0 px-5 pb-5 pt-5 sm:px-6 sm:pt-6">
                     <div className="flex items-center justify-between">
@@ -132,6 +142,7 @@ const Sidebar = ({ isOpen, onClose }) => {
                             className="group flex min-w-0 items-center gap-3.5"
                         >
                             {/* Logo */}
+
                             <motion.div
                                 whileHover={
                                     shouldReduceMotion
@@ -153,15 +164,18 @@ const Sidebar = ({ isOpen, onClose }) => {
                                 <FaBolt className="relative text-[16px] text-white" />
 
                                 {/* Logo shine */}
+
                                 <div className="pointer-events-none absolute inset-[1px] rounded-[14px] bg-gradient-to-br from-white/20 via-transparent to-transparent" />
 
                                 {/* Status */}
+
                                 <span className="absolute -bottom-1 -right-1 flex h-3.5 w-3.5 items-center justify-center rounded-full border-2 border-[#080b14] bg-emerald-400">
                                     <span className="h-1 w-1 rounded-full bg-emerald-950" />
                                 </span>
                             </motion.div>
 
                             {/* Brand */}
+
                             <div className="min-w-0">
                                 <h1 className="truncate text-[16px] font-bold tracking-[-0.02em] text-white">
                                     Study
@@ -177,6 +191,7 @@ const Sidebar = ({ isOpen, onClose }) => {
                         </NavLink>
 
                         {/* Mobile Close */}
+
                         <motion.button
                             type="button"
                             onClick={onClose}
@@ -204,19 +219,20 @@ const Sidebar = ({ isOpen, onClose }) => {
 
                 {/* =====================================
                     DIVIDER
-                ===================================== */}
+                ====================================== */}
 
                 <div className="relative mx-5 h-px bg-gradient-to-r from-transparent via-white/[0.07] to-transparent sm:mx-6" />
 
                 {/* =====================================
                     NAVIGATION
-                ===================================== */}
+                ====================================== */}
 
                 <nav
                     aria-label="Main navigation"
                     className="relative flex-1 overflow-y-auto px-3 py-6 sm:px-4"
                 >
                     {/* Section heading */}
+
                     <div className="mb-3 flex items-center justify-between px-2">
                         <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-600">
                             Workspace
@@ -228,7 +244,8 @@ const Sidebar = ({ isOpen, onClose }) => {
                     <div className="space-y-1.5">
                         {menuItems.map(
                             (item, index) => {
-                                const Icon = item.icon;
+                                const Icon =
+                                    item.icon;
 
                                 return (
                                     <motion.div
@@ -284,6 +301,7 @@ const Sidebar = ({ isOpen, onClose }) => {
                                                     `}
                                                 >
                                                     {/* Active glow */}
+
                                                     {isActive && (
                                                         <motion.div
                                                             layoutId="sidebar-active-glow"
@@ -297,6 +315,7 @@ const Sidebar = ({ isOpen, onClose }) => {
                                                     )}
 
                                                     {/* Active indicator */}
+
                                                     {isActive && (
                                                         <motion.div
                                                             layoutId="sidebar-active-indicator"
@@ -310,6 +329,7 @@ const Sidebar = ({ isOpen, onClose }) => {
                                                     )}
 
                                                     {/* Icon */}
+
                                                     <div
                                                         className={`
                                                             relative
@@ -338,6 +358,7 @@ const Sidebar = ({ isOpen, onClose }) => {
                                                     </div>
 
                                                     {/* Text */}
+
                                                     <div className="relative min-w-0 flex-1">
                                                         <p
                                                             className={`
@@ -381,6 +402,7 @@ const Sidebar = ({ isOpen, onClose }) => {
                                                     </div>
 
                                                     {/* Arrow */}
+
                                                     <motion.div
                                                         animate={{
                                                             opacity:
@@ -413,18 +435,21 @@ const Sidebar = ({ isOpen, onClose }) => {
 
                 {/* =====================================
                     BOTTOM STATUS PANEL
-                ===================================== */}
+                ====================================== */}
 
                 <div className="relative shrink-0 px-4 pb-4 sm:px-5 sm:pb-5">
                     <div className="relative overflow-hidden rounded-2xl border border-white/[0.055] bg-white/[0.025] p-3.5">
                         {/* Ambient glow */}
+
                         <div className="pointer-events-none absolute -right-8 -top-8 h-20 w-20 rounded-full bg-indigo-500/[0.08] blur-2xl" />
 
                         <div className="relative flex items-center gap-3">
                             {/* Status icon */}
+
                             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-emerald-400/10 bg-emerald-400/[0.06]">
                                 <span className="relative flex h-2 w-2">
                                     <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-40" />
+
                                     <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
                                 </span>
                             </div>
@@ -443,6 +468,7 @@ const Sidebar = ({ isOpen, onClose }) => {
                 </div>
 
                 {/* Bottom border highlight */}
+
                 <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-indigo-500/10 to-transparent" />
             </aside>
         </>
