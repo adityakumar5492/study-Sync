@@ -109,12 +109,95 @@ const getMyMaterials = async (req, res) => {
 };
 
 // =========================================
+// View Personal PDF
+// =========================================
+
+const viewMaterial = async (req, res) => {
+    try {
+        const material =
+            await Material.findOne({
+                _id: req.params.id,
+                owner: req.user._id,
+            });
+
+        if (!material) {
+            return res.status(404).json({
+                success: false,
+                message: "Material not found.",
+            });
+        }
+
+        if (!material.pdfUrl) {
+            return res.status(404).json({
+                success: false,
+                message: "PDF file not found.",
+            });
+        }
+
+        const pdfResponse = await fetch(
+            material.pdfUrl
+        );
+
+        if (!pdfResponse.ok) {
+            console.error(
+                "Cloudinary PDF fetch failed:",
+                pdfResponse.status,
+                pdfResponse.statusText
+            );
+
+            return res.status(502).json({
+                success: false,
+                message:
+                    "Unable to load PDF file.",
+            });
+        }
+
+        const pdfBuffer = Buffer.from(
+            await pdfResponse.arrayBuffer()
+        );
+
+        res.setHeader(
+            "Content-Type",
+            "application/pdf"
+        );
+
+        res.setHeader(
+            "Content-Disposition",
+            `inline; filename="${encodeURIComponent(
+                material.name
+            )}.pdf"`
+        );
+
+        res.setHeader(
+            "Content-Length",
+            pdfBuffer.length
+        );
+
+        res.setHeader(
+            "Cache-Control",
+            "private, no-cache, no-store, must-revalidate"
+        );
+
+        return res.send(pdfBuffer);
+    } catch (error) {
+        console.error(
+            "View material error:",
+            error
+        );
+
+        return res.status(500).json({
+            success: false,
+            message:
+                "Failed to load PDF.",
+        });
+    }
+};
+
+// =========================================
 // Delete Cloudinary Material
 // =========================================
 
 const destroyMaterialFile = async (material) => {
-    // New PDFs are uploaded as image assets.
-    // Existing PDFs may still be raw assets.
     const imageResult =
         await cloudinary.uploader.destroy(
             material.pdfPublicId,
@@ -253,6 +336,7 @@ const deleteMaterialsBulk = async (
 module.exports = {
     uploadMaterial,
     getMyMaterials,
+    viewMaterial,
     deleteMaterial,
     deleteMaterialsBulk,
 };

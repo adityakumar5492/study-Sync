@@ -1,25 +1,44 @@
 const express = require("express");
 
 const auth = require("../middleware/auth.middleware");
+
 const uploadPdf = require("../middleware/pdfUpload.middleware");
 
 const {
     uploadMaterial,
     getMyMaterials,
+    viewMaterial,
     deleteMaterial,
     deleteMaterialsBulk,
 } = require("../controllers/material.controller");
 
 const router = express.Router();
 
-// Get my personal materials
+// =========================================
+// Get My Materials
+// =========================================
+
 router.get(
     "/",
     auth,
     getMyMaterials
 );
 
-// Upload one or multiple personal PDFs
+// =========================================
+// View Personal PDF
+// IMPORTANT: Keep this BEFORE /:id
+// =========================================
+
+router.get(
+    "/:id/view",
+    auth,
+    viewMaterial
+);
+
+// =========================================
+// Upload One or Multiple PDFs
+// =========================================
+
 router.post(
     "/",
     auth,
@@ -27,14 +46,20 @@ router.post(
     uploadMaterial
 );
 
-// Delete multiple materials
+// =========================================
+// Delete Multiple Materials
+// =========================================
+
 router.delete(
     "/bulk",
     auth,
     deleteMaterialsBulk
 );
 
-// Delete single material
+// =========================================
+// Delete Single Material
+// =========================================
+
 router.delete(
     "/:id",
     auth,
