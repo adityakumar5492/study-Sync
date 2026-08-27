@@ -10,6 +10,7 @@ import {
     FaTimes,
     FaExclamationTriangle,
     FaCheck,
+    FaExpand,
 } from "react-icons/fa";
 import toast from "react-hot-toast";
 
@@ -117,9 +118,7 @@ const MaterialList = ({
     };
 
     const handleBulkDelete = async () => {
-        if (!selectedIds.length) {
-            return;
-        }
+        if (!selectedIds.length) return;
 
         try {
             setBulkDeleting(true);
@@ -174,72 +173,110 @@ const MaterialList = ({
         }
     };
 
+    const openPdf = (material) => {
+        setSelectedMaterial(material);
+    };
+
+    const closePdf = () => {
+        setSelectedMaterial(null);
+    };
+
     if (loading) {
         return (
-            <div className="py-10 text-center text-sm text-zinc-600">
-                Loading your materials...
+            <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] py-14 text-center">
+                <div className="mx-auto mb-3 h-7 w-7 animate-spin rounded-full border-2 border-white/10 border-t-violet-400" />
+
+                <p className="text-sm text-zinc-500">
+                    Loading your materials...
+                </p>
             </div>
         );
     }
 
     if (!materials?.length) {
         return (
-            <div className="rounded-2xl border border-dashed border-white/[0.08] py-12 text-center">
-                <FaFilePdf className="mx-auto mb-3 text-2xl text-zinc-700" />
+            <div className="rounded-2xl border border-dashed border-white/[0.08] bg-white/[0.015] py-14 text-center">
+                <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-red-500/[0.06] text-red-400/70">
+                    <FaFilePdf className="text-xl" />
+                </div>
 
-                <p className="text-sm font-semibold text-zinc-500">
+                <p className="text-sm font-semibold text-zinc-400">
                     No personal materials yet.
                 </p>
 
-                <p className="mt-1 text-xs text-zinc-700">
+                <p className="mt-1 text-xs text-zinc-600">
                     Upload your first PDF above.
                 </p>
             </div>
         );
     }
 
+    const allSelected =
+        selectedIds.length === materials.length;
+
     return (
         <>
             <div>
-                {/* Section Header */}
+                {/* =========================================
+                    SECTION HEADER
+                ========================================= */}
 
-                <div className="mb-4 flex items-center justify-between gap-3">
+                <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                     <div>
-                        <h2 className="text-lg font-bold text-white">
+                        <div className="flex items-center gap-2">
+                            <div className="h-1.5 w-1.5 rounded-full bg-violet-400" />
+
+                            <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-violet-400/80">
+                                Library
+                            </span>
+                        </div>
+
+                        <h2 className="mt-2 text-xl font-black tracking-tight text-white">
                             Your Materials
                         </h2>
 
-                        <p className="text-xs text-zinc-600">
-                            Private PDFs available only to you.
+                        <p className="mt-1 text-xs text-zinc-500">
+                            Private PDFs available only
+                            to you.
                         </p>
                     </div>
 
                     <div className="flex items-center gap-2">
+                        <span className="mr-1 hidden text-[10px] font-semibold text-zinc-600 sm:block">
+                            {materials.length}{" "}
+                            {materials.length === 1
+                                ? "PDF"
+                                : "PDFs"}
+                        </span>
+
                         <button
                             type="button"
                             onClick={selectAll}
+                            disabled={bulkDeleting}
                             className="
-                                rounded-lg
+                                rounded-xl
                                 border
                                 border-white/[0.07]
-                                bg-white/[0.03]
+                                bg-white/[0.025]
                                 px-3
                                 py-2
                                 text-[10px]
                                 font-bold
                                 text-zinc-400
-                                hover:bg-white/[0.06]
-                                hover:text-white
+                                transition
+                                hover:border-violet-400/20
+                                hover:bg-violet-500/[0.06]
+                                hover:text-violet-300
+                                disabled:cursor-not-allowed
+                                disabled:opacity-50
                             "
                         >
-                            {selectedIds.length ===
-                            materials.length
+                            {allSelected
                                 ? "Unselect All"
                                 : "Select All"}
                         </button>
 
-                        {selectedIds.length >
-                            0 && (
+                        {selectedIds.length > 0 && (
                             <button
                                 type="button"
                                 onClick={
@@ -252,18 +289,24 @@ const MaterialList = ({
                                     flex
                                     items-center
                                     gap-2
-                                    rounded-lg
-                                    bg-red-500/90
+                                    rounded-xl
+                                    border
+                                    border-red-400/10
+                                    bg-red-500/[0.08]
                                     px-3
                                     py-2
                                     text-[10px]
                                     font-bold
-                                    text-white
-                                    hover:bg-red-500
+                                    text-red-400
+                                    transition
+                                    hover:border-red-400/20
+                                    hover:bg-red-500/[0.14]
+                                    hover:text-red-300
+                                    disabled:cursor-not-allowed
                                     disabled:opacity-50
                                 "
                             >
-                                <FaTrash />
+                                <FaTrash className="text-[9px]" />
 
                                 {bulkDeleting
                                     ? "Deleting..."
@@ -273,11 +316,13 @@ const MaterialList = ({
                     </div>
                 </div>
 
-                {/* Material Cards */}
+                {/* =========================================
+                    MATERIAL CARDS
+                ========================================= */}
 
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                     {materials.map(
-                        (material) => {
+                        (material, index) => {
                             const isSelected =
                                 selectedIds.includes(
                                     material._id
@@ -290,26 +335,51 @@ const MaterialList = ({
                                     }
                                     initial={{
                                         opacity: 0,
-                                        y: 8,
+                                        y: 10,
                                     }}
                                     animate={{
                                         opacity: 1,
                                         y: 0,
                                     }}
+                                    transition={{
+                                        duration: 0.3,
+                                        delay:
+                                            index *
+                                            0.035,
+                                    }}
                                     className={`
                                         group
+                                        relative
+                                        overflow-hidden
                                         rounded-2xl
                                         border
                                         p-4
-                                        transition
+                                        transition-all
+                                        duration-200
                                         ${
                                             isSelected
-                                                ? "border-violet-400/40 bg-violet-500/[0.08]"
-                                                : "border-white/[0.07] bg-white/[0.025] hover:border-violet-400/20"
+                                                ? "border-violet-400/30 bg-violet-500/[0.07] shadow-[0_10px_40px_rgba(124,58,237,0.08)]"
+                                                : "border-white/[0.065] bg-white/[0.025] hover:-translate-y-0.5 hover:border-white/[0.11] hover:bg-white/[0.035]"
                                         }
                                     `}
                                 >
+                                    {/* Top accent */}
+                                    <div
+                                        className={`
+                                            absolute
+                                            inset-x-0
+                                            top-0
+                                            h-px
+                                            ${
+                                                isSelected
+                                                    ? "bg-violet-400/40"
+                                                    : "bg-gradient-to-r from-transparent via-white/[0.08] to-transparent"
+                                            }
+                                        `}
+                                    />
+
                                     <div className="flex items-start gap-3">
+                                        {/* Selection */}
                                         <button
                                             type="button"
                                             onClick={() =>
@@ -317,19 +387,24 @@ const MaterialList = ({
                                                     material._id
                                                 )
                                             }
+                                            disabled={
+                                                bulkDeleting
+                                            }
                                             className={`
+                                                mt-0.5
                                                 flex
-                                                h-6
-                                                w-6
+                                                h-5
+                                                w-5
                                                 shrink-0
                                                 items-center
                                                 justify-center
                                                 rounded-md
                                                 border
+                                                transition
                                                 ${
                                                     isSelected
                                                         ? "border-violet-400 bg-violet-500 text-white"
-                                                        : "border-white/[0.12] bg-black/20 text-transparent"
+                                                        : "border-white/[0.12] bg-black/20 text-transparent hover:border-violet-400/40"
                                                 }
                                             `}
                                             aria-label={
@@ -338,13 +413,15 @@ const MaterialList = ({
                                                     : "Select material"
                                             }
                                         >
-                                            <FaCheck className="text-[9px]" />
+                                            <FaCheck className="text-[8px]" />
                                         </button>
 
-                                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-red-500/10 text-red-400">
-                                            <FaFilePdf />
+                                        {/* PDF Icon */}
+                                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-red-500/[0.08] text-red-400 ring-1 ring-red-400/[0.06]">
+                                            <FaFilePdf className="text-lg" />
                                         </div>
 
+                                        {/* Material Info */}
                                         <div className="min-w-0 flex-1">
                                             <h3 className="truncate text-sm font-bold text-zinc-200">
                                                 {
@@ -355,21 +432,30 @@ const MaterialList = ({
                                             <p className="mt-1 text-[10px] text-zinc-600">
                                                 {new Date(
                                                     material.createdAt
-                                                ).toLocaleDateString()}
+                                                ).toLocaleDateString(
+                                                    undefined,
+                                                    {
+                                                        day: "2-digit",
+                                                        month: "short",
+                                                        year: "numeric",
+                                                    }
+                                                )}
                                             </p>
                                         </div>
                                     </div>
 
+                                    {/* Actions */}
                                     <div className="mt-4 flex gap-2">
                                         <button
                                             type="button"
                                             onClick={() =>
-                                                setSelectedMaterial(
+                                                openPdf(
                                                     material
                                                 )
                                             }
                                             className="
                                                 flex
+                                                min-w-0
                                                 flex-1
                                                 items-center
                                                 justify-center
@@ -379,11 +465,14 @@ const MaterialList = ({
                                                 border-violet-400/10
                                                 bg-violet-500/[0.06]
                                                 px-3
-                                                py-2
+                                                py-2.5
                                                 text-xs
                                                 font-bold
                                                 text-violet-300
+                                                transition
+                                                hover:border-violet-400/20
                                                 hover:bg-violet-500/[0.12]
+                                                hover:text-violet-200
                                             "
                                         >
                                             <FaExternalLinkAlt className="text-[9px]" />
@@ -399,12 +488,14 @@ const MaterialList = ({
                                             }
                                             disabled={
                                                 deletingId ===
-                                                material._id
+                                                material._id ||
+                                                bulkDeleting
                                             }
                                             className="
                                                 flex
-                                                h-9
-                                                w-9
+                                                h-10
+                                                w-10
+                                                shrink-0
                                                 items-center
                                                 justify-center
                                                 rounded-xl
@@ -412,7 +503,10 @@ const MaterialList = ({
                                                 border-red-400/10
                                                 bg-red-500/[0.05]
                                                 text-red-400
+                                                transition
+                                                hover:border-red-400/20
                                                 hover:bg-red-500/[0.1]
+                                                disabled:cursor-not-allowed
                                                 disabled:opacity-50
                                             "
                                             aria-label="Delete material"
@@ -427,7 +521,9 @@ const MaterialList = ({
                 </div>
             </div>
 
-            {/* PDF VIEWER */}
+            {/* =========================================
+                PDF VIEWER
+            ========================================= */}
 
             <AnimatePresence>
                 {selectedMaterial && (
@@ -448,89 +544,139 @@ const MaterialList = ({
                             flex
                             items-center
                             justify-center
-                            bg-black/80
-                            p-3
-                            backdrop-blur-md
-                            sm:p-5
+                            bg-[#020308]/90
+                            p-2
+                            backdrop-blur-xl
+                            sm:p-4
+                            lg:p-6
                         "
-                        onClick={() =>
-                            setSelectedMaterial(
-                                null
-                            )
-                        }
+                        onClick={closePdf}
                     >
                         <motion.div
                             initial={{
                                 opacity: 0,
-                                scale: 0.96,
+                                y: 12,
+                                scale: 0.98,
                             }}
                             animate={{
                                 opacity: 1,
+                                y: 0,
                                 scale: 1,
                             }}
                             exit={{
                                 opacity: 0,
-                                scale: 0.96,
+                                y: 12,
+                                scale: 0.98,
+                            }}
+                            transition={{
+                                duration: 0.25,
                             }}
                             onClick={(e) =>
                                 e.stopPropagation()
                             }
                             className="
                                 flex
-                                h-[92vh]
+                                h-[96vh]
                                 w-full
-                                max-w-6xl
+                                max-w-[1500px]
                                 flex-col
                                 overflow-hidden
                                 rounded-2xl
                                 border
                                 border-white/[0.1]
-                                bg-[#0b0b11]
+                                bg-[#090c13]
+                                shadow-[0_30px_100px_rgba(0,0,0,0.6)]
                             "
                         >
-                            <div className="flex h-14 shrink-0 items-center justify-between border-b border-white/[0.07] px-4">
+                            {/* Viewer Header */}
+                            <div className="flex min-h-[64px] shrink-0 items-center justify-between gap-3 border-b border-white/[0.07] bg-[#0b0f17] px-3 sm:px-5">
                                 <div className="flex min-w-0 items-center gap-3">
-                                    <FaFilePdf className="shrink-0 text-red-400" />
+                                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-red-500/[0.08] text-red-400">
+                                        <FaFilePdf className="text-sm" />
+                                    </div>
 
-                                    <h2 className="truncate text-sm font-bold text-white">
-                                        {
-                                            selectedMaterial.name
-                                        }
-                                    </h2>
+                                    <div className="min-w-0">
+                                        <p className="text-[9px] font-bold uppercase tracking-[0.16em] text-zinc-600">
+                                            Personal Material
+                                        </p>
+
+                                        <h2 className="truncate text-sm font-bold text-white sm:text-[15px]">
+                                            {
+                                                selectedMaterial.name
+                                            }
+                                        </h2>
+                                    </div>
                                 </div>
 
-                                <button
-                                    type="button"
-                                    onClick={() =>
-                                        setSelectedMaterial(
-                                            null
-                                        )
-                                    }
-                                    className="
-                                        flex
-                                        h-9
-                                        w-9
-                                        items-center
-                                        justify-center
-                                        rounded-lg
-                                        border
-                                        border-white/[0.07]
-                                        text-zinc-500
-                                        hover:bg-white/[0.06]
-                                        hover:text-white
-                                    "
-                                >
-                                    <FaTimes />
-                                </button>
+                                <div className="flex shrink-0 items-center gap-2">
+                                    <a
+                                        href={
+                                            selectedMaterial.pdfUrl
+                                        }
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="
+                                            hidden
+                                            h-9
+                                            items-center
+                                            gap-2
+                                            rounded-lg
+                                            border
+                                            border-white/[0.07]
+                                            bg-white/[0.025]
+                                            px-3
+                                            text-[10px]
+                                            font-bold
+                                            text-zinc-400
+                                            transition
+                                            hover:bg-white/[0.06]
+                                            hover:text-white
+                                            sm:flex
+                                        "
+                                    >
+                                        <FaExpand className="text-[9px]" />
+                                        Open separately
+                                    </a>
+
+                                    <button
+                                        type="button"
+                                        onClick={
+                                            closePdf
+                                        }
+                                        className="
+                                            flex
+                                            h-9
+                                            w-9
+                                            items-center
+                                            justify-center
+                                            rounded-lg
+                                            border
+                                            border-white/[0.07]
+                                            bg-white/[0.025]
+                                            text-zinc-500
+                                            transition
+                                            hover:border-red-400/20
+                                            hover:bg-red-500/[0.08]
+                                            hover:text-red-400
+                                        "
+                                        aria-label="Close PDF viewer"
+                                    >
+                                        <FaTimes />
+                                    </button>
+                                </div>
                             </div>
 
-                            <div className="min-h-0 flex-1 bg-zinc-900">
+                            {/* PDF Content */}
+                            <div className="relative min-h-0 flex-1 bg-[#1d1d1f]">
                                 <iframe
-                                    src={`${selectedMaterial.pdfUrl}#toolbar=1&navpanes=0&scrollbar=1`}
+                                    src={`https://docs.google.com/gview?embedded=1&url=${encodeURIComponent(
+                                        selectedMaterial.pdfUrl
+                                    )}`}
                                     title={
                                         selectedMaterial.name
                                     }
                                     className="h-full w-full border-0"
+                                    allow="fullscreen"
                                 />
                             </div>
                         </motion.div>
@@ -538,7 +684,9 @@ const MaterialList = ({
                 )}
             </AnimatePresence>
 
-            {/* SINGLE DELETE CONFIRMATION */}
+            {/* =========================================
+                DELETE CONFIRMATION
+            ========================================= */}
 
             <AnimatePresence>
                 {deleteTarget && (
@@ -552,7 +700,17 @@ const MaterialList = ({
                         exit={{
                             opacity: 0,
                         }}
-                        className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
+                        className="
+                            fixed
+                            inset-0
+                            z-[10000]
+                            flex
+                            items-center
+                            justify-center
+                            bg-black/70
+                            p-4
+                            backdrop-blur-md
+                        "
                         onClick={() =>
                             setDeleteTarget(null)
                         }
@@ -561,70 +719,111 @@ const MaterialList = ({
                             initial={{
                                 opacity: 0,
                                 scale: 0.94,
+                                y: 8,
                             }}
                             animate={{
                                 opacity: 1,
                                 scale: 1,
+                                y: 0,
                             }}
                             exit={{
                                 opacity: 0,
                                 scale: 0.94,
+                                y: 8,
                             }}
                             onClick={(e) =>
                                 e.stopPropagation()
                             }
-                            className="w-full max-w-sm rounded-2xl border border-white/[0.08] bg-[#101017] p-5"
+                            className="
+                                w-full
+                                max-w-sm
+                                overflow-hidden
+                                rounded-2xl
+                                border
+                                border-white/[0.08]
+                                bg-[#10141d]
+                                shadow-[0_25px_80px_rgba(0,0,0,0.5)]
+                            "
                         >
-                            <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-red-500/10 text-red-400">
-                                <FaExclamationTriangle />
-                            </div>
+                            <div className="p-5">
+                                <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-red-500/[0.08] text-red-400">
+                                    <FaExclamationTriangle />
+                                </div>
 
-                            <h3 className="text-sm font-bold text-white">
-                                Delete material?
-                            </h3>
+                                <h3 className="text-sm font-bold text-white">
+                                    Delete material?
+                                </h3>
 
-                            <p className="mt-2 text-xs leading-5 text-zinc-500">
-                                This will permanently
-                                delete{" "}
-                                <span className="font-semibold text-zinc-300">
-                                    "
-                                    {
-                                        deleteTarget.name
-                                    }
-                                    "
-                                </span>
-                                .
-                            </p>
+                                <p className="mt-2 text-xs leading-5 text-zinc-500">
+                                    This will permanently
+                                    delete{" "}
+                                    <span className="font-semibold text-zinc-300">
+                                        "
+                                        {
+                                            deleteTarget.name
+                                        }
+                                        "
+                                    </span>
+                                    .
+                                </p>
 
-                            <div className="mt-5 flex gap-2">
-                                <button
-                                    type="button"
-                                    onClick={() =>
-                                        setDeleteTarget(
-                                            null
-                                        )
-                                    }
-                                    className="flex-1 rounded-xl border border-white/[0.07] bg-white/[0.03] px-4 py-2.5 text-xs font-bold text-zinc-400"
-                                >
-                                    Cancel
-                                </button>
+                                <div className="mt-5 flex gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() =>
+                                            setDeleteTarget(
+                                                null
+                                            )
+                                        }
+                                        className="
+                                            flex-1
+                                            rounded-xl
+                                            border
+                                            border-white/[0.07]
+                                            bg-white/[0.03]
+                                            px-4
+                                            py-2.5
+                                            text-xs
+                                            font-bold
+                                            text-zinc-400
+                                            transition
+                                            hover:bg-white/[0.06]
+                                            hover:text-white
+                                        "
+                                    >
+                                        Cancel
+                                    </button>
 
-                                <button
-                                    type="button"
-                                    onClick={
-                                        handleDelete
-                                    }
-                                    disabled={
-                                        deletingId ===
+                                    <button
+                                        type="button"
+                                        onClick={
+                                            handleDelete
+                                        }
+                                        disabled={
+                                            deletingId ===
+                                            deleteTarget._id
+                                        }
+                                        className="
+                                            flex-1
+                                            rounded-xl
+                                            bg-red-500/90
+                                            px-4
+                                            py-2.5
+                                            text-xs
+                                            font-bold
+                                            text-white
+                                            transition
+                                            hover:bg-red-500
+                                            disabled:cursor-not-allowed
+                                            disabled:opacity-50
+                                        "
+                                    >
+                                        {deletingId ===
                                         deleteTarget._id
-                                    }
-                                    className="flex-1 rounded-xl bg-red-500/90 px-4 py-2.5 text-xs font-bold text-white disabled:opacity-50"
-                                >
-                                    {deletingId ===
-                                    deleteTarget._id
-                                        ? "Deleting..."
-                                        : "Delete"}
-                                </button>
+                                            ? "Deleting..."
+                                            : "Delete"}
+                                    </button>
+                                </div>
                             </div>
                         </motion.div>
                     </motion.div>
