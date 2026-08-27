@@ -13,6 +13,7 @@ import {
     FaExpand,
     FaCheckCircle,
     FaRegSquare,
+    FaCalendarAlt,
 } from "react-icons/fa";
 import toast from "react-hot-toast";
 
@@ -56,14 +57,14 @@ const MaterialList = ({
             materials.length
         ) {
             setSelectedIds([]);
-        } else {
-            setSelectedIds(
-                materials.map(
-                    (material) =>
-                        material._id
-                )
-            );
+            return;
         }
+
+        setSelectedIds(
+            materials.map(
+                (material) => material._id
+            )
+        );
     };
 
     // =========================================
@@ -85,8 +86,11 @@ const MaterialList = ({
     const openPdfSeparately = () => {
         if (!selectedMaterial) return;
 
+        const url =
+            getPdfViewUrl(selectedMaterial);
+
         window.open(
-            getPdfViewUrl(selectedMaterial),
+            url,
             "_blank",
             "noopener,noreferrer"
         );
@@ -158,9 +162,7 @@ const MaterialList = ({
     // =========================================
 
     const handleBulkDelete = async () => {
-        if (!selectedIds.length) {
-            return;
-        }
+        if (!selectedIds.length) return;
 
         try {
             setBulkDeleting(true);
@@ -227,35 +229,42 @@ const MaterialList = ({
         return (
             <div
                 className="
+                    overflow-hidden
                     rounded-2xl
                     border
                     border-white/[0.06]
-                    bg-white/[0.018]
-                    px-6
-                    py-14
-                    text-center
+                    bg-[#0b1018]/70
                 "
             >
-                <div
-                    className="
-                        mx-auto
-                        mb-4
-                        flex
-                        h-11
-                        w-11
-                        items-center
-                        justify-center
-                        rounded-2xl
-                        bg-violet-500/[0.08]
-                        text-violet-300
-                    "
-                >
-                    <FaFilePdf />
+                <div className="p-6">
+                    <div className="flex items-center gap-3">
+                        <div
+                            className="
+                                h-10
+                                w-10
+                                animate-pulse
+                                rounded-xl
+                                bg-white/[0.05]
+                            "
+                        />
+
+                        <div className="space-y-2">
+                            <div className="h-3 w-32 animate-pulse rounded bg-white/[0.05]" />
+                            <div className="h-2 w-48 animate-pulse rounded bg-white/[0.04]" />
+                        </div>
+                    </div>
                 </div>
 
-                <p className="text-sm font-semibold text-zinc-400">
-                    Loading your materials...
-                </p>
+                <div className="grid gap-3 border-t border-white/[0.05] p-4 sm:grid-cols-2 xl:grid-cols-3">
+                    {[1, 2, 3].map(
+                        (item) => (
+                            <div
+                                key={item}
+                                className="h-32 animate-pulse rounded-2xl bg-white/[0.025]"
+                            />
+                        )
+                    )}
+                </div>
             </div>
         );
     }
@@ -268,40 +277,48 @@ const MaterialList = ({
         return (
             <div
                 className="
+                    relative
+                    overflow-hidden
                     rounded-2xl
                     border
                     border-dashed
                     border-white/[0.08]
-                    bg-white/[0.015]
+                    bg-[#0b1018]/60
                     px-6
-                    py-14
+                    py-16
                     text-center
                 "
             >
+                <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-violet-400/20 to-transparent" />
+
                 <div
                     className="
                         mx-auto
-                        mb-4
+                        mb-5
                         flex
-                        h-14
-                        w-14
+                        h-16
+                        w-16
                         items-center
                         justify-center
                         rounded-2xl
-                        bg-violet-500/[0.07]
+                        border
+                        border-violet-400/10
+                        bg-violet-500/[0.06]
                         text-violet-300/70
+                        shadow-[0_10px_40px_rgba(124,58,237,0.08)]
                     "
                 >
-                    <FaFilePdf className="text-xl" />
+                    <FaFilePdf className="text-2xl" />
                 </div>
 
-                <h3 className="text-sm font-bold text-zinc-400">
-                    No personal materials yet
+                <h3 className="text-sm font-bold text-zinc-300">
+                    Your library is empty
                 </h3>
 
-                <p className="mt-1 text-xs text-zinc-600">
-                    Upload your first PDF above to
-                    start building your study library.
+                <p className="mx-auto mt-2 max-w-sm text-xs leading-5 text-zinc-600">
+                    Upload your study PDFs above
+                    and they will appear here as
+                    your private material library.
                 </p>
             </div>
         );
@@ -314,139 +331,138 @@ const MaterialList = ({
     return (
         <>
             {/* =====================================
-                SECTION HEADER
+                HEADER
             ===================================== */}
 
-            <div className="mb-5">
-                <div
-                    className="
-                        flex
-                        flex-col
-                        gap-4
-                        sm:flex-row
-                        sm:items-end
-                        sm:justify-between
-                    "
-                >
-                    <div>
-                        <div className="flex items-center gap-2">
-                            <h2 className="text-lg font-black tracking-tight text-white">
-                                Your Materials
-                            </h2>
+            <div
+                className="
+                    mb-5
+                    flex
+                    flex-col
+                    gap-4
+                    sm:flex-row
+                    sm:items-end
+                    sm:justify-between
+                "
+            >
+                <div>
+                    <div className="flex items-center gap-2.5">
+                        <h2 className="text-lg font-black tracking-tight text-white">
+                            Your Materials
+                        </h2>
 
-                            <span
-                                className="
-                                    rounded-full
-                                    border
-                                    border-violet-400/10
-                                    bg-violet-500/[0.08]
-                                    px-2
-                                    py-0.5
-                                    text-[10px]
-                                    font-bold
-                                    text-violet-300
-                                "
-                            >
-                                {materials.length}
-                            </span>
-                        </div>
-
-                        <p className="mt-1 text-xs text-zinc-600">
-                            Your private study library.
-                        </p>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                        <button
-                            type="button"
-                            onClick={selectAll}
+                        <span
                             className="
-                                flex
-                                items-center
-                                gap-2
-                                rounded-xl
+                                rounded-full
                                 border
-                                border-white/[0.07]
-                                bg-white/[0.025]
-                                px-3
-                                py-2
+                                border-violet-400/10
+                                bg-violet-500/[0.08]
+                                px-2
+                                py-0.5
                                 text-[10px]
                                 font-bold
-                                text-zinc-400
-                                transition
-                                hover:border-violet-400/20
-                                hover:bg-violet-500/[0.05]
-                                hover:text-violet-300
+                                text-violet-300
                             "
                         >
-                            {allSelected ? (
-                                <FaCheckCircle />
-                            ) : (
-                                <FaRegSquare />
-                            )}
-
-                            {allSelected
-                                ? "Unselect All"
-                                : "Select All"}
-                        </button>
-
-                        <AnimatePresence>
-                            {selectedIds.length >
-                                0 && (
-                                <motion.button
-                                    initial={{
-                                        opacity: 0,
-                                        scale: 0.95,
-                                    }}
-                                    animate={{
-                                        opacity: 1,
-                                        scale: 1,
-                                    }}
-                                    exit={{
-                                        opacity: 0,
-                                        scale: 0.95,
-                                    }}
-                                    type="button"
-                                    onClick={
-                                        handleBulkDelete
-                                    }
-                                    disabled={
-                                        bulkDeleting
-                                    }
-                                    className="
-                                        flex
-                                        items-center
-                                        gap-2
-                                        rounded-xl
-                                        border
-                                        border-red-400/15
-                                        bg-red-500/[0.08]
-                                        px-3
-                                        py-2
-                                        text-[10px]
-                                        font-bold
-                                        text-red-400
-                                        transition
-                                        hover:bg-red-500/[0.14]
-                                        hover:text-red-300
-                                        disabled:cursor-not-allowed
-                                        disabled:opacity-50
-                                    "
-                                >
-                                    <FaTrash />
-
-                                    {bulkDeleting
-                                        ? "Deleting..."
-                                        : `Delete ${selectedIds.length}`}
-                                </motion.button>
-                            )}
-                        </AnimatePresence>
+                            {materials.length}
+                        </span>
                     </div>
+
+                    <p className="mt-1 text-xs text-zinc-600">
+                        Your private study library.
+                    </p>
+                </div>
+
+                <div className="flex items-center gap-2">
+                    <button
+                        type="button"
+                        onClick={selectAll}
+                        className="
+                            flex
+                            items-center
+                            gap-2
+                            rounded-xl
+                            border
+                            border-white/[0.07]
+                            bg-white/[0.025]
+                            px-3
+                            py-2.5
+                            text-[10px]
+                            font-bold
+                            text-zinc-400
+                            transition-all
+                            hover:border-violet-400/20
+                            hover:bg-violet-500/[0.05]
+                            hover:text-violet-300
+                        "
+                    >
+                        {allSelected ? (
+                            <FaCheckCircle />
+                        ) : (
+                            <FaRegSquare />
+                        )}
+
+                        {allSelected
+                            ? "Unselect All"
+                            : "Select All"}
+                    </button>
+
+                    <AnimatePresence>
+                        {selectedIds.length >
+                            0 && (
+                            <motion.button
+                                initial={{
+                                    opacity: 0,
+                                    x: 8,
+                                }}
+                                animate={{
+                                    opacity: 1,
+                                    x: 0,
+                                }}
+                                exit={{
+                                    opacity: 0,
+                                    x: 8,
+                                }}
+                                type="button"
+                                onClick={
+                                    handleBulkDelete
+                                }
+                                disabled={
+                                    bulkDeleting
+                                }
+                                className="
+                                    flex
+                                    items-center
+                                    gap-2
+                                    rounded-xl
+                                    border
+                                    border-red-400/15
+                                    bg-red-500/[0.08]
+                                    px-3
+                                    py-2.5
+                                    text-[10px]
+                                    font-bold
+                                    text-red-400
+                                    transition
+                                    hover:bg-red-500/[0.13]
+                                    hover:text-red-300
+                                    disabled:cursor-not-allowed
+                                    disabled:opacity-50
+                                "
+                            >
+                                <FaTrash />
+
+                                {bulkDeleting
+                                    ? "Deleting..."
+                                    : `Delete ${selectedIds.length}`}
+                            </motion.button>
+                        )}
+                    </AnimatePresence>
                 </div>
             </div>
 
             {/* =====================================
-                MATERIAL CARDS
+                MATERIAL GRID
             ===================================== */}
 
             <div
@@ -465,7 +481,7 @@ const MaterialList = ({
                             );
 
                         return (
-                            <motion.div
+                            <motion.article
                                 key={
                                     material._id
                                 }
@@ -478,10 +494,10 @@ const MaterialList = ({
                                     y: 0,
                                 }}
                                 transition={{
-                                    duration: 0.35,
+                                    duration: 0.3,
                                     delay:
                                         index *
-                                        0.04,
+                                        0.035,
                                 }}
                                 className={`
                                     group
@@ -489,26 +505,23 @@ const MaterialList = ({
                                     overflow-hidden
                                     rounded-2xl
                                     border
-                                    p-4
                                     transition-all
                                     duration-200
                                     ${
                                         isSelected
-                                            ? "border-violet-400/30 bg-violet-500/[0.07] shadow-[0_12px_40px_rgba(124,58,237,0.08)]"
-                                            : "border-white/[0.065] bg-white/[0.022] hover:border-violet-400/15 hover:bg-white/[0.035]"
+                                            ? "border-violet-400/30 bg-violet-500/[0.065] shadow-[0_12px_40px_rgba(124,58,237,0.08)]"
+                                            : "border-white/[0.065] bg-[#0b1018]/70 hover:border-white/[0.11] hover:bg-[#0d131d]"
                                     }
                                 `}
                             >
-                                {/* Top accent */}
+                                {/* Top line */}
 
                                 <div
                                     className={`
                                         absolute
-                                        left-0
-                                        right-0
+                                        inset-x-0
                                         top-0
                                         h-px
-                                        transition
                                         ${
                                             isSelected
                                                 ? "bg-violet-400/40"
@@ -517,168 +530,181 @@ const MaterialList = ({
                                     `}
                                 />
 
-                                <div className="flex items-start gap-3">
-                                    {/* Selection */}
+                                <div className="p-4">
+                                    {/* Card top */}
 
-                                    <button
-                                        type="button"
-                                        onClick={() =>
-                                            toggleSelection(
-                                                material._id
-                                            )
-                                        }
-                                        className={`
-                                            mt-0.5
-                                            flex
-                                            h-6
-                                            w-6
-                                            shrink-0
-                                            items-center
-                                            justify-center
-                                            rounded-lg
-                                            border
-                                            transition
-                                            ${
+                                    <div className="flex items-start gap-3">
+                                        {/* Checkbox */}
+
+                                        <button
+                                            type="button"
+                                            onClick={() =>
+                                                toggleSelection(
+                                                    material._id
+                                                )
+                                            }
+                                            className={`
+                                                mt-0.5
+                                                flex
+                                                h-6
+                                                w-6
+                                                shrink-0
+                                                items-center
+                                                justify-center
+                                                rounded-lg
+                                                border
+                                                transition-all
+                                                ${
+                                                    isSelected
+                                                        ? "border-violet-400 bg-violet-500 text-white shadow-[0_4px_15px_rgba(124,58,237,0.25)]"
+                                                        : "border-white/[0.1] bg-black/20 text-transparent hover:border-violet-400/30 hover:bg-violet-500/[0.05]"
+                                                }
+                                            `}
+                                            aria-label={
                                                 isSelected
-                                                    ? "border-violet-400 bg-violet-500 text-white"
-                                                    : "border-white/[0.1] bg-black/20 text-transparent hover:border-violet-400/30"
+                                                    ? "Unselect material"
+                                                    : "Select material"
                                             }
-                                        `}
-                                        aria-label={
-                                            isSelected
-                                                ? "Unselect material"
-                                                : "Select material"
-                                        }
-                                    >
-                                        <FaCheck className="text-[8px]" />
-                                    </button>
+                                        >
+                                            <FaCheck className="text-[8px]" />
+                                        </button>
 
-                                    {/* PDF Icon */}
+                                        {/* PDF Icon */}
 
-                                    <div
-                                        className="
-                                            flex
-                                            h-11
-                                            w-11
-                                            shrink-0
-                                            items-center
-                                            justify-center
-                                            rounded-xl
-                                            bg-red-500/[0.08]
-                                            text-red-400
-                                            ring-1
-                                            ring-inset
-                                            ring-red-400/[0.06]
-                                        "
-                                    >
-                                        <FaFilePdf />
-                                    </div>
-
-                                    {/* Info */}
-
-                                    <div className="min-w-0 flex-1">
-                                        <h3
-                                            title={
-                                                material.name
-                                            }
+                                        <div
                                             className="
-                                                truncate
-                                                text-sm
-                                                font-bold
-                                                text-zinc-200
+                                                relative
+                                                flex
+                                                h-11
+                                                w-11
+                                                shrink-0
+                                                items-center
+                                                justify-center
+                                                rounded-xl
+                                                border
+                                                border-red-400/[0.08]
+                                                bg-red-500/[0.07]
+                                                text-red-400
                                             "
                                         >
-                                            {
-                                                material.name
-                                            }
-                                        </h3>
+                                            <FaFilePdf />
 
-                                        <p className="mt-1 text-[10px] text-zinc-600">
-                                            {new Date(
-                                                material.createdAt
-                                            ).toLocaleDateString(
-                                                undefined,
-                                                {
-                                                    day: "2-digit",
-                                                    month: "short",
-                                                    year: "numeric",
+                                            <span className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-red-400/70 ring-2 ring-[#0b1018]" />
+                                        </div>
+
+                                        {/* Details */}
+
+                                        <div className="min-w-0 flex-1">
+                                            <h3
+                                                title={
+                                                    material.name
                                                 }
-                                            )}
-                                        </p>
+                                                className="
+                                                    truncate
+                                                    text-sm
+                                                    font-bold
+                                                    text-zinc-200
+                                                "
+                                            >
+                                                {
+                                                    material.name
+                                                }
+                                            </h3>
+
+                                            <div className="mt-1.5 flex items-center gap-1.5 text-[10px] text-zinc-600">
+                                                <FaCalendarAlt className="text-[8px]" />
+
+                                                {new Date(
+                                                    material.createdAt
+                                                ).toLocaleDateString(
+                                                    undefined,
+                                                    {
+                                                        day: "2-digit",
+                                                        month: "short",
+                                                        year: "numeric",
+                                                    }
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Divider */}
+
+                                    <div className="my-4 h-px bg-white/[0.045]" />
+
+                                    {/* Actions */}
+
+                                    <div className="flex gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={() =>
+                                                openPdf(
+                                                    material
+                                                )
+                                            }
+                                            className="
+                                                flex
+                                                min-w-0
+                                                flex-1
+                                                items-center
+                                                justify-center
+                                                gap-2
+                                                rounded-xl
+                                                border
+                                                border-violet-400/10
+                                                bg-violet-500/[0.07]
+                                                px-3
+                                                py-2.5
+                                                text-[11px]
+                                                font-bold
+                                                text-violet-300
+                                                transition-all
+                                                hover:border-violet-400/20
+                                                hover:bg-violet-500/[0.13]
+                                                hover:text-violet-200
+                                            "
+                                        >
+                                            <FaExternalLinkAlt className="text-[9px]" />
+                                            View PDF
+                                        </button>
+
+                                        <button
+                                            type="button"
+                                            onClick={() =>
+                                                setDeleteTarget(
+                                                    material
+                                                )
+                                            }
+                                            disabled={
+                                                deletingId ===
+                                                material._id
+                                            }
+                                            className="
+                                                flex
+                                                h-10
+                                                w-10
+                                                shrink-0
+                                                items-center
+                                                justify-center
+                                                rounded-xl
+                                                border
+                                                border-red-400/10
+                                                bg-red-500/[0.035]
+                                                text-red-400/80
+                                                transition-all
+                                                hover:border-red-400/20
+                                                hover:bg-red-500/[0.1]
+                                                hover:text-red-300
+                                                disabled:cursor-not-allowed
+                                                disabled:opacity-50
+                                            "
+                                            aria-label="Delete material"
+                                        >
+                                            <FaTrash className="text-[10px]" />
+                                        </button>
                                     </div>
                                 </div>
-
-                                {/* Actions */}
-
-                                <div className="mt-4 flex gap-2">
-                                    <button
-                                        type="button"
-                                        onClick={() =>
-                                            openPdf(
-                                                material
-                                            )
-                                        }
-                                        className="
-                                            flex
-                                            min-w-0
-                                            flex-1
-                                            items-center
-                                            justify-center
-                                            gap-2
-                                            rounded-xl
-                                            border
-                                            border-violet-400/10
-                                            bg-violet-500/[0.07]
-                                            px-3
-                                            py-2.5
-                                            text-[11px]
-                                            font-bold
-                                            text-violet-300
-                                            transition-all
-                                            hover:border-violet-400/20
-                                            hover:bg-violet-500/[0.13]
-                                            hover:text-violet-200
-                                        "
-                                    >
-                                        <FaExternalLinkAlt className="text-[9px]" />
-                                        View PDF
-                                    </button>
-
-                                    <button
-                                        type="button"
-                                        onClick={() =>
-                                            setDeleteTarget(
-                                                material
-                                            )
-                                        }
-                                        disabled={
-                                            deletingId ===
-                                            material._id
-                                        }
-                                        className="
-                                            flex
-                                            h-10
-                                            w-10
-                                            shrink-0
-                                            items-center
-                                            justify-center
-                                            rounded-xl
-                                            border
-                                            border-red-400/10
-                                            bg-red-500/[0.04]
-                                            text-red-400/80
-                                            transition
-                                            hover:border-red-400/20
-                                            hover:bg-red-500/[0.1]
-                                            hover:text-red-300
-                                            disabled:opacity-50
-                                        "
-                                        aria-label="Delete material"
-                                    >
-                                        <FaTrash className="text-[10px]" />
-                                    </button>
-                                </div>
-                            </motion.div>
+                            </motion.article>
                         );
                     }
                 )}
@@ -707,7 +733,7 @@ const MaterialList = ({
                             flex
                             items-center
                             justify-center
-                            bg-black/80
+                            bg-black/85
                             p-2
                             backdrop-blur-md
                             sm:p-4
@@ -718,7 +744,7 @@ const MaterialList = ({
                         <motion.div
                             initial={{
                                 opacity: 0,
-                                y: 12,
+                                y: 16,
                                 scale: 0.985,
                             }}
                             animate={{
@@ -728,11 +754,11 @@ const MaterialList = ({
                             }}
                             exit={{
                                 opacity: 0,
-                                y: 12,
+                                y: 16,
                                 scale: 0.985,
                             }}
                             transition={{
-                                duration: 0.2,
+                                duration: 0.22,
                             }}
                             onClick={(e) =>
                                 e.stopPropagation()
@@ -748,7 +774,7 @@ const MaterialList = ({
                                 border
                                 border-white/[0.1]
                                 bg-[#080b11]
-                                shadow-[0_30px_100px_rgba(0,0,0,0.65)]
+                                shadow-[0_30px_100px_rgba(0,0,0,0.7)]
                             "
                         >
                             {/* Viewer Header */}
@@ -756,35 +782,37 @@ const MaterialList = ({
                             <div
                                 className="
                                     flex
-                                    min-h-[60px]
+                                    min-h-[62px]
                                     shrink-0
                                     items-center
                                     gap-3
                                     border-b
-                                    border-white/[0.07]
-                                    bg-[#0b0f17]
+                                    border-white/[0.06]
+                                    bg-[#0b1018]
                                     px-3
-                                    sm:px-4
+                                    sm:px-5
                                 "
                             >
                                 <div
                                     className="
                                         flex
-                                        h-9
-                                        w-9
+                                        h-10
+                                        w-10
                                         shrink-0
                                         items-center
                                         justify-center
                                         rounded-xl
-                                        bg-red-500/[0.09]
+                                        border
+                                        border-red-400/[0.08]
+                                        bg-red-500/[0.08]
                                         text-red-400
                                     "
                                 >
-                                    <FaFilePdf className="text-sm" />
+                                    <FaFilePdf />
                                 </div>
 
                                 <div className="min-w-0 flex-1">
-                                    <p className="text-[9px] font-bold uppercase tracking-[0.16em] text-zinc-600">
+                                    <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-zinc-600">
                                         Personal Material
                                     </p>
 
@@ -806,7 +834,7 @@ const MaterialList = ({
                                     </h2>
                                 </div>
 
-                                {/* Desktop open separately */}
+                                {/* Open separately */}
 
                                 <button
                                     type="button"
@@ -826,7 +854,7 @@ const MaterialList = ({
                                         text-[10px]
                                         font-bold
                                         text-zinc-400
-                                        transition
+                                        transition-all
                                         hover:border-violet-400/20
                                         hover:bg-violet-500/[0.06]
                                         hover:text-violet-300
@@ -854,7 +882,7 @@ const MaterialList = ({
                                         border-white/[0.07]
                                         bg-white/[0.025]
                                         text-zinc-500
-                                        transition
+                                        transition-all
                                         hover:border-red-400/15
                                         hover:bg-red-500/[0.06]
                                         hover:text-red-300
@@ -867,26 +895,18 @@ const MaterialList = ({
 
                             {/* PDF */}
 
-                            <div
-                                className="
-                                    relative
-                                    min-h-0
-                                    flex-1
-                                    bg-[#1d1d1f]
-                                "
-                            >
+                            <div className="relative min-h-0 flex-1 bg-[#1d1d1f]">
                                 <iframe
+                                    key={
+                                        selectedMaterial._id
+                                    }
                                     src={getPdfViewUrl(
                                         selectedMaterial
                                     )}
                                     title={
                                         selectedMaterial.name
                                     }
-                                    className="
-                                        h-full
-                                        w-full
-                                        border-0
-                                    "
+                                    className="h-full w-full border-0"
                                     allow="fullscreen"
                                 />
                             </div>
@@ -918,7 +938,7 @@ const MaterialList = ({
                             flex
                             items-center
                             justify-center
-                            bg-black/70
+                            bg-black/75
                             p-4
                             backdrop-blur-md
                         "
@@ -929,7 +949,7 @@ const MaterialList = ({
                         <motion.div
                             initial={{
                                 opacity: 0,
-                                y: 10,
+                                y: 12,
                                 scale: 0.96,
                             }}
                             animate={{
@@ -939,7 +959,7 @@ const MaterialList = ({
                             }}
                             exit={{
                                 opacity: 0,
-                                y: 10,
+                                y: 12,
                                 scale: 0.96,
                             }}
                             onClick={(e) =>
@@ -953,10 +973,10 @@ const MaterialList = ({
                                 border
                                 border-white/[0.08]
                                 bg-[#0d1119]
-                                shadow-[0_25px_80px_rgba(0,0,0,0.55)]
+                                shadow-[0_25px_80px_rgba(0,0,0,0.6)]
                             "
                         >
-                            <div className="p-5">
+                            <div className="border-b border-white/[0.06] p-5">
                                 <div
                                     className="
                                         mb-4
@@ -966,6 +986,8 @@ const MaterialList = ({
                                         items-center
                                         justify-center
                                         rounded-xl
+                                        border
+                                        border-red-400/10
                                         bg-red-500/[0.08]
                                         text-red-400
                                     "
@@ -981,74 +1003,70 @@ const MaterialList = ({
                                     This will permanently
                                     delete{" "}
                                     <span className="font-semibold text-zinc-300">
-                                        "
-                                        {
-                                            deleteTarget.name
-                                        }
-                                        "
+                                        "{deleteTarget.name}"
                                     </span>
                                     .
                                 </p>
+                            </div>
 
-                                <div className="mt-5 flex gap-2">
-                                    <button
-                                        type="button"
-                                        onClick={() =>
-                                            setDeleteTarget(
-                                                null
-                                            )
-                                        }
-                                        className="
-                                            flex-1
-                                            rounded-xl
-                                            border
-                                            border-white/[0.07]
-                                            bg-white/[0.025]
-                                            px-4
-                                            py-2.5
-                                            text-xs
-                                            font-bold
-                                            text-zinc-400
-                                            transition
-                                            hover:bg-white/[0.05]
-                                            hover:text-white
-                                        "
-                                    >
-                                        Cancel
-                                    </button>
+                            <div className="flex gap-2 p-4">
+                                <button
+                                    type="button"
+                                    onClick={() =>
+                                        setDeleteTarget(
+                                            null
+                                        )
+                                    }
+                                    className="
+                                        flex-1
+                                        rounded-xl
+                                        border
+                                        border-white/[0.07]
+                                        bg-white/[0.025]
+                                        px-4
+                                        py-2.5
+                                        text-xs
+                                        font-bold
+                                        text-zinc-400
+                                        transition
+                                        hover:bg-white/[0.05]
+                                        hover:text-white
+                                    "
+                                >
+                                    Cancel
+                                </button>
 
-                                    <button
-                                        type="button"
-                                        onClick={
-                                            handleDelete
-                                        }
-                                        disabled={
-                                            deletingId ===
-                                            deleteTarget._id
-                                        }
-                                        className="
-                                            flex-1
-                                            rounded-xl
-                                            border
-                                            border-red-400/10
-                                            bg-red-500/90
-                                            px-4
-                                            py-2.5
-                                            text-xs
-                                            font-bold
-                                            text-white
-                                            transition
-                                            hover:bg-red-500
-                                            disabled:cursor-not-allowed
-                                            disabled:opacity-50
-                                        "
-                                    >
-                                        {deletingId ===
+                                <button
+                                    type="button"
+                                    onClick={
+                                        handleDelete
+                                    }
+                                    disabled={
+                                        deletingId ===
                                         deleteTarget._id
-                                            ? "Deleting..."
-                                            : "Delete"}
-                                    </button>
-                                </div>
+                                    }
+                                    className="
+                                        flex-1
+                                        rounded-xl
+                                        border
+                                        border-red-400/10
+                                        bg-red-500/90
+                                        px-4
+                                        py-2.5
+                                        text-xs
+                                        font-bold
+                                        text-white
+                                        transition
+                                        hover:bg-red-500
+                                        disabled:cursor-not-allowed
+                                        disabled:opacity-50
+                                    "
+                                >
+                                    {deletingId ===
+                                    deleteTarget._id
+                                        ? "Deleting..."
+                                        : "Delete"}
+                                </button>
                             </div>
                         </motion.div>
                     </motion.div>

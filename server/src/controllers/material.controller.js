@@ -23,7 +23,7 @@ const uploadMaterial = async (req, res) => {
                         cloudinary.uploader.upload_stream(
                             {
                                 folder: "studysync/materials",
-                                resource_type: "image",
+                                resource_type: "raw",
                             },
                             (error, result) => {
                                 if (error) {
@@ -56,6 +56,7 @@ const uploadMaterial = async (req, res) => {
 
         return res.status(201).json({
             success: true,
+
             message:
                 uploadedMaterials.length === 1
                     ? "Material uploaded successfully."
@@ -109,7 +110,7 @@ const getMyMaterials = async (req, res) => {
 };
 
 // =========================================
-// View Personal PDF
+// VIEW PDF
 // =========================================
 
 const viewMaterial = async (req, res) => {
@@ -134,31 +135,54 @@ const viewMaterial = async (req, res) => {
             });
         }
 
-        const pdfResponse = await fetch(
+        /*
+         * Fetch the PDF from Cloudinary.
+         *
+         * We proxy it through our backend instead
+         * of exposing Cloudinary directly to the
+         * browser PDF viewer.
+         */
+
+        const response = await fetch(
             material.pdfUrl
         );
 
-        if (!pdfResponse.ok) {
+        if (!response.ok) {
             console.error(
-                "Cloudinary PDF fetch failed:",
-                pdfResponse.status,
-                pdfResponse.statusText
+                "Cloudinary PDF response:",
+                response.status,
+                response.statusText
             );
 
             return res.status(502).json({
                 success: false,
                 message:
-                    "Unable to load PDF file.",
+                    "Unable to retrieve PDF from storage.",
             });
         }
 
-        const pdfBuffer = Buffer.from(
-            await pdfResponse.arrayBuffer()
+        const contentType =
+            response.headers.get(
+                "content-type"
+            );
+
+        const arrayBuffer =
+            await response.arrayBuffer();
+
+        const buffer = Buffer.from(
+            arrayBuffer
         );
+
+        /*
+         * Force browser to render the PDF
+         * instead of downloading it.
+         */
 
         res.setHeader(
             "Content-Type",
-            "application/pdf"
+            contentType?.includes("pdf")
+                ? "application/pdf"
+                : "application/pdf"
         );
 
         res.setHeader(
@@ -170,15 +194,15 @@ const viewMaterial = async (req, res) => {
 
         res.setHeader(
             "Content-Length",
-            pdfBuffer.length
+            buffer.length
         );
 
         res.setHeader(
             "Cache-Control",
-            "private, no-cache, no-store, must-revalidate"
+            "private, max-age=3600"
         );
 
-        return res.send(pdfBuffer);
+        return res.status(200).send(buffer);
     } catch (error) {
         console.error(
             "View material error:",
@@ -188,7 +212,7 @@ const viewMaterial = async (req, res) => {
         return res.status(500).json({
             success: false,
             message:
-                "Failed to load PDF.",
+                "Failed to open PDF.",
         });
     }
 };
@@ -197,22 +221,35 @@ const viewMaterial = async (req, res) => {
 // Delete Cloudinary Material
 // =========================================
 
-const destroyMaterialFile = async (material) => {
-    const imageResult =
-        await cloudinary.uploader.destroy(
-            material.pdfPublicId,
-            {
-                resource_type: "image",
-            }
-        );
+const destroyMaterialFile = async (
+    material
+) => {
+    /*
+     * New materials are stored as raw PDFs.
+     */
 
-    if (
-        imageResult.result === "not found"
-    ) {
+    const rawResult =
         await cloudinary.uploader.destroy(
             material.pdfPublicId,
             {
                 resource_type: "raw",
+            }
+        );
+
+    /*
+     * Some older materials were incorrectly
+     * uploaded as image resources.
+     *
+     * Try image deletion as fallback.
+     */
+
+    if (
+        rawResult.result === "not found"
+    ) {
+        await cloudinary.uploader.destroy(
+            material.pdfPublicId,
+            {
+                resource_type: "image",
             }
         );
     }
@@ -237,7 +274,9 @@ const deleteMaterial = async (req, res) => {
             });
         }
 
-        await destroyMaterialFile(material);
+        await destroyMaterialFile(
+            material
+        );
 
         await material.deleteOne();
 
@@ -311,13 +350,17 @@ const deleteMaterialsBulk = async (
                         material._id
                 ),
             },
+
             owner: req.user._id,
         });
 
         return res.status(200).json({
             success: true,
+
             message: `${materials.length} materials deleted successfully.`,
-            deletedCount: materials.length,
+
+            deletedCount:
+                materials.length,
         });
     } catch (error) {
         console.error(

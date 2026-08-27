@@ -15,7 +15,7 @@ const {
 const router = express.Router();
 
 // =========================================
-// Get My Materials
+// Get My Personal Materials
 // =========================================
 
 router.get(
@@ -25,7 +25,7 @@ router.get(
 );
 
 // =========================================
-// View Personal PDF
+// View PDF
 // IMPORTANT: Keep this BEFORE /:id
 // =========================================
 
@@ -36,7 +36,7 @@ router.get(
 );
 
 // =========================================
-// Upload One or Multiple PDFs
+// Upload One / Multiple PDFs
 // =========================================
 
 router.post(
