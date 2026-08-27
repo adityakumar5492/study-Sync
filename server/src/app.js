@@ -20,6 +20,12 @@ app.use(
         crossOriginResourcePolicy: {
             policy: "cross-origin",
         },
+        contentSecurityPolicy: {
+            directives: {
+                ...helmet.contentSecurityPolicy.getDefaultDirectives(),
+                "frame-ancestors": ["'self'", CLIENT_URL],
+            },
+        },
     })
 );
 

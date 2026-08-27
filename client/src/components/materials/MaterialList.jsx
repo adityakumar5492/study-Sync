@@ -394,6 +394,10 @@ const MaterialList = ({
                             hover:border-violet-400/20
                             hover:bg-violet-500/[0.05]
                             hover:text-violet-300
+                            focus-visible:outline
+                            focus-visible:outline-2
+                            focus-visible:outline-offset-2
+                            focus-visible:outline-violet-400/60
                         "
                     >
                         {allSelected ? (
@@ -446,6 +450,10 @@ const MaterialList = ({
                                     transition
                                     hover:bg-red-500/[0.13]
                                     hover:text-red-300
+                                    focus-visible:outline
+                                    focus-visible:outline-2
+                                    focus-visible:outline-offset-2
+                                    focus-visible:outline-red-400/60
                                     disabled:cursor-not-allowed
                                     disabled:opacity-50
                                 "
@@ -554,6 +562,10 @@ const MaterialList = ({
                                                 rounded-lg
                                                 border
                                                 transition-all
+                                                focus-visible:outline
+                                                focus-visible:outline-2
+                                                focus-visible:outline-offset-2
+                                                focus-visible:outline-violet-400/60
                                                 ${
                                                     isSelected
                                                         ? "border-violet-400 bg-violet-500 text-white shadow-[0_4px_15px_rgba(124,58,237,0.25)]"
@@ -662,6 +674,10 @@ const MaterialList = ({
                                                 hover:border-violet-400/20
                                                 hover:bg-violet-500/[0.13]
                                                 hover:text-violet-200
+                                                focus-visible:outline
+                                                focus-visible:outline-2
+                                                focus-visible:outline-offset-2
+                                                focus-visible:outline-violet-400/60
                                             "
                                         >
                                             <FaExternalLinkAlt className="text-[9px]" />
@@ -695,6 +711,10 @@ const MaterialList = ({
                                                 hover:border-red-400/20
                                                 hover:bg-red-500/[0.1]
                                                 hover:text-red-300
+                                                focus-visible:outline
+                                                focus-visible:outline-2
+                                                focus-visible:outline-offset-2
+                                                focus-visible:outline-red-400/60
                                                 disabled:cursor-not-allowed
                                                 disabled:opacity-50
                                             "
@@ -765,7 +785,7 @@ const MaterialList = ({
                             }
                             className="
                                 flex
-                                h-[96vh]
+                                h-[92vh]
                                 w-full
                                 max-w-[1500px]
                                 flex-col
@@ -775,6 +795,7 @@ const MaterialList = ({
                                 border-white/[0.1]
                                 bg-[#080b11]
                                 shadow-[0_30px_100px_rgba(0,0,0,0.7)]
+                                sm:h-[96vh]
                             "
                         >
                             {/* Viewer Header */}
@@ -785,11 +806,12 @@ const MaterialList = ({
                                     min-h-[62px]
                                     shrink-0
                                     items-center
-                                    gap-3
+                                    gap-2
                                     border-b
                                     border-white/[0.06]
                                     bg-[#0b1018]
                                     px-3
+                                    sm:gap-3
                                     sm:px-5
                                 "
                             >
@@ -834,7 +856,7 @@ const MaterialList = ({
                                     </h2>
                                 </div>
 
-                                {/* Open separately */}
+                                {/* Open separately — icon-only on mobile, labeled from sm up */}
 
                                 <button
                                     type="button"
@@ -842,15 +864,17 @@ const MaterialList = ({
                                         openPdfSeparately
                                     }
                                     className="
-                                        hidden
+                                        flex
                                         h-10
+                                        w-10
+                                        shrink-0
                                         items-center
+                                        justify-center
                                         gap-2
                                         rounded-xl
                                         border
                                         border-white/[0.07]
                                         bg-white/[0.025]
-                                        px-3
                                         text-[10px]
                                         font-bold
                                         text-zinc-400
@@ -858,11 +882,20 @@ const MaterialList = ({
                                         hover:border-violet-400/20
                                         hover:bg-violet-500/[0.06]
                                         hover:text-violet-300
-                                        sm:flex
+                                        focus-visible:outline
+                                        focus-visible:outline-2
+                                        focus-visible:outline-offset-2
+                                        focus-visible:outline-violet-400/60
+                                        sm:w-auto
+                                        sm:px-3
                                     "
+                                    aria-label="Open PDF in a new tab"
+                                    title="Open in a new tab"
                                 >
                                     <FaExpand className="text-[9px]" />
-                                    Open separately
+                                    <span className="hidden sm:inline">
+                                        Open separately
+                                    </span>
                                 </button>
 
                                 {/* Close */}
@@ -886,6 +919,10 @@ const MaterialList = ({
                                         hover:border-red-400/15
                                         hover:bg-red-500/[0.06]
                                         hover:text-red-300
+                                        focus-visible:outline
+                                        focus-visible:outline-2
+                                        focus-visible:outline-offset-2
+                                        focus-visible:outline-red-400/60
                                     "
                                     aria-label="Close PDF viewer"
                                 >
@@ -1031,6 +1068,10 @@ const MaterialList = ({
                                         transition
                                         hover:bg-white/[0.05]
                                         hover:text-white
+                                        focus-visible:outline
+                                        focus-visible:outline-2
+                                        focus-visible:outline-offset-2
+                                        focus-visible:outline-white/40
                                     "
                                 >
                                     Cancel
@@ -1058,6 +1099,10 @@ const MaterialList = ({
                                         text-white
                                         transition
                                         hover:bg-red-500
+                                        focus-visible:outline
+                                        focus-visible:outline-2
+                                        focus-visible:outline-offset-2
+                                        focus-visible:outline-red-400/70
                                         disabled:cursor-not-allowed
                                         disabled:opacity-50
                                     "

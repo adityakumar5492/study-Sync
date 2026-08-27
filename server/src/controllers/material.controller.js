@@ -1,3 +1,4 @@
+const { Readable } = require("stream");
 const Material = require("../models/Material.model");
 const cloudinary = require("../config/cloudinary");
 
@@ -143,46 +144,68 @@ const viewMaterial = async (req, res) => {
          * browser PDF viewer.
          */
 
-        const response = await fetch(
-            material.pdfUrl
-        );
+        let response;
+
+        try {
+            response = await fetch(material.pdfUrl);
+        } catch (fetchError) {
+            console.error(
+                "Cloudinary PDF fetch threw:",
+                {
+                    materialId: material._id.toString(),
+                    pdfUrl: material.pdfUrl,
+                    error: fetchError.message,
+                }
+            );
+
+            return res.status(502).json({
+                success: false,
+                message:
+                    "Unable to reach file storage.",
+            });
+        }
 
         if (!response.ok) {
+            const errorBody = await response
+                .text()
+                .catch(() => "");
+
+            /*
+             * Log the FULL diagnostic — this is what
+             * tells us whether Cloudinary is blocking
+             * delivery, or something else is wrong.
+             */
+
             console.error(
-                "Cloudinary PDF response:",
-                response.status,
-                response.statusText
+                "Cloudinary PDF fetch failed:",
+                {
+                    materialId: material._id.toString(),
+                    pdfUrl: material.pdfUrl,
+                    status: response.status,
+                    statusText: response.statusText,
+                    bodySnippet: errorBody.slice(0, 500),
+                }
             );
 
             return res.status(502).json({
                 success: false,
                 message:
                     "Unable to retrieve PDF from storage.",
+                cloudinaryStatus: response.status,
             });
         }
 
-        const contentType =
-            response.headers.get(
-                "content-type"
-            );
-
-        const arrayBuffer =
-            await response.arrayBuffer();
-
-        const buffer = Buffer.from(
-            arrayBuffer
-        );
-
         /*
-         * Force browser to render the PDF
-         * instead of downloading it.
+         * Stream the response straight through instead
+         * of buffering the whole file into memory first.
+         * Buffering large PDFs can be slow enough on
+         * Render's free tier to trigger a real platform
+         * timeout/502, independent of this code.
          */
 
         res.setHeader(
             "Content-Type",
-            contentType?.includes("pdf")
-                ? "application/pdf"
-                : "application/pdf"
+            "application/pdf"
         );
 
         res.setHeader(
@@ -193,16 +216,45 @@ const viewMaterial = async (req, res) => {
         );
 
         res.setHeader(
-            "Content-Length",
-            buffer.length
-        );
-
-        res.setHeader(
             "Cache-Control",
             "private, max-age=3600"
         );
 
-        return res.status(200).send(buffer);
+        const contentLength =
+            response.headers.get("content-length");
+
+        if (contentLength) {
+            res.setHeader(
+                "Content-Length",
+                contentLength
+            );
+        }
+
+        const nodeStream = Readable.fromWeb(
+            response.body
+        );
+
+        nodeStream.on("error", (streamError) => {
+            console.error(
+                "PDF stream error:",
+                {
+                    materialId: material._id.toString(),
+                    error: streamError.message,
+                }
+            );
+
+            if (!res.headersSent) {
+                res.status(502).json({
+                    success: false,
+                    message:
+                        "PDF stream interrupted.",
+                });
+            } else {
+                res.end();
+            }
+        });
+
+        nodeStream.pipe(res);
     } catch (error) {
         console.error(
             "View material error:",
