@@ -73,7 +73,7 @@ const Reveal = ({
   className = "",
   direction = "up",
   delay = 0,
-  duration = 0.52,
+  duration = 0.4,
   scale = false,
 }) => {
   const reduced = useReducedMotion();
@@ -184,6 +184,11 @@ const Landing = () => {
         /* Landing-page performance + compact responsive typography. */
         [data-studysync-landing] {
           overflow-x: clip;
+          scroll-behavior: smooth;
+        }
+
+        [data-studysync-landing] [id] {
+          scroll-margin-top: 82px;
         }
 
         [data-studysync-landing] h1 {
@@ -213,7 +218,12 @@ const Landing = () => {
 
           [data-studysync-landing] .ss-orbit,
           [data-studysync-landing] .ss-orbit-reverse {
-            opacity: .5;
+            opacity: .42;
+            animation-duration: 55s;
+          }
+
+          [data-studysync-landing] .ss-marquee {
+            animation-duration: 30s;
           }
         }
 
@@ -237,9 +247,7 @@ const Landing = () => {
       <Navbar />
       <Hero />
       <LiveCollaboration />
-      <VoiceCollaboration />
       <InteractiveWorkspace />
-      <CinematicRoom />
       <Features />
       <FinalCTA />
       <Footer />
@@ -438,7 +446,7 @@ const Hero = () => {
   return (
     <section
       onMouseMove={handleMouseMove}
-      className="relative isolate min-h-[780px] overflow-hidden bg-[#05050a] sm:min-h-screen"
+      className="relative isolate min-h-[640px] overflow-hidden bg-[#05050a] sm:min-h-[700px]"
     >
       <div className="pointer-events-none absolute inset-0">
         <div className="absolute left-[-18%] top-[5%] h-[420px] w-[420px] rounded-full bg-violet-600/20 blur-[110px] sm:h-[550px] sm:w-[550px] sm:blur-[140px]" />
@@ -463,7 +471,7 @@ const Hero = () => {
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_18%,#05050a_84%)]" />
       </div>
 
-      <div className="relative mx-auto grid min-h-[780px] w-full max-w-7xl items-center gap-10 px-4 pb-14 pt-24 sm:min-h-screen sm:px-8 sm:pb-16 sm:pt-28 lg:grid-cols-[.9fr_1.1fr] lg:gap-8">
+      <div className="relative mx-auto grid min-h-[640px] w-full max-w-7xl items-center gap-7 px-4 pb-9 pt-20 sm:min-h-[700px] sm:px-8 sm:pb-12 sm:pt-24 lg:grid-cols-[.9fr_1.1fr] lg:gap-8">
         <div className="relative z-20 mx-auto w-full max-w-2xl lg:mx-0">
           <Reveal className="mb-6 inline-flex max-w-full items-center gap-2 rounded-full border border-violet-400/20 bg-violet-400/[0.07] px-3.5 py-2 text-[10px] font-semibold uppercase tracking-[.15em] text-violet-300 backdrop-blur-xl sm:px-4 sm:text-xs sm:tracking-[.18em]">
             <span className="relative flex h-2 w-2 shrink-0">
@@ -477,7 +485,7 @@ const Hero = () => {
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.06, ease: motionEase }}
-            className="max-w-3xl text-[clamp(3.1rem,13vw,5.5rem)] font-black leading-[.9] tracking-[-.055em]"
+            className="max-w-3xl text-[clamp(2.45rem,11vw,4.5rem)] font-black leading-[.9] tracking-[-.055em]"
           >
             Don&apos;t study
             <br />
@@ -491,7 +499,7 @@ const Hero = () => {
             </span>
           </motion.h1>
 
-          <Reveal delay={0.16} className="mt-7 max-w-xl text-sm leading-6 text-zinc-400 sm:mt-8 sm:text-lg sm:leading-7">
+          <Reveal delay={0.16} className="mt-5 max-w-xl text-xs leading-5 text-zinc-400 sm:mt-6 sm:text-base sm:leading-6">
             A real-time study universe where your friends, notes, PDFs,
             conversations, annotations and ideas live in one beautiful
             collaborative room.
@@ -785,7 +793,7 @@ const LiveCollaboration = () => {
     <section
       id="experience"
       style={sectionStyle}
-      className="relative overflow-hidden bg-[#05050a] py-16 sm:py-22 lg:py-28"
+      className="relative overflow-hidden bg-[#05050a] py-9 sm:py-13 lg:py-17"
     >
       <div className="mx-auto w-full max-w-7xl px-4 sm:px-8">
         <SectionHeading
@@ -794,7 +802,7 @@ const LiveCollaboration = () => {
           description="See what your friends are reading. Discuss ideas instantly. Annotate the same page. Everything stays synchronized."
         />
 
-        <div className="relative mx-auto mt-14 max-w-5xl sm:mt-20">
+        <div className="relative mx-auto mt-8 max-w-5xl sm:mt-13">
           <div className="absolute left-1/2 top-1/2 h-[260px] w-[520px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-violet-600/10 blur-[100px]" />
 
           <Reveal scale className="relative overflow-hidden rounded-[28px] border border-white/[0.08] bg-white/[0.025] p-1.5 shadow-[0_25px_80px_rgba(0,0,0,.45)] sm:rounded-[32px] sm:p-2">
@@ -914,7 +922,7 @@ const VoiceCollaboration = () => {
   return (
     <section
       style={sectionStyle}
-      className="relative overflow-hidden border-y border-white/[0.05] bg-[#07070d] py-16 sm:py-22 lg:py-28"
+      className="relative overflow-hidden border-y border-white/[0.05] bg-[#07070d] py-9 sm:py-13 lg:py-17"
     >
       <div className="pointer-events-none absolute inset-0">
         <div className="absolute left-[5%] top-[10%] h-[320px] w-[320px] rounded-full bg-violet-600/10 blur-[110px]" />
@@ -928,9 +936,9 @@ const VoiceCollaboration = () => {
           description="Students speak, react, point at the same page and solve problems together. StudySync turns a silent screen into a living study session."
         />
 
-        <div className="mt-12 grid gap-5 sm:mt-16 sm:gap-8 lg:grid-cols-[1.25fr_.75fr]">
+        <div className="mt-8 grid gap-4 sm:mt-11 sm:gap-6 lg:grid-cols-[1.25fr_.75fr]">
           <Reveal scale className="relative overflow-hidden rounded-[28px] border border-white/10 bg-[#0b0b13] p-2 shadow-[0_30px_90px_rgba(0,0,0,.5)] sm:rounded-[34px] sm:p-3">
-            <div className="relative min-h-[430px] overflow-hidden rounded-[23px] border border-white/[0.06] bg-gradient-to-br from-[#11111b] via-[#0b0b12] to-[#08080d] p-3 sm:min-h-[510px] sm:rounded-[27px] sm:p-6">
+            <div className="relative min-h-[315px] overflow-hidden rounded-[21px] border border-white/[0.06] bg-gradient-to-br from-[#11111b] via-[#0b0b12] to-[#08080d] p-3 sm:min-h-[370px] sm:rounded-[27px] sm:p-6">
               <div className="flex items-center justify-between">
                 <div className="min-w-0">
                   <p className="text-[8px] font-bold uppercase tracking-[.25em] text-violet-400">
@@ -1134,7 +1142,7 @@ const InteractiveWorkspace = () => {
   return (
     <section
       style={sectionStyle}
-      className="relative overflow-hidden bg-[#05050a] py-16 sm:py-22 lg:py-28"
+      className="relative overflow-hidden bg-[#05050a] py-9 sm:py-13 lg:py-17"
     >
       <div className="mx-auto w-full max-w-7xl px-4 sm:px-8">
         <SectionHeading
@@ -1178,7 +1186,7 @@ const InteractiveWorkspace = () => {
           </div>
 
           <Reveal scale>
-            <div className="relative min-h-[410px] overflow-hidden rounded-[28px] border border-white/10 bg-[#0a0a10] p-3 shadow-[0_30px_90px_rgba(0,0,0,.45)] sm:min-h-[480px] sm:rounded-[32px] sm:p-4">
+            <div className="relative min-h-[315px] overflow-hidden rounded-[25px] border border-white/10 bg-[#0a0a10] p-3 shadow-[0_30px_90px_rgba(0,0,0,.45)] sm:min-h-[370px] sm:rounded-[32px] sm:p-4">
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_30%,rgba(139,92,246,.12),transparent_45%)]" />
 
               {[
@@ -1332,7 +1340,7 @@ const CinematicRoom = () => {
   return (
     <section
       style={sectionStyle}
-      className="relative overflow-hidden bg-[#030307] py-16 sm:py-22 lg:py-28"
+      className="relative overflow-hidden bg-[#030307] py-9 sm:py-13 lg:py-17"
     >
       <div className="pointer-events-none absolute inset-0">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_45%,rgba(124,58,237,.12),transparent_35%),radial-gradient(circle_at_15%_70%,rgba(34,211,238,.08),transparent_30%),radial-gradient(circle_at_85%_25%,rgba(217,70,239,.07),transparent_28%)]" />
@@ -1633,7 +1641,7 @@ const LiveStudyMap = () => {
   return (
     <section
       style={sectionStyle}
-      className="relative overflow-hidden bg-[#05050a] py-16 sm:py-22 lg:py-28"
+      className="relative overflow-hidden bg-[#05050a] py-9 sm:py-13 lg:py-17"
     >
       <div className="mx-auto w-full max-w-7xl px-4 sm:px-8">
         <div className="grid items-center gap-12 lg:grid-cols-[.8fr_1.2fr]">
@@ -1810,7 +1818,7 @@ const StudyFlow = () => {
   return (
     <section
       style={sectionStyle}
-      className="relative overflow-hidden bg-[#08080d] py-16 sm:py-22 lg:py-28"
+      className="relative overflow-hidden bg-[#08080d] py-9 sm:py-13 lg:py-17"
     >
       <div className="mx-auto w-full max-w-7xl px-4 sm:px-8">
         <SectionHeading
@@ -1928,7 +1936,7 @@ const Features = () => {
     <section
       id="features"
       style={sectionStyle}
-      className="relative overflow-hidden border-y border-white/[0.05] bg-[#08080d] py-16 sm:py-22 lg:py-28"
+      className="relative overflow-hidden border-y border-white/[0.05] bg-[#08080d] py-9 sm:py-13 lg:py-17"
     >
       <div className="mx-auto w-full max-w-7xl px-4 sm:px-8">
         <SectionHeading
@@ -1937,12 +1945,12 @@ const Features = () => {
           description="Not another boring dashboard packed with unnecessary features. Just the tools that make studying together actually work."
         />
 
-        <div className="mt-12 grid gap-3.5 sm:mt-16 sm:grid-cols-2 sm:gap-5">
+        <div className="mt-8 grid gap-3 sm:mt-11 sm:grid-cols-2 sm:gap-4">
           {features.map((feature, index) => (
             <Reveal key={feature.number} delay={index * 0.04}>
               <motion.div
                 whileHover={{ y: -6 }}
-                className={`group relative h-full overflow-hidden rounded-[24px] border border-white/[0.07] bg-gradient-to-br ${feature.gradient} p-6 transition-shadow duration-500 hover:border-white/[0.13] hover:shadow-[0_25px_70px_rgba(0,0,0,.3)] sm:rounded-[28px] sm:p-8`}
+                className={`group relative h-full overflow-hidden rounded-[20px] border border-white/[0.07] bg-gradient-to-br ${feature.gradient} p-5 transition-shadow duration-500 hover:border-white/[0.13] hover:shadow-[0_25px_70px_rgba(0,0,0,.3)] sm:rounded-[24px] sm:p-6`}
               >
                 <div className="absolute right-[-40px] top-[-40px] h-36 w-36 rounded-full bg-white/[0.025] blur-3xl transition-transform duration-700 group-hover:scale-150" />
 
@@ -1955,11 +1963,11 @@ const Features = () => {
                   </span>
                 </div>
 
-                <h3 className="relative mt-7 text-xl font-black tracking-tight sm:mt-9 sm:text-2xl">
+                <h3 className="relative mt-5 text-lg font-black tracking-tight sm:mt-6 sm:text-xl">
                   {feature.title}
                 </h3>
 
-                <p className="relative mt-3 max-w-lg text-xs leading-6 text-zinc-500 sm:mt-4 sm:text-base sm:leading-7">
+                <p className="relative mt-2 max-w-lg text-[11px] leading-5 text-zinc-500 sm:mt-3 sm:text-sm sm:leading-6">
                   {feature.text}
                 </p>
 
@@ -1967,6 +1975,45 @@ const Features = () => {
               </motion.div>
             </Reveal>
           ))}
+        </div>
+
+        <div
+          id="how"
+          className="mt-7 rounded-[20px] border border-white/[0.07] bg-white/[0.018] p-3 sm:mt-9 sm:p-4"
+        >
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="shrink-0">
+              <p className="text-[8px] font-black uppercase tracking-[.2em] text-cyan-400">
+                HOW IT WORKS
+              </p>
+              <p className="mt-1 text-xs font-bold text-white sm:text-sm">
+                Create. Share. Study together.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-1.5 sm:flex sm:gap-2">
+              {[
+                ["01", "Create"],
+                ["02", "Material"],
+                ["03", "Invite"],
+                ["04", "Study live"],
+              ].map(([number, label], index) => (
+                <motion.div
+                  key={number}
+                  initial={{ opacity: 0, y: 7 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, amount: 0.2 }}
+                  transition={{ duration: 0.28, delay: index * 0.03 }}
+                  className="flex items-center gap-1.5 rounded-lg border border-white/[0.06] bg-black/20 px-2 py-1.5"
+                >
+                  <span className="text-[7px] font-black text-violet-400">{number}</span>
+                  <span className="text-[8px] font-semibold text-zinc-400 sm:text-[9px]">
+                    {label}
+                  </span>
+                </motion.div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     </section>
@@ -2009,7 +2056,7 @@ const HowItWorks = () => {
     <section
       id="how"
       style={sectionStyle}
-      className="relative overflow-hidden bg-[#05050a] py-16 sm:py-22 lg:py-28"
+      className="relative overflow-hidden bg-[#05050a] py-9 sm:py-13 lg:py-17"
     >
       <div className="mx-auto w-full max-w-7xl px-4 sm:px-8">
         <SectionHeading
@@ -2024,7 +2071,7 @@ const HowItWorks = () => {
               initial={{ width: 0 }}
               whileInView={{ width: "100%" }}
               viewport={{ once: true }}
-              transition={{ duration: 1.2, ease: motionEase }}
+              transition={{ duration: 0.8, ease: motionEase }}
               className="h-full bg-gradient-to-r from-violet-500 via-fuchsia-500 to-cyan-400"
             />
           </div>
@@ -2072,11 +2119,11 @@ const SectionHeading = ({ eyebrow, title, description }) => {
         {eyebrow}
       </div>
 
-      <h2 className="mt-5 text-[clamp(2.35rem,8vw,3.75rem)] font-black leading-[.96] tracking-[-.045em] sm:mt-6 sm:text-6xl">
+      <h2 className="mt-5 text-[clamp(1.8rem,6vw,3rem)] font-black leading-[.98] tracking-[-.045em] sm:mt-5 sm:text-5xl">
         {title}
       </h2>
 
-      <p className="mt-4 max-w-2xl text-sm leading-6 text-zinc-500 sm:mt-6 sm:text-lg sm:leading-7">
+      <p className="mt-3 max-w-2xl text-xs leading-5 text-zinc-500 sm:mt-4 sm:text-sm sm:leading-6">
         {description}
       </p>
     </Reveal>
@@ -2130,12 +2177,12 @@ const FinalCTA = () => {
   return (
     <section
       style={sectionStyle}
-      className="relative overflow-hidden bg-[#05050a] py-16 sm:py-22 lg:py-28"
+      className="relative overflow-hidden bg-[#05050a] py-9 sm:py-13 lg:py-17"
     >
       <div className="absolute left-1/2 top-1/2 h-[380px] w-[620px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-violet-600/10 blur-[110px] sm:h-[500px] sm:w-[800px] sm:blur-[140px]" />
 
       <div className="relative mx-auto w-full max-w-5xl px-4 text-center sm:px-8">
-        <Reveal scale className="relative overflow-hidden rounded-[30px] border border-white/10 bg-gradient-to-br from-violet-600/20 via-fuchsia-500/10 to-cyan-500/10 px-5 py-14 shadow-[0_35px_100px_rgba(124,58,237,.1)] sm:rounded-[40px] sm:px-12 sm:py-20">
+        <Reveal scale className="relative overflow-hidden rounded-[30px] border border-white/10 bg-gradient-to-br from-violet-600/20 via-fuchsia-500/10 to-cyan-500/10 px-5 py-8 shadow-[0_25px_70px_rgba(124,58,237,.08)] sm:rounded-[34px] sm:px-10 sm:py-12">
           {[1, 2, 3, 4, 5].map((dot) => (
             <span
               key={dot}
@@ -2151,7 +2198,7 @@ const FinalCTA = () => {
 
           <HiOutlineSparkles className="mx-auto text-2xl text-violet-300 sm:text-3xl" />
 
-          <h2 className="mx-auto mt-5 max-w-3xl text-[clamp(2.3rem,8vw,3.75rem)] font-black leading-[.96] tracking-[-.045em] sm:mt-7 sm:text-6xl">
+          <h2 className="mx-auto mt-5 max-w-3xl text-[clamp(1.9rem,7vw,3.1rem)] font-black leading-[.96] tracking-[-.045em] sm:mt-7 sm:text-6xl">
             Your next study session
             <br />
             should feel different.
