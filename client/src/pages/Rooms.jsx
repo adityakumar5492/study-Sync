@@ -47,6 +47,18 @@ const Rooms = () => {
     const dispatch = useAppDispatch();
     const navigate = useNavigate();
     const location = useLocation();
+    
+    useEffect(() => {
+    if (location.state?.openCreateRoom) {
+        setOpenModal(true);
+
+        navigate(location.pathname, {
+            replace: true,
+            state: {},
+        });
+    }
+}, [location, navigate]);
+
     const { openSidebar } = useOutletContext();
 
     const shouldReduceMotion = useReducedMotion();

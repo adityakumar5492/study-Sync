@@ -24,9 +24,13 @@ const Dashboard = () => {
     // =========================================
 
     const handleCreateRoom = () => {
-        navigate("/rooms");
+        navigate("/rooms", {
+            state: {
+                openCreateRoom: true,
+            },
+        });
     };
-
+    
     const handleJoinRoom = () => {
         navigate("/rooms", {
             state: {
