@@ -332,18 +332,7 @@ const Register = () => {
 
                                         <div className="h-px flex-1 bg-white/[0.06]" />
                                     </div>
-
-                                    {/* Google */}
-
-                                    <motion.button
-                                        type="button"
-                                        whileHover={{ y: -1 }}
-                                        whileTap={{ scale: 0.985 }}
-                                        transition={{ duration: 0.15 }}
-                                        className="flex min-h-[48px] w-full items-center justify-center gap-2.5 rounded-xl border border-white/[0.07] bg-white/[0.025] px-4 py-3 text-xs font-semibold text-zinc-300 transition-colors duration-200 hover:border-white/[0.12] hover:bg-white/[0.045] sm:rounded-2xl sm:text-sm"
-                                    >
-                                
-                                    </motion.button>
+                                    
 
                                     {/* Login */}
 

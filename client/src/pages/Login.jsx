@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { FcGoogle } from "react-icons/fc";
 import {
     FiMail,
     FiLock,
@@ -9,14 +8,10 @@ import {
     FiEyeOff,
     FiHome,
     FiUsers,
-  
     FiCheck,
-    FiArrowUpRight,
     FiBookOpen,
 } from "react-icons/fi";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
-
-import AuthLayout from "../components/auth/AuthLayout";
 
 import { useAppDispatch, useAppSelector } from "../redux/hooks";
 import { loginThunk } from "../redux/auth/authThunk";
@@ -25,9 +20,17 @@ import { clearError } from "../redux/auth/authSlice";
 /*
  * STUDYSYNC — PREMIUM LOGIN
  *
- * Keeps the existing authentication flow intact.
- * The visual layer is intentionally self-contained so it does not
- * change your Redux/auth architecture.
+ * Authentication logic remains unchanged.
+ *
+ * Improvements:
+ * - Google authentication removed
+ * - Smaller and more consistent typography
+ * - Better mobile responsiveness
+ * - Reduced animation workload
+ * - Faster initial rendering
+ * - No unnecessary infinite animations
+ * - Tighter spacing
+ * - Better viewport usage
  */
 
 const STUDY_IMAGE =
@@ -75,125 +78,143 @@ const Login = () => {
     }, [dispatch]);
 
     return (
-        <div className="min-h-screen overflow-hidden bg-[#030307] text-white">
+        <div className="min-h-screen overflow-x-hidden bg-[#030307] text-white">
             <LoginNavbar />
 
-            <main className="relative min-h-screen pt-[76px]">
-                {/* Cinematic background */}
-                <div className="pointer-events-none fixed inset-0">
-                    <motion.div
-                        animate={
-                            reduceMotion
-                                ? {}
-                                : {
-                                      x: [0, 60, -40, 0],
-                                      y: [0, -30, 45, 0],
-                                      scale: [1, 1.08, 0.96, 1],
-                                  }
-                        }
-                        transition={{
-                            duration: 18,
-                            repeat: Infinity,
-                            ease: "easeInOut",
-                        }}
-                        className="absolute -left-40 top-10 h-[500px] w-[500px] rounded-full bg-violet-600/15 blur-[130px]"
-                    />
+            <main className="relative min-h-screen pt-[68px]">
+                {/* Lightweight background */}
+                <div className="pointer-events-none fixed inset-0 overflow-hidden">
+                    {!reduceMotion && (
+                        <>
+                            <motion.div
+                                animate={{
+                                    x: [0, 35, 0],
+                                    y: [0, -20, 0],
+                                }}
+                                transition={{
+                                    duration: 22,
+                                    repeat: Infinity,
+                                    ease: "easeInOut",
+                                }}
+                                className="absolute -left-48 top-20 h-[420px] w-[420px] rounded-full bg-violet-600/[0.10] blur-[110px]"
+                            />
 
-                    <motion.div
-                        animate={
-                            reduceMotion
-                                ? {}
-                                : {
-                                      x: [0, -50, 30, 0],
-                                      y: [0, 40, -25, 0],
-                                      scale: [1, 0.94, 1.08, 1],
-                                  }
-                        }
-                        transition={{
-                            duration: 20,
-                            repeat: Infinity,
-                            ease: "easeInOut",
-                        }}
-                        className="absolute -right-40 bottom-0 h-[500px] w-[500px] rounded-full bg-cyan-500/10 blur-[140px]"
-                    />
+                            <motion.div
+                                animate={{
+                                    x: [0, -30, 0],
+                                    y: [0, 20, 0],
+                                }}
+                                transition={{
+                                    duration: 25,
+                                    repeat: Infinity,
+                                    ease: "easeInOut",
+                                }}
+                                className="absolute -right-48 bottom-0 h-[420px] w-[420px] rounded-full bg-cyan-500/[0.07] blur-[120px]"
+                            />
+                        </>
+                    )}
 
                     <div
-                        className="absolute inset-0 opacity-[0.035]"
+                        className="absolute inset-0 opacity-[0.025]"
                         style={{
                             backgroundImage:
                                 "linear-gradient(rgba(255,255,255,.8) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.8) 1px, transparent 1px)",
                             backgroundSize: "70px 70px",
                         }}
                     />
+
+                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_20%,#030307_90%)]" />
                 </div>
 
-                <div className="relative mx-auto flex min-h-[calc(100vh-76px)] max-w-7xl items-center px-5 py-10 sm:px-8 lg:py-14">
-                    <div className="grid w-full overflow-hidden rounded-[34px] border border-white/[0.08] bg-white/[0.025] shadow-[0_40px_140px_rgba(0,0,0,.55)] backdrop-blur-2xl lg:grid-cols-[1.1fr_.9fr]">
-                        {/* IMAGE / BRAND STORY */}
-                        <section className="relative hidden min-h-[720px] overflow-hidden lg:block">
+                <div className="relative mx-auto flex min-h-[calc(100vh-68px)] w-full max-w-6xl items-center px-4 py-6 sm:px-6 sm:py-8 lg:px-8 lg:py-10">
+                    <div className="grid w-full overflow-hidden rounded-[24px] border border-white/[0.07] bg-white/[0.02] shadow-[0_30px_100px_rgba(0,0,0,.5)] lg:grid-cols-[1.08fr_.92fr] lg:rounded-[30px]">
+                        {/* =================================================
+                            IMAGE / BRAND STORY
+                           ================================================= */}
+
+                        <section className="relative hidden min-h-[650px] overflow-hidden lg:block">
                             <motion.img
-                                initial={{ scale: 1.12, opacity: 0 }}
+                                initial={
+                                    reduceMotion
+                                        ? { opacity: 1 }
+                                        : { scale: 1.06, opacity: 0 }
+                                }
                                 animate={{
                                     scale: 1,
                                     opacity: 1,
                                 }}
-                                transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
+                                transition={{
+                                    duration: reduceMotion ? 0 : 0.7,
+                                    ease: [0.16, 1, 0.3, 1],
+                                }}
                                 src={STUDY_IMAGE}
                                 alt="Students collaborating during a study session"
                                 onLoad={() => setImageLoaded(true)}
-                                className={`absolute inset-0 h-full w-full object-cover transition duration-1000 ${
-                                    imageLoaded ? "scale-100" : "scale-105"
+                                loading="eager"
+                                decoding="async"
+                                className={`absolute inset-0 h-full w-full object-cover transition-transform duration-500 ${
+                                    imageLoaded ? "scale-100" : "scale-[1.02]"
                                 }`}
                             />
 
-                            <div className="absolute inset-0 bg-gradient-to-br from-[#05050a]/35 via-[#05050a]/35 to-[#05050a]/95" />
-                            <div className="absolute inset-0 bg-gradient-to-t from-[#05050a] via-transparent to-[#05050a]/20" />
+                            <div className="absolute inset-0 bg-gradient-to-br from-[#05050a]/30 via-[#05050a]/35 to-[#05050a]/95" />
 
-                            {/* animated image glow */}
-                            <motion.div
-                                animate={
-                                    reduceMotion
-                                        ? {}
-                                        : {
-                                              opacity: [0.15, 0.3, 0.15],
-                                              scale: [1, 1.1, 1],
-                                          }
-                                }
-                                transition={{ duration: 5, repeat: Infinity }}
-                                className="absolute -right-20 top-1/3 h-64 w-64 rounded-full bg-violet-500/30 blur-[100px]"
-                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-[#05050a] via-transparent to-[#05050a]/10" />
 
-                            {/* image copy */}
-                            <div className="absolute inset-x-0 bottom-0 p-8 sm:p-10 xl:p-12">
+                            {/* Small animated glow */}
+                            {!reduceMotion && (
                                 <motion.div
-                                    initial={{ opacity: 0, y: 25 }}
+                                    animate={{
+                                        opacity: [0.12, 0.22, 0.12],
+                                    }}
+                                    transition={{
+                                        duration: 7,
+                                        repeat: Infinity,
+                                        ease: "easeInOut",
+                                    }}
+                                    className="absolute -right-20 top-1/3 h-56 w-56 rounded-full bg-violet-500/25 blur-[90px]"
+                                />
+                            )}
+
+                            {/* Image copy */}
+                            <div className="absolute inset-x-0 bottom-0 p-7 xl:p-9">
+                                <motion.div
+                                    initial={
+                                        reduceMotion
+                                            ? { opacity: 1 }
+                                            : { opacity: 0, y: 18 }
+                                    }
                                     animate={{ opacity: 1, y: 0 }}
-                                    transition={{ delay: 0.25, duration: 0.8 }}
+                                    transition={{
+                                        duration: reduceMotion ? 0 : 0.55,
+                                        delay: reduceMotion ? 0 : 0.15,
+                                    }}
                                 >
-                                    <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-black/20 px-3 py-1.5 text-[9px] font-bold uppercase tracking-[.2em] text-white/75 backdrop-blur-xl">
-                                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_10px_#34d399]" />
+                                    <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/20 px-3 py-1.5 text-[8px] font-bold uppercase tracking-[0.18em] text-white/70 backdrop-blur-md">
+                                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
                                         Study together
                                     </div>
 
-                                    <h1 className="mt-6 max-w-xl text-4xl font-black leading-[.98] tracking-[-.055em] text-white xl:text-6xl">
+                                    <h1 className="mt-5 max-w-lg text-3xl font-black leading-[0.98] tracking-[-0.045em] text-white xl:text-5xl">
                                         Your people are
                                         <span className="block bg-gradient-to-r from-violet-300 via-fuchsia-300 to-cyan-300 bg-clip-text text-transparent">
                                             already waiting.
                                         </span>
                                     </h1>
 
-                                    <p className="mt-5 max-w-lg text-sm leading-7 text-white/60">
+                                    <p className="mt-4 max-w-md text-xs leading-6 text-white/55 xl:text-sm">
                                         Jump back into your room, continue the
-                                        conversation and keep building knowledge
-                                        together.
+                                        conversation and keep building
+                                        knowledge together.
                                     </p>
 
-                                    <div className="mt-7 flex flex-wrap gap-3">
+                                    <div className="mt-6 flex flex-wrap gap-2.5">
                                         <GlassStat
                                             icon={<FiUsers />}
                                             value="4"
                                             label="online"
                                         />
+
                                         <GlassStat
                                             icon={<FiBookOpen />}
                                             value="LIVE"
@@ -203,65 +224,71 @@ const Login = () => {
                                 </motion.div>
                             </div>
 
-                            {/* floating notification */}
-                            <motion.div
-                                initial={{ opacity: 0, x: 30, y: 10 }}
-                                animate={
-                                    reduceMotion
-                                        ? { opacity: 1, x: 0, y: 0 }
-                                        : {
-                                              opacity: [0, 1, 1, 1],
-                                              x: [30, 0, 0, 0],
-                                              y: [10, 0, -7, 0],
-                                          }
-                                }
-                                transition={{
-                                    duration: 5,
-                                    repeat: Infinity,
-                                    repeatDelay: 3,
-                                }}
-                                className="absolute right-7 top-8 rounded-2xl border border-white/10 bg-black/40 px-4 py-3 shadow-2xl backdrop-blur-2xl"
-                            >
-                                <div className="flex items-center gap-3">
-                                    <div className="flex -space-x-2">
-                                        {["A", "R", "S"].map((x, i) => (
-                                            <span
-                                                key={x}
-                                                className={`flex h-8 w-8 items-center justify-center rounded-full border-2 border-[#14141b] text-[8px] font-black ${
-                                                    i === 0
-                                                        ? "bg-violet-500"
-                                                        : i === 1
-                                                          ? "bg-cyan-500"
-                                                          : "bg-emerald-500"
-                                                }`}
-                                            >
-                                                {x}
-                                            </span>
-                                        ))}
+                            {/* Floating notification */}
+                            {!reduceMotion && (
+                                <motion.div
+                                    initial={{ opacity: 0, x: 18 }}
+                                    animate={{
+                                        opacity: [0, 1, 1, 1],
+                                        x: [18, 0, 0, 0],
+                                    }}
+                                    transition={{
+                                        duration: 3.5,
+                                        delay: 0.4,
+                                        repeat: Infinity,
+                                        repeatDelay: 5,
+                                    }}
+                                    className="absolute right-6 top-7 rounded-xl border border-white/10 bg-black/35 px-3 py-2.5 shadow-xl backdrop-blur-xl"
+                                >
+                                    <div className="flex items-center gap-2.5">
+                                        <div className="flex -space-x-2">
+                                            {["A", "R", "S"].map((x, i) => (
+                                                <span
+                                                    key={x}
+                                                    className={`flex h-7 w-7 items-center justify-center rounded-full border-2 border-[#14141b] text-[7px] font-black ${
+                                                        i === 0
+                                                            ? "bg-violet-500"
+                                                            : i === 1
+                                                              ? "bg-cyan-500"
+                                                              : "bg-emerald-500"
+                                                    }`}
+                                                >
+                                                    {x}
+                                                </span>
+                                            ))}
+                                        </div>
+
+                                        <div>
+                                            <p className="text-[8px] font-bold text-white">
+                                                Your study group is live
+                                            </p>
+
+                                            <p className="mt-0.5 text-[7px] text-white/40">
+                                                Join the conversation
+                                            </p>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <p className="text-[9px] font-bold text-white">
-                                            Your study group is live
-                                        </p>
-                                        <p className="mt-1 text-[8px] text-white/40">
-                                            Join the conversation
-                                        </p>
-                                    </div>
-                                </div>
-                            </motion.div>
+                                </motion.div>
+                            )}
                         </section>
 
-                        {/* LOGIN PANEL */}
-                        <section className="relative flex items-center bg-[#08080e]/90 p-6 sm:p-10 lg:p-12">
-                            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_80%_10%,rgba(139,92,246,.12),transparent_35%)]" />
+                        {/* =================================================
+                            LOGIN PANEL
+                           ================================================= */}
 
-                            <div className="relative mx-auto w-full max-w-md">
-                                {/* mobile brand */}
-                                <div className="mb-8 flex items-center gap-3 lg:hidden">
-                                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-cyan-400 shadow-[0_0_30px_rgba(139,92,246,.25)]">
-                                        <span className="text-sm font-black">S</span>
+                        <section className="relative flex items-center bg-[#08080e]/95 px-5 py-7 sm:px-8 sm:py-9 lg:px-9 lg:py-10">
+                            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_80%_10%,rgba(139,92,246,.10),transparent_35%)]" />
+
+                            <div className="relative mx-auto w-full max-w-sm">
+                                {/* Mobile brand */}
+                                <div className="mb-7 flex items-center gap-2.5 lg:hidden">
+                                    <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-violet-500 to-cyan-400 shadow-[0_0_22px_rgba(139,92,246,.2)]">
+                                        <span className="text-xs font-black">
+                                            S
+                                        </span>
                                     </div>
-                                    <span className="text-lg font-black">
+
+                                    <span className="text-base font-black">
                                         Study
                                         <span className="bg-gradient-to-r from-violet-400 to-cyan-400 bg-clip-text text-transparent">
                                             Sync
@@ -270,31 +297,37 @@ const Login = () => {
                                 </div>
 
                                 <motion.div
-                                    initial={{ opacity: 0, y: 25 }}
+                                    initial={
+                                        reduceMotion
+                                            ? { opacity: 1 }
+                                            : { opacity: 0, y: 14 }
+                                    }
                                     animate={{ opacity: 1, y: 0 }}
-                                    transition={{ duration: 0.7 }}
+                                    transition={{
+                                        duration: reduceMotion ? 0 : 0.5,
+                                    }}
                                 >
-                                    <div className="mb-8">
-                                        <span className="inline-flex items-center gap-2 rounded-full border border-violet-400/10 bg-violet-400/[0.06] px-3 py-1.5 text-[9px] font-bold uppercase tracking-[.18em] text-violet-300">
+                                    <div className="mb-6">
+                                        <span className="inline-flex items-center gap-2 rounded-full border border-violet-400/10 bg-violet-400/[0.05] px-2.5 py-1 text-[8px] font-bold uppercase tracking-[0.17em] text-violet-300">
                                             <span className="h-1.5 w-1.5 rounded-full bg-violet-400" />
                                             Welcome back
                                         </span>
 
-                                        <h2 className="mt-5 text-3xl font-black tracking-[-.045em] sm:text-4xl">
+                                        <h2 className="mt-4 text-[28px] font-black leading-[1] tracking-[-0.045em] sm:text-3xl">
                                             Enter your
                                             <span className="block bg-gradient-to-r from-white via-violet-200 to-cyan-200 bg-clip-text text-transparent">
                                                 study universe.
                                             </span>
                                         </h2>
 
-                                        <p className="mt-4 text-sm leading-6 text-zinc-500">
-                                            Sign in to continue your collaborative
-                                            learning journey.
+                                        <p className="mt-3 max-w-sm text-xs leading-5 text-zinc-500 sm:text-sm">
+                                            Sign in to continue your
+                                            collaborative learning journey.
                                         </p>
                                     </div>
 
                                     <form onSubmit={handleSubmit}>
-                                        <div className="space-y-5">
+                                        <div className="space-y-4">
                                             <PremiumInput
                                                 id="email"
                                                 name="email"
@@ -311,21 +344,21 @@ const Login = () => {
                                                 <div className="mb-2 flex items-center justify-between">
                                                     <label
                                                         htmlFor="password"
-                                                        className="text-xs font-semibold text-zinc-300"
+                                                        className="text-[11px] font-semibold text-zinc-300 sm:text-xs"
                                                     >
                                                         Password
                                                     </label>
 
                                                     <button
                                                         type="button"
-                                                        className="text-[11px] font-semibold text-violet-400 transition hover:text-violet-300"
+                                                        className="text-[10px] font-semibold text-violet-400 transition-colors hover:text-violet-300 sm:text-[11px]"
                                                     >
                                                         Forgot password?
                                                     </button>
                                                 </div>
 
                                                 <div className="group relative">
-                                                    <FiLock className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-zinc-600 transition group-focus-within:text-violet-400" />
+                                                    <FiLock className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-600 transition-colors group-focus-within:text-violet-400" />
 
                                                     <input
                                                         id="password"
@@ -335,12 +368,14 @@ const Login = () => {
                                                                 : "password"
                                                         }
                                                         name="password"
-                                                        value={formData.password}
+                                                        value={
+                                                            formData.password
+                                                        }
                                                         onChange={handleChange}
                                                         placeholder="Enter your password"
                                                         autoComplete="current-password"
                                                         required
-                                                        className="w-full rounded-2xl border border-white/[0.08] bg-white/[0.035] py-4 pl-11 pr-12 text-sm text-white outline-none placeholder:text-zinc-700 transition duration-300 focus:border-violet-400/40 focus:bg-violet-400/[0.04] focus:ring-4 focus:ring-violet-500/10"
+                                                        className="min-h-[48px] w-full rounded-xl border border-white/[0.08] bg-white/[0.035] py-3 pl-10 pr-11 text-xs text-white outline-none placeholder:text-zinc-700 transition-colors duration-200 focus:border-violet-400/40 focus:bg-violet-400/[0.04] focus:ring-2 focus:ring-violet-500/10 sm:rounded-2xl sm:text-sm"
                                                     />
 
                                                     <button
@@ -350,7 +385,7 @@ const Login = () => {
                                                                 (prev) => !prev
                                                             )
                                                         }
-                                                        className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-600 transition hover:text-zinc-300"
+                                                        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-600 transition-colors hover:text-zinc-300"
                                                         aria-label={
                                                             showPassword
                                                                 ? "Hide password"
@@ -358,36 +393,33 @@ const Login = () => {
                                                         }
                                                     >
                                                         {showPassword ? (
-                                                            <FiEyeOff size={17} />
+                                                            <FiEyeOff size={16} />
                                                         ) : (
-                                                            <FiEye size={17} />
+                                                            <FiEye size={16} />
                                                         )}
                                                     </button>
                                                 </div>
                                             </div>
                                         </div>
 
-                                        <AnimatePresence>
+                                        <AnimatePresence initial={false}>
                                             {error && (
                                                 <motion.div
                                                     initial={{
                                                         opacity: 0,
                                                         height: 0,
-                                                        y: -5,
                                                     }}
                                                     animate={{
                                                         opacity: 1,
                                                         height: "auto",
-                                                        y: 0,
                                                     }}
                                                     exit={{
                                                         opacity: 0,
                                                         height: 0,
-                                                        y: -5,
                                                     }}
-                                                    className="mt-5 overflow-hidden rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3"
+                                                    className="mt-4 overflow-hidden rounded-xl border border-red-500/20 bg-red-500/10 px-3.5 py-2.5"
                                                 >
-                                                    <p className="text-xs leading-5 text-red-300">
+                                                    <p className="text-[10px] leading-4 text-red-300 sm:text-xs">
                                                         {error}
                                                     </p>
                                                 </motion.div>
@@ -398,66 +430,51 @@ const Login = () => {
                                             type="submit"
                                             disabled={loading}
                                             whileHover={
-                                                loading
+                                                loading || reduceMotion
                                                     ? {}
-                                                    : {
-                                                          y: -2,
-                                                          scale: 1.01,
-                                                      }
+                                                    : { y: -1 }
                                             }
                                             whileTap={
-                                                loading ? {} : { scale: 0.985 }
+                                                loading || reduceMotion
+                                                    ? {}
+                                                    : { scale: 0.99 }
                                             }
-                                            className="group relative mt-6 flex w-full items-center justify-center gap-3 overflow-hidden rounded-2xl bg-white py-4 text-sm font-black text-black shadow-[0_15px_50px_rgba(255,255,255,.08)] transition disabled:cursor-not-allowed disabled:opacity-50"
+                                            transition={{ duration: 0.15 }}
+                                            className="group relative mt-5 flex min-h-[48px] w-full items-center justify-center gap-2.5 overflow-hidden rounded-xl bg-white px-4 py-3 text-xs font-black text-black shadow-[0_10px_35px_rgba(255,255,255,.06)] transition-opacity duration-200 disabled:cursor-not-allowed disabled:opacity-50 sm:rounded-2xl sm:text-sm"
                                         >
-                                            <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-violet-100/80 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
+                                            <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-violet-100/80 to-transparent transition-transform duration-500 group-hover:translate-x-full" />
 
-                                            <span className="relative flex items-center gap-3">
+                                            <span className="relative flex items-center gap-2.5">
                                                 {loading ? (
                                                     <>
-                                                        <span className="h-4 w-4 animate-spin rounded-full border-2 border-black/20 border-t-black" />
+                                                        <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-black/20 border-t-black" />
                                                         Signing in...
                                                     </>
                                                 ) : (
                                                     <>
                                                         Enter StudySync
-                                                        <FiArrowRight className="transition-transform group-hover:translate-x-1" />
+                                                        <FiArrowRight className="transition-transform duration-200 group-hover:translate-x-1" />
                                                     </>
                                                 )}
                                             </span>
                                         </motion.button>
                                     </form>
 
-                                    <div className="my-7 flex items-center gap-4">
-                                        <div className="h-px flex-1 bg-white/[0.07]" />
-                                        <span className="text-[9px] font-bold tracking-[.2em] text-zinc-700">
-                                            OR
-                                        </span>
-                                        <div className="h-px flex-1 bg-white/[0.07]" />
-                                    </div>
-
-                                    <motion.button
-                                        type="button"
-                                        whileHover={{ y: -2 }}
-                                        whileTap={{ scale: 0.985 }}
-                                        className="flex w-full items-center justify-center gap-3 rounded-2xl border border-white/[0.08] bg-white/[0.025] py-4 text-sm font-semibold text-zinc-300 transition hover:border-white/[0.14] hover:bg-white/[0.05]"
-                                    >
-                                        <FcGoogle size={19} />
-                                        Continue with Google
-                                    </motion.button>
-
-                                    <div className="mt-7 flex items-center justify-center gap-2 text-xs text-zinc-600">
+                                    {/* Register link */}
+                                    <div className="mt-6 flex items-center justify-center gap-1.5 text-[10px] text-zinc-600 sm:text-xs">
                                         <span>New to StudySync?</span>
+
                                         <Link
                                             to="/register"
-                                            className="group inline-flex items-center gap-1 font-bold text-violet-400 transition hover:text-violet-300"
+                                            className="group inline-flex items-center gap-1 font-bold text-violet-400 transition-colors hover:text-violet-300"
                                         >
                                             Create account
-                                            <FiArrowUpRight className="text-[11px] transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+                                            <FiArrowRight className="text-[9px] transition-transform duration-200 group-hover:translate-x-0.5" />
                                         </Link>
                                     </div>
 
-                                    <div className="mt-8 grid grid-cols-3 gap-2 border-t border-white/[0.06] pt-6">
+                                    {/* Trust row */}
+                                    <div className="mt-6 grid grid-cols-3 gap-1.5 border-t border-white/[0.06] pt-5">
                                         {[
                                             "Real-time",
                                             "Collaborative",
@@ -465,7 +482,7 @@ const Login = () => {
                                         ].map((item) => (
                                             <div
                                                 key={item}
-                                                className="flex items-center justify-center gap-1.5 text-[8px] font-semibold uppercase tracking-wider text-zinc-700"
+                                                className="flex items-center justify-center gap-1 text-[7px] font-semibold uppercase tracking-[0.08em] text-zinc-700 sm:text-[8px]"
                                             >
                                                 <FiCheck className="text-emerald-500/70" />
                                                 {item}
@@ -482,48 +499,66 @@ const Login = () => {
     );
 };
 
-
 /* =========================================================
-   PREMIUM NAVBAR
+   NAVBAR
    ========================================================= */
 
 const LoginNavbar = () => {
     const [scrolled, setScrolled] = useState(false);
 
     useEffect(() => {
-        const handleScroll = () => setScrolled(window.scrollY > 12);
+        let ticking = false;
 
-        window.addEventListener("scroll", handleScroll);
-        return () => window.removeEventListener("scroll", handleScroll);
+        const handleScroll = () => {
+            if (!ticking) {
+                window.requestAnimationFrame(() => {
+                    setScrolled(window.scrollY > 12);
+                    ticking = false;
+                });
+
+                ticking = true;
+            }
+        };
+
+        window.addEventListener("scroll", handleScroll, {
+            passive: true,
+        });
+
+        return () => {
+            window.removeEventListener("scroll", handleScroll);
+        };
     }, []);
 
     return (
         <motion.header
-            initial={{ y: -80, opacity: 0 }}
+            initial={{ y: -50, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
-            transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-            className={`fixed left-0 right-0 top-0 z-[100] border-b transition-all duration-500 ${
+            transition={{ duration: 0.45 }}
+            className={`fixed left-0 right-0 top-0 z-[100] border-b transition-[background-color,border-color,box-shadow] duration-300 ${
                 scrolled
-                    ? "border-white/[0.08] bg-[#030307]/85 shadow-2xl shadow-black/20 backdrop-blur-2xl"
-                    : "border-transparent bg-[#030307]/50 backdrop-blur-xl"
+                    ? "border-white/[0.07] bg-[#030307]/90 shadow-xl shadow-black/20 backdrop-blur-xl"
+                    : "border-transparent bg-[#030307]/60 backdrop-blur-md"
             }`}
         >
-            <div className="mx-auto flex h-[76px] max-w-7xl items-center justify-between px-5 sm:px-8">
+            <div className="mx-auto flex h-[68px] max-w-6xl items-center justify-between px-4 sm:px-6 lg:px-8">
                 <Link
                     to="/"
-                    className="group flex items-center gap-3"
+                    className="group flex items-center gap-2.5"
                     aria-label="Go to StudySync landing page"
                 >
                     <motion.div
-                        whileHover={{ rotate: 180, scale: 1.06 }}
-                        transition={{ duration: 0.5 }}
-                        className="relative flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-cyan-400 shadow-[0_0_30px_rgba(139,92,246,.25)]"
+                        whileHover={{ rotate: 180 }}
+                        transition={{ duration: 0.35 }}
+                        className="relative flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-violet-500 to-cyan-400 shadow-[0_0_22px_rgba(139,92,246,.2)]"
                     >
-                        <span className="text-sm font-black text-white">S</span>
-                        <span className="absolute inset-0 rounded-xl bg-white/20 opacity-0 blur-md transition group-hover:opacity-100" />
+                        <span className="text-xs font-black text-white">
+                            S
+                        </span>
+
+                        <span className="absolute inset-0 rounded-lg bg-white/20 opacity-0 blur-md transition-opacity duration-200 group-hover:opacity-100" />
                     </motion.div>
 
-                    <span className="text-xl font-black tracking-tight">
+                    <span className="text-lg font-black tracking-tight sm:text-xl">
                         Study
                         <span className="bg-gradient-to-r from-violet-400 via-fuchsia-400 to-cyan-400 bg-clip-text text-transparent">
                             Sync
@@ -531,29 +566,40 @@ const LoginNavbar = () => {
                     </span>
                 </Link>
 
-                <nav className="hidden items-center gap-1 md:flex">
+                <nav className="hidden items-center gap-0.5 md:flex">
                     <NavItem to="/" icon={<FiHome />} label="Home" />
-                    <NavItem to="/#experience" icon={<FiUsers />} label="Experience" />
-                    <NavItem to="/#features" icon={<FiBookOpen />} label="Features" />
+
+                    <NavItem
+                        to="/#experience"
+                        icon={<FiUsers />}
+                        label="Experience"
+                    />
+
+                    <NavItem
+                        to="/#features"
+                        icon={<FiBookOpen />}
+                        label="Features"
+                    />
                 </nav>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5 sm:gap-2">
                     <Link
                         to="/"
-                        className="hidden rounded-full px-4 py-2.5 text-xs font-semibold text-zinc-500 transition hover:bg-white/5 hover:text-white sm:block"
+                        className="hidden rounded-full px-3.5 py-2 text-[11px] font-semibold text-zinc-500 transition-colors hover:bg-white/5 hover:text-white sm:block"
                     >
                         Back to landing
                     </Link>
 
                     <Link
                         to="/register"
-                        className="group relative overflow-hidden rounded-full bg-white px-4 py-2.5 text-xs font-black text-black shadow-[0_8px_30px_rgba(255,255,255,.07)] transition hover:-translate-y-0.5 hover:shadow-[0_12px_40px_rgba(255,255,255,.13)] sm:px-5"
+                        className="group relative overflow-hidden rounded-full bg-white px-3.5 py-2 text-[10px] font-black text-black shadow-[0_6px_24px_rgba(255,255,255,.06)] transition-transform hover:-translate-y-0.5 sm:px-4 sm:py-2.5 sm:text-xs"
                     >
-                        <span className="relative z-10 flex items-center gap-2">
+                        <span className="relative z-10 flex items-center gap-1.5 sm:gap-2">
                             Join StudySync
-                            <FiArrowRight className="transition-transform group-hover:translate-x-1" />
+                            <FiArrowRight className="text-[11px] transition-transform duration-200 group-hover:translate-x-1" />
                         </span>
-                        <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-violet-100 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
+
+                        <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-violet-100 to-transparent transition-transform duration-500 group-hover:translate-x-full" />
                     </Link>
                 </div>
             </div>
@@ -564,14 +610,19 @@ const LoginNavbar = () => {
 const NavItem = ({ to, icon, label }) => (
     <Link
         to={to}
-        className="group flex items-center gap-2 rounded-full px-4 py-2.5 text-xs font-semibold text-zinc-500 transition hover:bg-white/[0.04] hover:text-white"
+        className="group flex items-center gap-1.5 rounded-full px-3.5 py-2 text-[11px] font-semibold text-zinc-500 transition-colors hover:bg-white/[0.04] hover:text-white"
     >
-        <span className="text-zinc-700 transition group-hover:text-violet-400">
+        <span className="text-zinc-700 transition-colors group-hover:text-violet-400">
             {icon}
         </span>
+
         {label}
     </Link>
 );
+
+/* =========================================================
+   INPUT
+   ========================================================= */
 
 const PremiumInput = ({
     id,
@@ -587,13 +638,13 @@ const PremiumInput = ({
     <div>
         <label
             htmlFor={id}
-            className="mb-2 block text-xs font-semibold text-zinc-300"
+            className="mb-2 block text-[11px] font-semibold text-zinc-300 sm:text-xs"
         >
             {label}
         </label>
 
         <div className="group relative">
-            <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-zinc-600 transition group-focus-within:text-violet-400">
+            <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-600 transition-colors group-focus-within:text-violet-400">
                 {icon}
             </span>
 
@@ -606,21 +657,28 @@ const PremiumInput = ({
                 placeholder={placeholder}
                 autoComplete={autoComplete}
                 required
-                className="w-full rounded-2xl border border-white/[0.08] bg-white/[0.035] py-4 pl-11 pr-4 text-sm text-white outline-none placeholder:text-zinc-700 transition duration-300 focus:border-violet-400/40 focus:bg-violet-400/[0.04] focus:ring-4 focus:ring-violet-500/10"
+                className="min-h-[48px] w-full rounded-xl border border-white/[0.08] bg-white/[0.035] py-3 pl-10 pr-4 text-xs text-white outline-none placeholder:text-zinc-700 transition-colors duration-200 focus:border-violet-400/40 focus:bg-violet-400/[0.04] focus:ring-2 focus:ring-violet-500/10 sm:rounded-2xl sm:text-sm"
             />
         </div>
     </div>
 );
 
+/* =========================================================
+   GLASS STAT
+   ========================================================= */
+
 const GlassStat = ({ icon, value, label }) => (
     <motion.div
-        whileHover={{ y: -3 }}
-        className="flex items-center gap-3 rounded-2xl border border-white/10 bg-black/20 px-4 py-3 backdrop-blur-xl"
+        whileHover={{ y: -2 }}
+        transition={{ duration: 0.15 }}
+        className="flex items-center gap-2.5 rounded-xl border border-white/10 bg-black/20 px-3 py-2.5 backdrop-blur-md"
     >
         <span className="text-violet-300">{icon}</span>
+
         <div>
-            <p className="text-xs font-black text-white">{value}</p>
-            <p className="text-[8px] uppercase tracking-wider text-white/35">
+            <p className="text-[10px] font-black text-white">{value}</p>
+
+            <p className="text-[7px] uppercase tracking-wider text-white/35">
                 {label}
             </p>
         </div>
