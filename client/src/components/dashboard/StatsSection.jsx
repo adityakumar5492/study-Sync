@@ -5,7 +5,7 @@ import {
     FaCalendarAlt,
 } from "react-icons/fa";
 import { motion, useReducedMotion } from "framer-motion";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { useAppSelector } from "../../redux/hooks";
 import socket from "../../socket/socket";
@@ -16,14 +16,23 @@ const StatsSection = () => {
 
     const calendarRef = useRef(null);
 
-    const { rooms } = useAppSelector((state) => state.room);
+    const { rooms } = useAppSelector(
+        (state) => state.room
+    );
 
     const [studyStats, setStudyStats] = useState({
         totalSeconds: 0,
         sessions: [],
     });
 
-    const [showCalendar, setShowCalendar] = useState(false);
+    const [showCalendar, setShowCalendar] =
+        useState(false);
+
+    const [calendarPosition, setCalendarPosition] =
+        useState({
+            top: 0,
+            left: 0,
+        });
 
     // =========================================
     // STUDY STATS
@@ -32,7 +41,9 @@ const StatsSection = () => {
     useEffect(() => {
         const handleStats = (data) => {
             setStudyStats({
-                totalSeconds: Number(data?.totalSeconds) || 0,
+                totalSeconds:
+                    Number(data?.totalSeconds) || 0,
+
                 sessions: Array.isArray(data?.sessions)
                     ? data.sessions
                     : [],
@@ -62,6 +73,7 @@ const StatsSection = () => {
 
         return () => {
             socket.off("study:stats", handleStats);
+
             socket.off(
                 "profile:study-stats-updated",
                 handleStatsUpdated
@@ -70,7 +82,137 @@ const StatsSection = () => {
     }, []);
 
     // =========================================
-    // CLOSE CALENDAR WHEN CLICKING OUTSIDE
+    // CALENDAR POSITION
+    // =========================================
+
+    const updateCalendarPosition = () => {
+        if (!calendarRef.current) return;
+
+        const rect =
+            calendarRef.current.getBoundingClientRect();
+
+        const calendarWidth = 380;
+        const gap = 14;
+        const viewportPadding = 12;
+
+        let left = rect.left - calendarWidth - gap;
+
+        /*
+         * Normally the calendar opens on the LEFT
+         * side of the Study Activity card.
+         */
+        if (left < viewportPadding) {
+            left = rect.right + gap;
+        }
+
+        /*
+         * If there isn't enough space on either side,
+         * keep it inside the viewport.
+         */
+        if (
+            left + calendarWidth >
+            window.innerWidth - viewportPadding
+        ) {
+            left =
+                window.innerWidth -
+                calendarWidth -
+                viewportPadding;
+        }
+
+        left = Math.max(
+            viewportPadding,
+            left
+        );
+
+        const calendarHeight = 620;
+
+        let top = rect.top;
+
+        if (
+            top + calendarHeight >
+            window.innerHeight - viewportPadding
+        ) {
+            top =
+                window.innerHeight -
+                calendarHeight -
+                viewportPadding;
+        }
+
+        top = Math.max(
+            viewportPadding,
+            top
+        );
+
+        setCalendarPosition({
+            top,
+            left,
+        });
+    };
+
+    // =========================================
+    // OPEN / CLOSE CALENDAR
+    // =========================================
+
+    const toggleCalendar = () => {
+        if (!showCalendar) {
+            requestAnimationFrame(() => {
+                updateCalendarPosition();
+            });
+        }
+
+        setShowCalendar(
+            (previous) => !previous
+        );
+    };
+
+    // =========================================
+    // KEEP CALENDAR POSITIONED CORRECTLY
+    // =========================================
+
+    useEffect(() => {
+        if (!showCalendar) return;
+
+        updateCalendarPosition();
+
+        const handleResize = () => {
+            updateCalendarPosition();
+        };
+
+        const handleScroll = () => {
+            updateCalendarPosition();
+        };
+
+        window.addEventListener(
+            "resize",
+            handleResize
+        );
+
+        /*
+         * Capture scroll from dashboard containers too,
+         * not only window scrolling.
+         */
+        window.addEventListener(
+            "scroll",
+            handleScroll,
+            true
+        );
+
+        return () => {
+            window.removeEventListener(
+                "resize",
+                handleResize
+            );
+
+            window.removeEventListener(
+                "scroll",
+                handleScroll,
+                true
+            );
+        };
+    }, [showCalendar]);
+
+    // =========================================
+    // CLICK OUTSIDE
     // =========================================
 
     useEffect(() => {
@@ -79,9 +221,16 @@ const StatsSection = () => {
         const handlePointerDown = (event) => {
             if (
                 calendarRef.current &&
-                !calendarRef.current.contains(event.target)
+                !calendarRef.current.contains(
+                    event.target
+                )
             ) {
-                setShowCalendar(false);
+                /*
+                 * Calendar itself is rendered inside the
+                 * activity wrapper, so clicks inside it
+                 * are ignored by this check.
+                 */
+                return;
             }
         };
 
@@ -99,7 +248,7 @@ const StatsSection = () => {
     }, [showCalendar]);
 
     // =========================================
-    // ESCAPE KEY
+    // ESCAPE
     // =========================================
 
     useEffect(() => {
@@ -136,8 +285,9 @@ const StatsSection = () => {
     // CURRENT STREAK
     // =========================================
 
-    const currentStreak = useMemo(() => {
-        const sessions = studyStats.sessions || [];
+    const currentStreak = (() => {
+        const sessions =
+            studyStats.sessions || [];
 
         if (!sessions.length) return 0;
 
@@ -146,20 +296,21 @@ const StatsSection = () => {
         sessions.forEach((session) => {
             if (!session?.startedAt) return;
 
-            const date = new Date(session.startedAt);
+            const date = new Date(
+                session.startedAt
+            );
 
-            if (Number.isNaN(date.getTime())) return;
+            if (Number.isNaN(date.getTime()))
+                return;
 
             const key = [
                 date.getFullYear(),
-                String(date.getMonth() + 1).padStart(
-                    2,
-                    "0"
-                ),
-                String(date.getDate()).padStart(
-                    2,
-                    "0"
-                ),
+                String(
+                    date.getMonth() + 1
+                ).padStart(2, "0"),
+                String(
+                    date.getDate()
+                ).padStart(2, "0"),
             ].join("-");
 
             studyDays.add(key);
@@ -169,7 +320,12 @@ const StatsSection = () => {
 
         const currentDate = new Date();
 
-        currentDate.setHours(0, 0, 0, 0);
+        currentDate.setHours(
+            0,
+            0,
+            0,
+            0
+        );
 
         let streak = 0;
 
@@ -196,37 +352,7 @@ const StatsSection = () => {
         }
 
         return streak;
-    }, [studyStats.sessions]);
-
-    // =========================================
-    // ACTIVE DAYS
-    // =========================================
-
-    const activityDays = useMemo(() => {
-        const days = new Set();
-
-        (studyStats.sessions || []).forEach(
-            (session) => {
-                if (!session?.startedAt) return;
-
-                const date = new Date(
-                    session.startedAt
-                );
-
-                if (Number.isNaN(date.getTime())) return;
-
-                const key = [
-                    date.getFullYear(),
-                    date.getMonth(),
-                    date.getDate(),
-                ].join("-");
-
-                days.add(key);
-            }
-        );
-
-        return days.size;
-    }, [studyStats.sessions]);
+    })();
 
     // =========================================
     // STAT DATA
@@ -240,6 +366,7 @@ const StatsSection = () => {
             icon: FaUsers,
             accent: "indigo",
         },
+
         {
             id: "hours",
             title: "Study Hours",
@@ -247,6 +374,7 @@ const StatsSection = () => {
             icon: FaClock,
             accent: "cyan",
         },
+
         {
             id: "streak",
             title: "Current Streak",
@@ -254,10 +382,16 @@ const StatsSection = () => {
             icon: FaFire,
             accent: "orange",
         },
+
         {
+            /*
+             * IMPORTANT:
+             * No activity count here.
+             * Active days are calculated INSIDE the calendar.
+             */
             id: "activity",
             title: "Study Activity",
-            value: activityDays,
+            value: null,
             icon: FaCalendarAlt,
             accent: "violet",
         },
@@ -315,7 +449,9 @@ const StatsSection = () => {
         visible: {
             transition: {
                 staggerChildren:
-                    shouldReduceMotion ? 0 : 0.06,
+                    shouldReduceMotion
+                        ? 0
+                        : 0.06,
             },
         },
     };
@@ -323,7 +459,9 @@ const StatsSection = () => {
     const itemVariants = {
         hidden: {
             opacity: 0,
-            y: shouldReduceMotion ? 0 : 14,
+            y: shouldReduceMotion
+                ? 0
+                : 14,
         },
 
         visible: {
@@ -332,18 +470,19 @@ const StatsSection = () => {
 
             transition: {
                 duration: 0.4,
-                ease: [0.16, 1, 0.3, 1],
+                ease: [
+                    0.16,
+                    1,
+                    0.3,
+                    1,
+                ],
             },
         },
     };
 
     // =========================================
-    // TOGGLE CALENDAR
+    // RENDER
     // =========================================
-
-    const toggleCalendar = () => {
-        setShowCalendar((previous) => !previous);
-    };
 
     return (
         <section className="relative z-10">
@@ -370,7 +509,12 @@ const StatsSection = () => {
                 }
                 transition={{
                     duration: 0.4,
-                    ease: [0.16, 1, 0.3, 1],
+                    ease: [
+                        0.16,
+                        1,
+                        0.3,
+                        1,
+                    ],
                 }}
                 className="mb-5 flex items-end justify-between gap-4 sm:mb-6"
             >
@@ -407,213 +551,251 @@ const StatsSection = () => {
                 animate="visible"
                 className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4"
             >
-                {stats.map((stat, index) => {
-                    const Icon = stat.icon;
-                    const colors =
-                        accentStyles[stat.accent];
+                {stats.map(
+                    (stat, index) => {
+                        const Icon =
+                            stat.icon;
 
-                    const isActivity =
-                        stat.id === "activity";
+                        const colors =
+                            accentStyles[
+                                stat.accent
+                            ];
 
-                    return (
-                        <div
-                            key={stat.id}
-                            ref={
-                                isActivity
-                                    ? calendarRef
-                                    : null
-                            }
-                            className={`relative min-w-0 ${
-                                isActivity
-                                    ? "z-20"
-                                    : "z-0"
-                            }`}
-                        >
-                            {/* =================================
-                                STAT CARD
-                            ================================= */}
+                        const isActivity =
+                            stat.id ===
+                            "activity";
 
-                            <motion.div
-                                variants={itemVariants}
-                                whileHover={
-                                    shouldReduceMotion
-                                        ? undefined
-                                        : {
-                                              y: -4,
-                                          }
-                                }
-                                onClick={
+                        return (
+                            <div
+                                key={stat.id}
+                                ref={
                                     isActivity
-                                        ? toggleCalendar
-                                        : undefined
+                                        ? calendarRef
+                                        : null
                                 }
-                                role={
+                                className={`relative min-w-0 ${
                                     isActivity
-                                        ? "button"
-                                        : undefined
-                                }
-                                tabIndex={
-                                    isActivity ? 0 : undefined
-                                }
-                                aria-expanded={
-                                    isActivity
-                                        ? showCalendar
-                                        : undefined
-                                }
-                                aria-label={
-                                    isActivity
-                                        ? "Open study activity calendar"
-                                        : undefined
-                                }
-                                onKeyDown={
-                                    isActivity
-                                        ? (event) => {
-                                              if (
-                                                  event.key ===
-                                                      "Enter" ||
-                                                  event.key ===
-                                                      " "
-                                              ) {
-                                                  event.preventDefault();
-                                                  toggleCalendar();
-                                              }
-                                          }
-                                        : undefined
-                                }
-                                className={`group relative min-w-0 overflow-hidden rounded-[20px] border border-slate-800/80 bg-[#0a0f17] p-4 shadow-[0_12px_40px_rgba(0,0,0,0.14)] transition-[border-color,background-color,box-shadow] duration-500 hover:bg-[#0c121c] hover:shadow-[0_18px_48px_rgba(0,0,0,0.22)] sm:p-5 ${
-                                    colors.border
-                                } ${
-                                    isActivity
-                                        ? "cursor-pointer"
-                                        : ""
-                                } ${
-                                    showCalendar &&
-                                    isActivity
-                                        ? "border-violet-500/30 bg-[#0c121c]"
-                                        : ""
+                                        ? "z-50"
+                                        : "z-0"
                                 }`}
                             >
-                                {/* Ambient glow */}
+                                {/* =================================
+                                    STAT CARD
+                                ================================= */}
 
-                                <div
-                                    className={`pointer-events-none absolute -right-14 -top-14 h-32 w-32 rounded-full opacity-[0.035] blur-[45px] transition-all duration-700 group-hover:scale-125 group-hover:opacity-[0.12] ${colors.glow}`}
-                                />
+                                <motion.div
+                                    variants={
+                                        itemVariants
+                                    }
+                                    whileHover={
+                                        shouldReduceMotion
+                                            ? undefined
+                                            : {
+                                                  y: -4,
+                                              }
+                                    }
+                                    onClick={
+                                        isActivity
+                                            ? toggleCalendar
+                                            : undefined
+                                    }
+                                    role={
+                                        isActivity
+                                            ? "button"
+                                            : undefined
+                                    }
+                                    tabIndex={
+                                        isActivity
+                                            ? 0
+                                            : undefined
+                                    }
+                                    aria-expanded={
+                                        isActivity
+                                            ? showCalendar
+                                            : undefined
+                                    }
+                                    aria-label={
+                                        isActivity
+                                            ? "Open study activity calendar"
+                                            : undefined
+                                    }
+                                    onKeyDown={
+                                        isActivity
+                                            ? (
+                                                  event
+                                              ) => {
+                                                  if (
+                                                      event.key ===
+                                                          "Enter" ||
+                                                      event.key ===
+                                                          " "
+                                                  ) {
+                                                      event.preventDefault();
 
-                                {/* Top accent */}
-
-                                <div
-                                    className={`pointer-events-none absolute left-6 right-6 top-0 h-px transition-opacity duration-500 ${
+                                                      toggleCalendar();
+                                                  }
+                                              }
+                                            : undefined
+                                    }
+                                    className={`group relative min-w-0 overflow-hidden rounded-[20px] border border-slate-800/80 bg-[#0a0f17] p-4 shadow-[0_12px_40px_rgba(0,0,0,0.14)] transition-[border-color,background-color,box-shadow] duration-500 hover:bg-[#0c121c] hover:shadow-[0_18px_48px_rgba(0,0,0,0.22)] sm:p-5 ${
+                                        colors.border
+                                    } ${
+                                        isActivity
+                                            ? "cursor-pointer"
+                                            : ""
+                                    } ${
                                         showCalendar &&
                                         isActivity
-                                            ? "opacity-100"
-                                            : "opacity-0 group-hover:opacity-70"
-                                    } ${colors.dot}`}
-                                />
+                                            ? "border-violet-500/30 bg-[#0c121c]"
+                                            : ""
+                                    }`}
+                                >
+                                    {/* Ambient glow */}
 
-                                {/* Card header */}
-
-                                <div className="relative flex items-center justify-between">
-                                    <motion.div
-                                        whileHover={
-                                            shouldReduceMotion
-                                                ? undefined
-                                                : {
-                                                      scale: 1.06,
-                                                      rotate: -3,
-                                                  }
-                                        }
-                                        transition={{
-                                            type: "spring",
-                                            stiffness: 400,
-                                            damping: 20,
-                                        }}
-                                        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-[13px] border border-white/[0.035] shadow-[0_8px_22px_rgba(0,0,0,0.16)] sm:h-11 sm:w-11 ${colors.bg} ${colors.icon}`}
-                                    >
-                                        <Icon className="text-[15px] sm:text-base" />
-                                    </motion.div>
-
-                                    <span className="flex h-5 min-w-5 items-center justify-center rounded-full border border-slate-800/80 bg-slate-900/70 px-1.5 text-[8px] font-semibold tracking-wider text-slate-600 transition-colors duration-300 group-hover:text-slate-400">
-                                        0{index + 1}
-                                    </span>
-                                </div>
-
-                                {/* Value */}
-
-                                <div className="relative mt-5">
-                                    <motion.div
-                                        key={String(
-                                            stat.value
-                                        )}
-                                        initial={
-                                            shouldReduceMotion
-                                                ? false
-                                                : {
-                                                      opacity: 0,
-                                                      y: 5,
-                                                  }
-                                        }
-                                        animate={
-                                            shouldReduceMotion
-                                                ? undefined
-                                                : {
-                                                      opacity: 1,
-                                                      y: 0,
-                                                  }
-                                        }
-                                        transition={{
-                                            duration: 0.3,
-                                        }}
-                                        className="truncate text-[25px] font-bold leading-none tracking-[-0.045em] text-white sm:text-[29px]"
-                                    >
-                                        {stat.value}
-                                    </motion.div>
-
-                                    <p className="mt-2 truncate text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500 sm:text-[11px]">
-                                        {stat.title}
-                                    </p>
-                                </div>
-
-                                {/* Bottom status */}
-
-                                <div className="relative mt-4 flex items-center gap-2">
-                                    <span
-                                        className={`h-1.5 w-1.5 shrink-0 rounded-full opacity-70 transition-all duration-300 group-hover:opacity-100 ${colors.dot}`}
+                                    <div
+                                        className={`pointer-events-none absolute -right-14 -top-14 h-32 w-32 rounded-full opacity-[0.035] blur-[45px] transition-all duration-700 group-hover:scale-125 group-hover:opacity-[0.12] ${colors.glow}`}
                                     />
 
-                                    <span className="truncate text-[9px] font-medium text-slate-600 transition-colors duration-300 group-hover:text-slate-500">
-                                        {isActivity
-                                            ? showCalendar
-                                                ? "Click to close activity"
-                                                : "Click to view activity"
-                                            : "Study activity"}
-                                    </span>
-                                </div>
+                                    {/* Top accent */}
 
-                                {/* Inner border */}
+                                    <div
+                                        className={`pointer-events-none absolute left-6 right-6 top-0 h-px transition-opacity duration-500 ${
+                                            showCalendar &&
+                                            isActivity
+                                                ? "opacity-100"
+                                                : "opacity-0 group-hover:opacity-70"
+                                        } ${colors.dot}`}
+                                    />
 
-                                <div className="pointer-events-none absolute inset-0 rounded-[20px] ring-1 ring-inset ring-white/[0.025] transition-all duration-500 group-hover:ring-white/[0.06]" />
-                            </motion.div>
+                                    {/* Card Header */}
 
-                            {/* =================================
-                                CALENDAR
-                            ================================= */}
+                                    <div className="relative flex items-center justify-between">
+                                        <motion.div
+                                            whileHover={
+                                                shouldReduceMotion
+                                                    ? undefined
+                                                    : {
+                                                          scale: 1.06,
+                                                          rotate: -3,
+                                                      }
+                                            }
+                                            transition={{
+                                                type: "spring",
+                                                stiffness: 400,
+                                                damping: 20,
+                                            }}
+                                            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-[13px] border border-white/[0.035] shadow-[0_8px_22px_rgba(0,0,0,0.16)] sm:h-11 sm:w-11 ${colors.bg} ${colors.icon}`}
+                                        >
+                                            <Icon className="text-[15px] sm:text-base" />
+                                        </motion.div>
 
-                            {isActivity && (
-                                <StudyStreakCalendar
-                                    isOpen={showCalendar}
-                                    onClose={() =>
-                                        setShowCalendar(
-                                            false
-                                        )
-                                    }
-                                    sessions={
-                                        studyStats.sessions
-                                    }
-                                />
-                            )}
-                        </div>
-                    );
-                })}
+                                        <span className="flex h-5 min-w-5 items-center justify-center rounded-full border border-slate-800/80 bg-slate-900/70 px-1.5 text-[8px] font-semibold tracking-wider text-slate-600 transition-colors duration-300 group-hover:text-slate-400">
+                                            0
+                                            {index +
+                                                1}
+                                        </span>
+                                    </div>
+
+                                    {/* =================================
+                                        VALUE
+                                    ================================= */}
+
+                                    <div className="relative mt-5">
+                                        {isActivity ? (
+                                            /*
+                                             * Intentionally empty.
+                                             * Study Activity does NOT show
+                                             * active-day count on the card.
+                                             */
+                                            <div className="h-[29px] sm:h-[34px]" />
+                                        ) : (
+                                            <motion.div
+                                                key={String(
+                                                    stat.value
+                                                )}
+                                                initial={
+                                                    shouldReduceMotion
+                                                        ? false
+                                                        : {
+                                                              opacity: 0,
+                                                              y: 5,
+                                                          }
+                                                }
+                                                animate={
+                                                    shouldReduceMotion
+                                                        ? undefined
+                                                        : {
+                                                              opacity: 1,
+                                                              y: 0,
+                                                          }
+                                                }
+                                                transition={{
+                                                    duration: 0.3,
+                                                }}
+                                                className="truncate text-[25px] font-bold leading-none tracking-[-0.045em] text-white sm:text-[29px]"
+                                            >
+                                                {
+                                                    stat.value
+                                                }
+                                            </motion.div>
+                                        )}
+
+                                        <p className="mt-2 truncate text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500 sm:text-[11px]">
+                                            {
+                                                stat.title
+                                            }
+                                        </p>
+                                    </div>
+
+                                    {/* =================================
+                                        BOTTOM STATUS
+                                    ================================= */}
+
+                                    <div className="relative mt-4 flex items-center gap-2">
+                                        <span
+                                            className={`h-1.5 w-1.5 shrink-0 rounded-full opacity-70 transition-all duration-300 group-hover:opacity-100 ${colors.dot}`}
+                                        />
+
+                                        <span className="truncate text-[9px] font-medium text-slate-600 transition-colors duration-300 group-hover:text-slate-500">
+                                            {isActivity
+                                                ? showCalendar
+                                                    ? "Click to close activity"
+                                                    : "Click to view activity"
+                                                : "Study activity"}
+                                        </span>
+                                    </div>
+
+                                    {/* Inner border */}
+
+                                    <div className="pointer-events-none absolute inset-0 rounded-[20px] ring-1 ring-inset ring-white/[0.025] transition-all duration-500 group-hover:ring-white/[0.06]" />
+                                </motion.div>
+
+                                {/* =================================
+                                    CALENDAR POPUP
+                                ================================= */}
+
+                                {isActivity && (
+                                    <StudyStreakCalendar
+                                        isOpen={
+                                            showCalendar
+                                        }
+                                        onClose={() =>
+                                            setShowCalendar(
+                                                false
+                                            )
+                                        }
+                                        sessions={
+                                            studyStats.sessions
+                                        }
+                                        position={
+                                            calendarPosition
+                                        }
+                                    />
+                                )}
+                            </div>
+                        );
+                    }
+                )}
             </motion.div>
         </section>
     );
