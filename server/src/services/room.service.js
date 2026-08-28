@@ -44,12 +44,13 @@ const deletePdfFromCloudinary = async (publicId) => {
 const formatRoomResponse = (room, userId) => {
     const roomObj = room.toObject();
 
+    const hostId =
+        roomObj.host?._id
+            ? roomObj.host._id.toString()
+            : roomObj.host?.toString();
+
     const isHost =
-        roomObj.host._id
-            ? roomObj.host._id.toString() ===
-              userId.toString()
-            : roomObj.host.toString() ===
-              userId.toString();
+        hostId === userId.toString();
 
     if (!isHost) {
         delete roomObj.inviteCode;
@@ -58,6 +59,9 @@ const formatRoomResponse = (room, userId) => {
     return roomObj;
 };
 
+/**
+ * Create Room
+ */
 const createRoom = async (userId, data) => {
     const {
         name,
@@ -71,9 +75,10 @@ const createRoom = async (userId, data) => {
     while (true) {
         inviteCode = generateInviteCode();
 
-        const roomExists = await Room.findOne({
-            inviteCode,
-        });
+        const roomExists =
+            await Room.findOne({
+                inviteCode,
+            });
 
         if (!roomExists) {
             break;
@@ -117,13 +122,18 @@ const createRoom = async (userId, data) => {
     );
 };
 
+/**
+ * Get All Rooms
+ *
+ * IMPORTANT:
+ * Every active room is visible to everyone.
+ *
+ * Leaving a room does NOT remove it
+ * from the room list.
+ */
 const getAllRooms = async (userId) => {
     const rooms = await Room.find({
         isActive: true,
-        $or: [
-            { host: userId },
-            { members: userId },
-        ],
     })
         .populate(
             "host",
@@ -134,38 +144,59 @@ const getAllRooms = async (userId) => {
             "name email avatar"
         )
         .select("-__v -inviteCode")
-        .sort({ createdAt: -1 });
+        .sort({
+            createdAt: -1,
+        });
 
     return rooms;
 };
 
+/**
+ * Get Room By ID
+ *
+ * Public room:
+ * - Everyone can access.
+ *
+ * Private room:
+ * - Host can access.
+ * - Existing member can access.
+ * - Non-member can SEE the room in the list,
+ *   but cannot enter without joining first.
+ */
 const getRoomById = async (
     roomId,
     userId
 ) => {
-    const room = await Room.findById(roomId)
-        .populate(
-            "host",
-            "name email avatar"
-        )
-        .populate(
-            "members",
-            "name email avatar"
-        )
-        .populate(
-            "removedMembers.user",
-            "name email avatar"
-        )
-        .populate(
-            "rejoinRequests.user",
-            "name email avatar"
-        );
+    const room =
+        await Room.findById(roomId)
+            .populate(
+                "host",
+                "name email avatar"
+            )
+            .populate(
+                "members",
+                "name email avatar"
+            )
+            .populate(
+                "removedMembers.user",
+                "name email avatar"
+            )
+            .populate(
+                "rejoinRequests.user",
+                "name email avatar"
+            );
 
     if (!room) {
-        throw new Error("Room not found.");
+        throw new Error(
+            "Room not found."
+        );
     }
 
-    // Public room → everyone can access
+    /**
+     * PUBLIC ROOM
+     *
+     * Anyone can access.
+     */
     if (!room.isPrivate) {
         return formatRoomResponse(
             room,
@@ -173,37 +204,61 @@ const getRoomById = async (
         );
     }
 
-    // Host can access
-    const isHost =
-        room.host._id.toString() ===
+    /**
+     * PRIVATE ROOM
+     *
+     * Host can access.
+     */
+    const hostId =
+        room.host._id.toString();
+
+    const currentUserId =
         userId.toString();
 
-    if (isHost) {
+    if (hostId === currentUserId) {
         return formatRoomResponse(
             room,
             userId
         );
     }
 
-    // Existing member can access
-    const isMember = room.members.some(
-        (member) =>
-            member._id.toString() ===
-            userId.toString()
-    );
+    /**
+     * PRIVATE ROOM
+     *
+     * Existing member can access.
+     */
+    const isMember =
+        room.members.some(
+            (member) =>
+                member._id.toString() ===
+                currentUserId
+        );
 
-    if (!isMember) {
-        throw new Error(
-            "You must join this room first."
+    if (isMember) {
+        return formatRoomResponse(
+            room,
+            userId
         );
     }
 
-    return formatRoomResponse(
-        room,
-        userId
+    /**
+     * PRIVATE ROOM
+     *
+     * User can see this room in
+     * getAllRooms(), but cannot
+     * directly enter it.
+     *
+     * They must use the invite code
+     * through joinRoom().
+     */
+    throw new Error(
+        "You must join this private room first."
     );
 };
 
+/**
+ * Join Room Using Invite Code
+ */
 const joinRoom = async (
     userId,
     inviteCode
@@ -218,12 +273,13 @@ const joinRoom = async (
         );
     }
 
-    const room = await Room.findOne({
-        inviteCode: inviteCode
-            .trim()
-            .toUpperCase(),
-        isActive: true,
-    });
+    const room =
+        await Room.findOne({
+            inviteCode: inviteCode
+                .trim()
+                .toUpperCase(),
+            isActive: true,
+        });
 
     if (!room) {
         throw new Error(
@@ -231,7 +287,10 @@ const joinRoom = async (
         );
     }
 
-    // Previously removed users cannot directly rejoin.
+    /**
+     * Previously removed users
+     * cannot directly rejoin.
+     */
     const wasRemoved =
         room.removedMembers?.some(
             (entry) =>
@@ -245,11 +304,15 @@ const joinRoom = async (
         );
     }
 
-    const isMember = room.members.some(
-        (member) =>
-            member.toString() ===
-            userId.toString()
-    );
+    /**
+     * Already a member.
+     */
+    const isMember =
+        room.members.some(
+            (member) =>
+                member.toString() ===
+                userId.toString()
+        );
 
     if (isMember) {
         throw new Error(
@@ -257,13 +320,21 @@ const joinRoom = async (
         );
     }
 
+    /**
+     * Check room capacity.
+     */
     if (
         room.members.length >=
         room.maxMembers
     ) {
-        throw new Error("Room is full.");
+        throw new Error(
+            "Room is full."
+        );
     }
 
+    /**
+     * Add member.
+     */
     room.members.push(userId);
 
     await room.save();
@@ -295,6 +366,15 @@ const joinRoom = async (
     );
 };
 
+/**
+ * Leave Room
+ *
+ * IMPORTANT:
+ * Room remains visible in the
+ * user's room list because
+ * getAllRooms() returns every
+ * active room.
+ */
 const leaveRoom = async (
     userId,
     roomId
@@ -308,6 +388,9 @@ const leaveRoom = async (
         );
     }
 
+    /**
+     * Host cannot leave.
+     */
     if (
         room.host.toString() ===
         userId.toString()
@@ -317,6 +400,9 @@ const leaveRoom = async (
         );
     }
 
+    /**
+     * Check membership.
+     */
     const isMember =
         room.members.some(
             (member) =>
@@ -330,6 +416,17 @@ const leaveRoom = async (
         );
     }
 
+    /**
+     * Remove user from members.
+     *
+     * IMPORTANT:
+     * Do NOT add the user to
+     * removedMembers here.
+     *
+     * Leaving voluntarily is
+     * different from being removed
+     * by the host.
+     */
     room.members =
         room.members.filter(
             (member) =>
@@ -366,6 +463,9 @@ const leaveRoom = async (
     );
 };
 
+/**
+ * Delete Room
+ */
 const deleteRoom = async (
     userId,
     roomId
@@ -388,7 +488,9 @@ const deleteRoom = async (
         );
     }
 
-    // Delete PDF from Cloudinary
+    /**
+     * Delete PDF from Cloudinary.
+     */
     if (room.pdfPublicId) {
         try {
             await deletePdfFromCloudinary(
@@ -409,6 +511,9 @@ const deleteRoom = async (
     return true;
 };
 
+/**
+ * Update Room
+ */
 const updateRoom = async (
     userId,
     roomId,
@@ -518,7 +623,6 @@ const uploadRoomPdf = async (
         );
     }
 
-    // Upload new PDF to Cloudinary
     const result = await new Promise(
         (resolve, reject) => {
             const stream =
@@ -527,7 +631,10 @@ const uploadRoomPdf = async (
                         folder: "studysync/pdfs",
                         resource_type: "raw",
                     },
-                    (error, result) => {
+                    (
+                        error,
+                        result
+                    ) => {
                         if (error) {
                             reject(error);
                         } else {
@@ -540,17 +647,21 @@ const uploadRoomPdf = async (
         }
     );
 
-    // Save old Cloudinary ID
     const oldPdfPublicId =
         room.pdfPublicId;
 
-    // Save new PDF information
-    room.pdfUrl = result.secure_url;
-    room.pdfPublicId = result.public_id;
+    room.pdfUrl =
+        result.secure_url;
+
+    room.pdfPublicId =
+        result.public_id;
 
     await room.save();
 
-    // Delete previous PDF after new one is saved
+    /**
+     * Delete old PDF after
+     * new PDF is saved.
+     */
     if (oldPdfPublicId) {
         try {
             await deletePdfFromCloudinary(
@@ -587,7 +698,6 @@ const uploadRoomPdf = async (
 
 /**
  * Delete PDF from room.
- * Called when host clicks Delete PDF.
  */
 const deleteRoomPdf = async (
     userId,
@@ -620,13 +730,11 @@ const deleteRoomPdf = async (
     const oldPdfPublicId =
         room.pdfPublicId;
 
-    // Remove PDF information from database
     room.pdfUrl = "";
     room.pdfPublicId = "";
 
     await room.save();
 
-    // Delete actual PDF from Cloudinary
     if (oldPdfPublicId) {
         try {
             await deletePdfFromCloudinary(
@@ -661,6 +769,9 @@ const deleteRoomPdf = async (
     );
 };
 
+/**
+ * Get Room Messages
+ */
 const getRoomMessages = async (
     userId,
     roomId
@@ -707,6 +818,12 @@ const getRoomMessages = async (
     return messages;
 };
 
+/**
+ * Request Rejoin
+ *
+ * Used ONLY for users who
+ * were removed by the host.
+ */
 const requestRejoin = async (
     userId,
     roomId
@@ -751,7 +868,8 @@ const requestRejoin = async (
             (request) =>
                 request.user.toString() ===
                     userId.toString() &&
-                request.status === "pending"
+                request.status ===
+                    "pending"
         );
 
     if (existingRequest) {
@@ -770,6 +888,9 @@ const requestRejoin = async (
     return true;
 };
 
+/**
+ * Approve Rejoin Request
+ */
 const approveRejoinRequest = async (
     hostId,
     roomId,
@@ -798,7 +919,8 @@ const approveRejoinRequest = async (
             (item) =>
                 item.user.toString() ===
                     userId.toString() &&
-                item.status === "pending"
+                item.status ===
+                    "pending"
         );
 
     if (!request) {
@@ -827,7 +949,8 @@ const approveRejoinRequest = async (
         room.members.push(userId);
     }
 
-    request.status = "approved";
+    request.status =
+        "approved";
 
     await room.save();
 
@@ -840,6 +963,9 @@ const approveRejoinRequest = async (
     return true;
 };
 
+/**
+ * Reject Rejoin Request
+ */
 const rejectRejoinRequest = async (
     hostId,
     roomId,
@@ -868,7 +994,8 @@ const rejectRejoinRequest = async (
             (item) =>
                 item.user.toString() ===
                     userId.toString() &&
-                item.status === "pending"
+                item.status ===
+                    "pending"
         );
 
     if (!request) {
@@ -877,7 +1004,8 @@ const rejectRejoinRequest = async (
         );
     }
 
-    request.status = "rejected";
+    request.status =
+        "rejected";
 
     await room.save();
 
