@@ -4,6 +4,7 @@ import {
     FaFileUpload,
     FaBolt,
 } from "react-icons/fa";
+
 import {
     motion,
     useReducedMotion,
@@ -38,11 +39,11 @@ const QuickActions = ({
             onClick: onJoinRoom,
         },
         {
-            id: "upload",
-            title: "Upload Material",
+            id: "personal-materials",
+            title: "Personal Materials",
             description:
-                "Add PDFs, notes, and presentations to your shared study workspace.",
-            label: "Add to workspace",
+                "Upload and manage your personal PDFs, notes, and study materials.",
+            label: "Manage your materials",
             icon: FaFileUpload,
             accent: "violet",
             onClick: onUploadMaterial,
@@ -59,6 +60,7 @@ const QuickActions = ({
             accentText: "text-indigo-300",
             border: "group-hover:border-indigo-400/20",
         },
+
         cyan: {
             icon:
                 "from-cyan-500/20 via-cyan-500/10 to-transparent text-cyan-300 ring-cyan-400/15",
@@ -68,6 +70,7 @@ const QuickActions = ({
             accentText: "text-cyan-300",
             border: "group-hover:border-cyan-400/20",
         },
+
         violet: {
             icon:
                 "from-violet-500/20 via-violet-500/10 to-transparent text-violet-300 ring-violet-400/15",
@@ -81,6 +84,7 @@ const QuickActions = ({
 
     const containerVariants = {
         hidden: {},
+
         visible: {
             transition: {
                 staggerChildren: shouldReduceMotion
@@ -95,9 +99,11 @@ const QuickActions = ({
             opacity: 0,
             y: shouldReduceMotion ? 0 : 18,
         },
+
         visible: {
             opacity: 1,
             y: 0,
+
             transition: {
                 duration: 0.45,
                 ease: [0.16, 1, 0.3, 1],
@@ -107,21 +113,27 @@ const QuickActions = ({
 
     return (
         <section className="relative">
+
             {/* =========================================
                 SECTION HEADER
             ========================================= */}
 
             <div className="mb-5 flex items-end justify-between gap-4 sm:mb-6">
+
                 <div>
+
                     <div className="mb-2 flex items-center gap-2">
+
                         <span className="relative flex h-1.5 w-1.5">
                             <span className="absolute inset-0 animate-ping rounded-full bg-indigo-400/50" />
+
                             <span className="relative h-1.5 w-1.5 rounded-full bg-indigo-400" />
                         </span>
 
                         <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-indigo-400/80">
                             Get started
                         </span>
+
                     </div>
 
                     <h2 className="text-xl font-bold tracking-[-0.035em] text-white sm:text-2xl">
@@ -131,15 +143,19 @@ const QuickActions = ({
                     <p className="mt-1.5 text-xs leading-5 text-slate-500 sm:text-sm">
                         Start your next collaborative session.
                     </p>
+
                 </div>
 
                 <div className="hidden items-center gap-2 rounded-full border border-slate-800/80 bg-slate-900/50 px-3 py-1.5 sm:flex">
+
                     <FaBolt className="text-[9px] text-amber-400" />
 
                     <span className="text-[10px] font-medium text-slate-500">
                         Ready to learn
                     </span>
+
                 </div>
+
             </div>
 
             {/* =========================================
@@ -152,6 +168,7 @@ const QuickActions = ({
                 animate="visible"
                 className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3"
             >
+
                 {actions.map((action, index) => {
                     const Icon = action.icon;
                     const colors =
@@ -163,6 +180,7 @@ const QuickActions = ({
                             variants={cardVariants}
                             type="button"
                             onClick={action.onClick}
+
                             whileHover={
                                 shouldReduceMotion
                                     ? undefined
@@ -170,6 +188,7 @@ const QuickActions = ({
                                           y: -5,
                                       }
                             }
+
                             whileTap={
                                 shouldReduceMotion
                                     ? undefined
@@ -177,11 +196,13 @@ const QuickActions = ({
                                           scale: 0.985,
                                       }
                             }
+
                             transition={{
                                 type: "spring",
                                 stiffness: 350,
                                 damping: 26,
                             }}
+
                             className={`
                                 group
                                 relative
@@ -208,6 +229,7 @@ const QuickActions = ({
                                 ${colors.border}
                             `}
                         >
+
                             {/* =================================
                                 AMBIENT LIGHT
                             ================================= */}
@@ -258,7 +280,7 @@ const QuickActions = ({
                             ================================= */}
 
                             <div className="relative flex items-start justify-between">
-                                {/* Icon */}
+
                                 <motion.div
                                     whileHover={
                                         shouldReduceMotion
@@ -268,11 +290,13 @@ const QuickActions = ({
                                                   rotate: -3,
                                               }
                                     }
+
                                     transition={{
                                         type: "spring",
                                         stiffness: 400,
                                         damping: 20,
                                     }}
+
                                     className={`
                                         relative
                                         flex
@@ -293,24 +317,26 @@ const QuickActions = ({
                                     <Icon className="relative text-[17px]" />
                                 </motion.div>
 
-                                {/* Index */}
-                                <span className="
-                                    rounded-full
-                                    border
-                                    border-slate-800/80
-                                    bg-slate-900/60
-                                    px-2
-                                    py-1
-                                    text-[9px]
-                                    font-semibold
-                                    tracking-[0.14em]
-                                    text-slate-600
-                                    transition-colors
-                                    duration-300
-                                    group-hover:text-slate-400
-                                ">
+                                <span
+                                    className="
+                                        rounded-full
+                                        border
+                                        border-slate-800/80
+                                        bg-slate-900/60
+                                        px-2
+                                        py-1
+                                        text-[9px]
+                                        font-semibold
+                                        tracking-[0.14em]
+                                        text-slate-600
+                                        transition-colors
+                                        duration-300
+                                        group-hover:text-slate-400
+                                    "
+                                >
                                     0{index + 1}
                                 </span>
+
                             </div>
 
                             {/* =================================
@@ -318,7 +344,9 @@ const QuickActions = ({
                             ================================= */}
 
                             <div className="relative mt-6">
+
                                 <div className="mb-2 flex items-center gap-2">
+
                                     <span
                                         className={`
                                             h-1.5
@@ -339,68 +367,78 @@ const QuickActions = ({
                                     >
                                         {action.label}
                                     </span>
+
                                 </div>
 
-                                <h3 className="
-                                    text-[16px]
-                                    font-semibold
-                                    tracking-[-0.02em]
-                                    text-slate-100
-                                    transition-colors
-                                    duration-300
-                                    group-hover:text-white
-                                    sm:text-[17px]
-                                ">
+                                <h3
+                                    className="
+                                        text-[16px]
+                                        font-semibold
+                                        tracking-[-0.02em]
+                                        text-slate-100
+                                        transition-colors
+                                        duration-300
+                                        group-hover:text-white
+                                        sm:text-[17px]
+                                    "
+                                >
                                     {action.title}
                                 </h3>
 
-                                <p className="
-                                    mt-2.5
-                                    max-w-[320px]
-                                    text-[12px]
-                                    leading-[20px]
-                                    text-slate-500
-                                    transition-colors
-                                    duration-300
-                                    group-hover:text-slate-400
-                                    sm:text-[13px]
-                                    sm:leading-[21px]
-                                ">
+                                <p
+                                    className="
+                                        mt-2.5
+                                        max-w-[320px]
+                                        text-[12px]
+                                        leading-[20px]
+                                        text-slate-500
+                                        transition-colors
+                                        duration-300
+                                        group-hover:text-slate-400
+                                        sm:text-[13px]
+                                        sm:leading-[21px]
+                                    "
+                                >
                                     {action.description}
                                 </p>
+
                             </div>
 
                             {/* =================================
                                 BOTTOM INTERACTION
                             ================================= */}
 
-                            <div className="
-                                absolute
-                                bottom-5
-                                left-5
-                                right-5
-                                flex
-                                items-center
-                                justify-between
-                                border-t
-                                border-slate-800/70
-                                pt-3.5
-                                sm:bottom-6
-                                sm:left-6
-                                sm:right-6
-                            ">
-                                <span className="
-                                    text-[10px]
-                                    font-medium
-                                    text-slate-600
-                                    transition-colors
-                                    duration-300
-                                    group-hover:text-slate-400
-                                ">
+                            <div
+                                className="
+                                    absolute
+                                    bottom-5
+                                    left-5
+                                    right-5
+                                    flex
+                                    items-center
+                                    justify-between
+                                    border-t
+                                    border-slate-800/70
+                                    pt-3.5
+                                    sm:bottom-6
+                                    sm:left-6
+                                    sm:right-6
+                                "
+                            >
+
+                                <span
+                                    className="
+                                        text-[10px]
+                                        font-medium
+                                        text-slate-600
+                                        transition-colors
+                                        duration-300
+                                        group-hover:text-slate-400
+                                    "
+                                >
                                     Continue
                                 </span>
 
-                                {/* Minimal motion indicator */}
                                 <motion.span
                                     animate={
                                         shouldReduceMotion
@@ -409,12 +447,14 @@ const QuickActions = ({
                                                   x: [0, 3, 0],
                                               }
                                     }
+
                                     transition={{
                                         duration: 1.8,
                                         repeat: Infinity,
                                         repeatDelay: 2,
                                         ease: "easeInOut",
                                     }}
+
                                     className={`
                                         flex
                                         h-6
@@ -434,47 +474,54 @@ const QuickActions = ({
                                         `}
                                     />
                                 </motion.span>
+
                             </div>
 
                             {/* =================================
                                 PREMIUM INNER BORDER
                             ================================= */}
 
-                            <div className="
-                                pointer-events-none
-                                absolute
-                                inset-0
-                                rounded-[22px]
-                                ring-1
-                                ring-inset
-                                ring-white/[0.025]
-                                transition-all
-                                duration-500
-                                group-hover:ring-white/[0.06]
-                            " />
+                            <div
+                                className="
+                                    pointer-events-none
+                                    absolute
+                                    inset-0
+                                    rounded-[22px]
+                                    ring-1
+                                    ring-inset
+                                    ring-white/[0.025]
+                                    transition-all
+                                    duration-500
+                                    group-hover:ring-white/[0.06]
+                                "
+                            />
 
                             {/* =================================
                                 HOVER LIGHT
                             ================================= */}
 
-                            <div className="
-                                pointer-events-none
-                                absolute
-                                inset-x-10
-                                bottom-0
-                                h-px
-                                bg-gradient-to-r
-                                from-transparent
-                                via-white/[0.08]
-                                to-transparent
-                                opacity-0
-                                transition-opacity
-                                duration-500
-                                group-hover:opacity-100
-                            " />
+                            <div
+                                className="
+                                    pointer-events-none
+                                    absolute
+                                    inset-x-10
+                                    bottom-0
+                                    h-px
+                                    bg-gradient-to-r
+                                    from-transparent
+                                    via-white/[0.08]
+                                    to-transparent
+                                    opacity-0
+                                    transition-opacity
+                                    duration-500
+                                    group-hover:opacity-100
+                                "
+                            />
+
                         </motion.button>
                     );
                 })}
+
             </motion.div>
         </section>
     );
