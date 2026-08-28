@@ -8,7 +8,7 @@ import { motion, useReducedMotion } from "framer-motion";
 import { useEffect, useState } from "react";
 
 import { useAppSelector } from "../../redux/hooks";
-import socket from "../../socket";
+import socket from "../../socket/socket";
 
 const StatsSection = () => {
     const shouldReduceMotion = useReducedMotion();
