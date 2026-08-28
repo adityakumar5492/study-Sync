@@ -2265,9 +2265,7 @@ const Footer = () => {
                 <a className="block transition hover:text-white" href="#how">
                   How it works
                 </a>
-                <a className="block transition hover:text-white" href="#experience">
-                  Collaboration
-                </a>
+                
               </div>
             </div>
 
