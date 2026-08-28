@@ -73,7 +73,7 @@ const Reveal = ({
   className = "",
   direction = "up",
   delay = 0,
-  duration = 0.7,
+  duration = 0.52,
   scale = false,
 }) => {
   const reduced = useReducedMotion();
@@ -81,10 +81,10 @@ const Reveal = ({
   const initial = reduced
     ? { opacity: 0 }
     : direction === "left"
-      ? { opacity: 0, x: -30, ...(scale ? { scale: 0.98 } : {}) }
+      ? { opacity: 0, x: -20, ...(scale ? { scale: 0.985 } : {}) }
       : direction === "right"
-        ? { opacity: 0, x: 30, ...(scale ? { scale: 0.98 } : {}) }
-        : { opacity: 0, y: 30, ...(scale ? { scale: 0.98 } : {}) };
+        ? { opacity: 0, x: 20, ...(scale ? { scale: 0.985 } : {}) }
+        : { opacity: 0, y: 18, ...(scale ? { scale: 0.985 } : {}) };
 
   const visible = reduced
     ? { opacity: 1 }
@@ -94,7 +94,7 @@ const Reveal = ({
     <motion.div
       initial={initial}
       whileInView={visible}
-      viewport={{ once: true, amount: 0.12, margin: "0px 0px -70px" }}
+      viewport={{ once: true, amount: 0.08, margin: "0px 0px -40px" }}
       transition={{ duration, delay, ease: motionEase }}
       className={className}
     >
@@ -105,7 +105,7 @@ const Reveal = ({
 
 const Landing = () => {
   return (
-    <main className="min-h-screen w-full overflow-x-clip bg-[#05050a] text-white selection:bg-violet-500/30">
+    <main data-studysync-landing className="min-h-screen w-full overflow-x-clip bg-[#05050a] text-white selection:bg-violet-500/30">
       <style>{`
         @keyframes ss-float {
           0%, 100% { transform: translate3d(0, 0, 0); }
@@ -175,11 +175,47 @@ const Landing = () => {
         .ss-pulse-ring { animation: ss-pulse-ring 2.8s ease-out infinite; will-change: transform, opacity; }
         .ss-breathe { animation: ss-breathe 3.5s ease-in-out infinite; will-change: transform, opacity; }
         .ss-wave { animation: ss-wave var(--wave-duration, 1s) ease-in-out infinite; animation-delay: var(--wave-delay, 0s); transform-origin: bottom; will-change: transform; }
-        .ss-marquee { animation: ss-marquee 28s linear infinite; will-change: transform; }
+        .ss-marquee { animation: ss-marquee 24s linear infinite; will-change: transform; }
         .ss-orbit { animation: ss-orbit 35s linear infinite; will-change: transform; }
         .ss-orbit-reverse { animation: ss-orbit-reverse 45s linear infinite; will-change: transform; }
         .ss-shimmer { animation: ss-shimmer 2.8s linear infinite; will-change: transform; }
         .ss-annotation { animation: ss-annotation 2.5s ease-in-out infinite; }
+
+        /* Landing-page performance + compact responsive typography. */
+        [data-studysync-landing] {
+          overflow-x: clip;
+        }
+
+        [data-studysync-landing] h1 {
+          font-size: clamp(2.25rem, 8vw, 4.8rem);
+          line-height: .96;
+        }
+
+        [data-studysync-landing] h2 {
+          font-size: clamp(1.9rem, 6vw, 3.4rem);
+          line-height: 1;
+        }
+
+        [data-studysync-landing] p {
+          text-wrap: pretty;
+        }
+
+        @media (max-width: 640px) {
+          [data-studysync-landing] section {
+            content-visibility: auto;
+            contain-intrinsic-size: 650px;
+          }
+
+          /* Keep the cinematic animation, but reduce decorative work on phones. */
+          [data-studysync-landing] .ss-pulse:nth-of-type(n + 9) {
+            display: none;
+          }
+
+          [data-studysync-landing] .ss-orbit,
+          [data-studysync-landing] .ss-orbit-reverse {
+            opacity: .5;
+          }
+        }
 
         @media (prefers-reduced-motion: reduce) {
           .ss-float,
@@ -204,11 +240,7 @@ const Landing = () => {
       <VoiceCollaboration />
       <InteractiveWorkspace />
       <CinematicRoom />
-      <LiveStudyMap />
-      <StudyFlow />
       <Features />
-      <HowItWorks />
-      <StatsMarquee />
       <FinalCTA />
       <Footer />
     </main>
@@ -753,7 +785,7 @@ const LiveCollaboration = () => {
     <section
       id="experience"
       style={sectionStyle}
-      className="relative overflow-hidden bg-[#05050a] py-20 sm:py-28 lg:py-36"
+      className="relative overflow-hidden bg-[#05050a] py-16 sm:py-22 lg:py-28"
     >
       <div className="mx-auto w-full max-w-7xl px-4 sm:px-8">
         <SectionHeading
@@ -882,7 +914,7 @@ const VoiceCollaboration = () => {
   return (
     <section
       style={sectionStyle}
-      className="relative overflow-hidden border-y border-white/[0.05] bg-[#07070d] py-20 sm:py-28 lg:py-36"
+      className="relative overflow-hidden border-y border-white/[0.05] bg-[#07070d] py-16 sm:py-22 lg:py-28"
     >
       <div className="pointer-events-none absolute inset-0">
         <div className="absolute left-[5%] top-[10%] h-[320px] w-[320px] rounded-full bg-violet-600/10 blur-[110px]" />
@@ -1102,7 +1134,7 @@ const InteractiveWorkspace = () => {
   return (
     <section
       style={sectionStyle}
-      className="relative overflow-hidden bg-[#05050a] py-20 sm:py-28 lg:py-36"
+      className="relative overflow-hidden bg-[#05050a] py-16 sm:py-22 lg:py-28"
     >
       <div className="mx-auto w-full max-w-7xl px-4 sm:px-8">
         <SectionHeading
@@ -1300,7 +1332,7 @@ const CinematicRoom = () => {
   return (
     <section
       style={sectionStyle}
-      className="relative overflow-hidden bg-[#030307] py-20 sm:py-28 lg:py-36"
+      className="relative overflow-hidden bg-[#030307] py-16 sm:py-22 lg:py-28"
     >
       <div className="pointer-events-none absolute inset-0">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_45%,rgba(124,58,237,.12),transparent_35%),radial-gradient(circle_at_15%_70%,rgba(34,211,238,.08),transparent_30%),radial-gradient(circle_at_85%_25%,rgba(217,70,239,.07),transparent_28%)]" />
@@ -1601,7 +1633,7 @@ const LiveStudyMap = () => {
   return (
     <section
       style={sectionStyle}
-      className="relative overflow-hidden bg-[#05050a] py-20 sm:py-28 lg:py-36"
+      className="relative overflow-hidden bg-[#05050a] py-16 sm:py-22 lg:py-28"
     >
       <div className="mx-auto w-full max-w-7xl px-4 sm:px-8">
         <div className="grid items-center gap-12 lg:grid-cols-[.8fr_1.2fr]">
@@ -1778,7 +1810,7 @@ const StudyFlow = () => {
   return (
     <section
       style={sectionStyle}
-      className="relative overflow-hidden bg-[#08080d] py-20 sm:py-28 lg:py-36"
+      className="relative overflow-hidden bg-[#08080d] py-16 sm:py-22 lg:py-28"
     >
       <div className="mx-auto w-full max-w-7xl px-4 sm:px-8">
         <SectionHeading
@@ -1896,7 +1928,7 @@ const Features = () => {
     <section
       id="features"
       style={sectionStyle}
-      className="relative overflow-hidden border-y border-white/[0.05] bg-[#08080d] py-20 sm:py-28 lg:py-36"
+      className="relative overflow-hidden border-y border-white/[0.05] bg-[#08080d] py-16 sm:py-22 lg:py-28"
     >
       <div className="mx-auto w-full max-w-7xl px-4 sm:px-8">
         <SectionHeading
@@ -1977,7 +2009,7 @@ const HowItWorks = () => {
     <section
       id="how"
       style={sectionStyle}
-      className="relative overflow-hidden bg-[#05050a] py-20 sm:py-28 lg:py-36"
+      className="relative overflow-hidden bg-[#05050a] py-16 sm:py-22 lg:py-28"
     >
       <div className="mx-auto w-full max-w-7xl px-4 sm:px-8">
         <SectionHeading
@@ -2098,7 +2130,7 @@ const FinalCTA = () => {
   return (
     <section
       style={sectionStyle}
-      className="relative overflow-hidden bg-[#05050a] py-20 sm:py-28 lg:py-36"
+      className="relative overflow-hidden bg-[#05050a] py-16 sm:py-22 lg:py-28"
     >
       <div className="absolute left-1/2 top-1/2 h-[380px] w-[620px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-violet-600/10 blur-[110px] sm:h-[500px] sm:w-[800px] sm:blur-[140px]" />
 
