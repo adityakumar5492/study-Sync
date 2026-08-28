@@ -24,7 +24,7 @@ const uploadMaterial = async (req, res) => {
                         cloudinary.uploader.upload_stream(
                             {
                                 folder: "studysync/materials",
-                                resource_type: "raw",
+                                resource_type: "image",
                             },
                             (error, result) => {
                                 if (error) {
