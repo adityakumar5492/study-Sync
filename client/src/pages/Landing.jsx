@@ -249,6 +249,7 @@ const Landing = () => {
       <LiveCollaboration />
       <InteractiveWorkspace />
       <Features />
+      <HowItWorks />
       <FinalCTA />
       <Footer />
     </main>
@@ -1945,7 +1946,7 @@ const Features = () => {
           description="Not another boring dashboard packed with unnecessary features. Just the tools that make studying together actually work."
         />
 
-        <div className="mt-8 grid gap-3 sm:mt-11 sm:grid-cols-2 sm:gap-4">
+        <div className="mt-9 grid gap-3.5 sm:mt-12 sm:grid-cols-2 sm:gap-5">
           {features.map((feature, index) => (
             <Reveal key={feature.number} delay={index * 0.04}>
               <motion.div
@@ -1979,7 +1980,7 @@ const Features = () => {
 
         <div
           id="how"
-          className="mt-7 rounded-[20px] border border-white/[0.07] bg-white/[0.018] p-3 sm:mt-9 sm:p-4"
+          className="mt-7 rounded-[22px] border border-white/[0.07] bg-white/[0.018] p-4 sm:mt-9 sm:p-4"
         >
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="shrink-0">
@@ -2119,7 +2120,7 @@ const SectionHeading = ({ eyebrow, title, description }) => {
         {eyebrow}
       </div>
 
-      <h2 className="mt-5 text-[clamp(1.8rem,6vw,3rem)] font-black leading-[.98] tracking-[-.045em] sm:mt-5 sm:text-5xl">
+      <h2 className="mt-5 text-[clamp(2rem,6.5vw,3.25rem)] font-black leading-[.98] tracking-[-.045em] sm:mt-5 sm:text-5xl">
         {title}
       </h2>
 
@@ -2284,10 +2285,12 @@ const Footer = () => {
           </div>
         </div>
 
-        <div className="mt-10 border-t border-white/[0.06] pt-6 text-[10px] text-zinc-700 sm:mt-14 sm:pt-7 sm:text-xs">
-          © {new Date().getFullYear()} StudySync. Built for collaborative learning.
-          <p className="mt-1">Built By Aditya</p>
-        </div>
+        <div className="mt-1 text-xs text-zinc-600">
+  © {new Date().getFullYear()} StudySync. All rights reserved.
+  <p className="mt-1">
+    Designed & Built by <span className="text-zinc-500">Aditya Kumar</span>
+  </p>
+</div>
       </div>
     </footer>
   );
