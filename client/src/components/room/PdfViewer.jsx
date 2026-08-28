@@ -566,9 +566,7 @@ useEffect(() => {
             const width =
                 element.clientWidth;
 
-            setViewerWidth(
-                Math.max(300, width)
-            );
+            setViewerWidth(Math.max(1, width));
         };
 
         updateWidth();
@@ -1107,13 +1105,23 @@ useEffect(() => {
     // Calculated Width
     // ===========================
 
-    const pdfWidth =
+    const viewerPadding =
+        viewerWidth < 640
+            ? 16
+            : viewerWidth < 768
+              ? 24
+              : viewerWidth < 1024
+                ? 32
+                : 40;
+
+    const pdfBaseWidth =
         viewerWidth > 0
-            ? Math.max(
-                  300,
-                  viewerWidth *
-                      renderZoom
-              )
+            ? Math.max(1, viewerWidth - viewerPadding)
+            : undefined;
+
+    const pdfWidth =
+        pdfBaseWidth
+            ? pdfBaseWidth * renderZoom
             : undefined;
 
     const liveScale =
@@ -1144,7 +1152,7 @@ useEffect(() => {
                     1,
                 ],
             }}
-            className="relative flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-white/[0.07] bg-[#050509] shadow-[0_30px_100px_rgba(0,0,0,.35)]"
+            className="relative flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-2xl border border-white/[0.07] bg-[#050509] shadow-[0_30px_100px_rgba(0,0,0,.35)]"
         >
             {/* ==========================================
                 AMBIENT BACKGROUND
@@ -1227,7 +1235,7 @@ useEffect(() => {
                 TOOLBAR
             ========================================== */}
 
-            <div className="relative z-50">
+            <div className="relative z-50 min-w-0 overflow-x-auto overflow-y-hidden">
                 <PdfToolbar
                     pdfUrl={pdfUrl}
                     pdfName={pdfName}
@@ -1336,10 +1344,10 @@ useEffect(() => {
                     ref={viewerRef}
                     className="absolute inset-0 overflow-auto bg-[#030306] p-2 sm:p-3 md:p-4 lg:p-5"
                     style={{
-                        overscrollBehavior:
-                            "contain",
-                        scrollbarWidth:
-                            "thin",
+                        overscrollBehavior: "contain",
+                        scrollbarWidth: "thin",
+                        WebkitOverflowScrolling: "touch",
+                        touchAction: "pan-x pan-y",
                     }}
                 >
                     {pdfUrl ? (

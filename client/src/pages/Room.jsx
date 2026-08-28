@@ -41,6 +41,16 @@ const Room = () => {
     const [activeTab, setActiveTab] =
         useState("pdf");
 
+    /*
+     * RESPONSIVE SIDEBAR
+     *
+     * Desktop:
+     * Sidebar remains open by default.
+     *
+     * Mobile:
+     * Sidebar starts closed so the study workspace
+     * gets the maximum available width.
+     */
     const [sidebarOpen, setSidebarOpen] =
         useState(true);
 
@@ -93,6 +103,40 @@ const Room = () => {
                 memberId === user?._id?.toString()
             );
         }) || false;
+
+    // ===========================
+    // RESPONSIVE SIDEBAR
+    // ===========================
+
+    useEffect(() => {
+        const handleResize = () => {
+            /*
+             * Keep desktop behavior exactly as before.
+             *
+             * On mobile, close the sidebar so the workspace
+             * receives the full available width.
+             */
+            if (window.innerWidth < 1024) {
+                setSidebarOpen(false);
+            } else {
+                setSidebarOpen(true);
+            }
+        };
+
+        handleResize();
+
+        window.addEventListener(
+            "resize",
+            handleResize
+        );
+
+        return () => {
+            window.removeEventListener(
+                "resize",
+                handleResize
+            );
+        };
+    }, []);
 
     // ===========================
     // Load Room
@@ -268,6 +312,10 @@ const Room = () => {
         navigate,
     ]);
 
+    // ===========================
+    // Drawing Permission Listener
+    // ===========================
+
     useEffect(() => {
         const handleDrawingPermissionChange = ({
             mode,
@@ -410,7 +458,7 @@ const Room = () => {
 
     if (loading && !room) {
         return (
-            <div className="flex min-h-screen items-center justify-center bg-slate-950 text-white">
+            <div className="flex min-h-screen items-center justify-center bg-slate-950 px-4 text-center text-white">
                 Loading room...
             </div>
         );
@@ -422,18 +470,18 @@ const Room = () => {
 
     if (error && !room) {
         return (
-            <div className="flex min-h-screen flex-col items-center justify-center bg-slate-950 text-white">
-                <h1 className="mb-3 text-2xl font-bold">
+            <div className="flex min-h-screen flex-col items-center justify-center bg-slate-950 px-4 text-white">
+                <h1 className="mb-3 text-center text-xl font-bold sm:text-2xl">
                     Room Unavailable
                 </h1>
 
-                <p className="mb-8 max-w-md text-center text-slate-400">
+                <p className="mb-8 max-w-md text-center text-sm text-slate-400">
                     {error}
                 </p>
 
                 <Link
                     to="/rooms"
-                    className="rounded-xl bg-green-500 px-6 py-3 font-medium text-white transition hover:bg-green-600"
+                    className="rounded-xl bg-green-500 px-6 py-3 text-sm font-medium text-white transition hover:bg-green-600"
                 >
                     Back to Rooms
                 </Link>
@@ -447,18 +495,18 @@ const Room = () => {
 
     if (!room) {
         return (
-            <div className="flex min-h-screen flex-col items-center justify-center bg-slate-950 text-white">
-                <h1 className="mb-3 text-2xl font-bold">
+            <div className="flex min-h-screen flex-col items-center justify-center bg-slate-950 px-4 text-white">
+                <h1 className="mb-3 text-center text-xl font-bold sm:text-2xl">
                     Room Not Found
                 </h1>
 
-                <p className="mb-8 text-slate-400">
+                <p className="mb-8 text-center text-sm text-slate-400">
                     This room does not exist or is no longer active.
                 </p>
 
                 <Link
                     to="/rooms"
-                    className="rounded-xl bg-green-500 px-6 py-3 font-medium text-white transition hover:bg-green-600"
+                    className="rounded-xl bg-green-500 px-6 py-3 text-sm font-medium text-white transition hover:bg-green-600"
                 >
                     Back to Rooms
                 </Link>
@@ -467,13 +515,13 @@ const Room = () => {
     }
 
     return (
-        <div className="flex h-screen min-h-0 flex-col overflow-hidden bg-slate-950 text-white">
+        <div className="flex h-[100dvh] min-h-0 w-full flex-col overflow-hidden bg-slate-950 text-white">
 
             {/* =================================
                 ROOM HEADER
             ================================= */}
 
-            <div className="z-50 shrink-0 border-b border-slate-800/80 bg-slate-950/95 shadow-lg shadow-black/10 backdrop-blur">
+            <div className="relative z-50 shrink-0 border-b border-slate-800/80 bg-slate-950/95 shadow-lg shadow-black/10 backdrop-blur">
                 <RoomHeader
                     room={room}
                     currentUser={user}
@@ -484,37 +532,85 @@ const Room = () => {
                 MAIN ROOM AREA
             ================================= */}
 
-            <div className="relative flex min-h-0 flex-1 overflow-hidden bg-slate-950">
+            <div className="relative flex min-h-0 min-w-0 flex-1 overflow-hidden bg-slate-950">
+
+                {/* =================================
+                    MOBILE SIDEBAR OVERLAY
+                ================================= */}
+
+                {sidebarOpen && (
+                    <button
+                        type="button"
+                        aria-label="Close room sidebar"
+                        onClick={() =>
+                            setSidebarOpen(false)
+                        }
+                        className="absolute inset-0 z-30 bg-black/50 backdrop-blur-[2px] lg:hidden"
+                    />
+                )}
 
                 {/* =================================
                     LEFT SIDEBAR
                 ================================= */}
 
                 <aside
-                    className={`relative z-40 flex min-h-0 shrink-0 flex-col overflow-hidden border-r border-slate-800/80 bg-slate-900 shadow-2xl shadow-black/20 transition-[width] duration-200 ease-out ${
-                        sidebarOpen
-                            ? "w-[320px] max-w-[38vw]"
-                            : "w-0"
-                    }`}
+                    className={`
+                        absolute
+                        inset-y-0
+                        left-0
+                        z-40
+                        flex
+                        min-h-0
+                        w-[min(320px,calc(100vw-16px))]
+                        max-w-[320px]
+                        flex-col
+                        overflow-hidden
+                        border-r
+                        border-slate-800/80
+                        bg-slate-900
+                        shadow-2xl
+                        shadow-black/40
+                        transition-transform
+                        duration-200
+                        ease-out
+
+                        lg:relative
+                        lg:z-40
+                        lg:w-[320px]
+                        lg:max-w-[38vw]
+                        lg:shrink-0
+                        lg:translate-x-0
+                        lg:shadow-2xl
+
+                        ${
+                            sidebarOpen
+                                ? "translate-x-0"
+                                : "-translate-x-full"
+                        }
+                    `}
                 >
                     {sidebarOpen && (
-                        <RoomCommunication
-                            room={room}
-                            roomId={room._id}
-                            currentUser={user}
-                            onlineUsers={onlineUsers}
-                            isHost={isHost}
-                            isMember={isMember}
-                            onRemoveMember={
-                                handleRemoveMember
-                            }
-                            drawingPermission={
-                                drawingPermission
-                            }
-                            onDrawingPermissionChange={
-                                handleDrawingPermissionChange
-                            }
-                        />
+                        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+                            <RoomCommunication
+                                room={room}
+                                roomId={room._id}
+                                currentUser={user}
+                                onlineUsers={
+                                    onlineUsers
+                                }
+                                isHost={isHost}
+                                isMember={isMember}
+                                onRemoveMember={
+                                    handleRemoveMember
+                                }
+                                drawingPermission={
+                                    drawingPermission
+                                }
+                                onDrawingPermissionChange={
+                                    handleDrawingPermissionChange
+                                }
+                            />
+                        </div>
                     )}
                 </aside>
 
@@ -529,11 +625,34 @@ const Room = () => {
                             (open) => !open
                         )
                     }
-                    className={`absolute top-1/2 z-[100] flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-slate-700/80 bg-slate-800/95 text-slate-300 shadow-xl shadow-black/30 transition hover:bg-slate-700 hover:text-white ${
-                        sidebarOpen
-                            ? "left-[304px]"
-                            : "left-2"
-                    }`}
+                    className={`
+                        absolute
+                        top-1/2
+                        z-[100]
+                        flex
+                        h-9
+                        w-9
+                        -translate-y-1/2
+                        items-center
+                        justify-center
+                        rounded-full
+                        border
+                        border-slate-700/80
+                        bg-slate-800/95
+                        text-slate-300
+                        shadow-xl
+                        shadow-black/30
+                        transition-all
+                        duration-200
+                        hover:bg-slate-700
+                        hover:text-white
+
+                        ${
+                            sidebarOpen
+                                ? "left-[calc(min(320px,100vw-16px)-18px)] lg:left-[304px]"
+                                : "left-2"
+                        }
+                    `}
                     title={
                         sidebarOpen
                             ? "Collapse sidebar"
@@ -560,11 +679,13 @@ const Room = () => {
                     MAIN STUDY WORKSPACE
                 ================================= */}
 
-                <main className="flex min-w-0 min-h-0 flex-1 flex-col overflow-hidden bg-slate-950">
+                <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-slate-950">
 
-                    {/* WORKSPACE TABS */}
+                    {/* =================================
+                        WORKSPACE TABS
+                    ================================= */}
 
-                    <div className="flex h-11 shrink-0 border-b border-slate-800/80 bg-slate-900/95 px-1 pt-1 shadow-sm">
+                    <div className="flex h-12 min-h-12 shrink-0 border-b border-slate-800/80 bg-slate-900/95 px-1 pt-1 shadow-sm sm:h-11 sm:min-h-11 sm:px-1">
 
                         {/* PDF */}
 
@@ -575,18 +696,36 @@ const Room = () => {
                                     "pdf"
                                 )
                             }
-                            className={`flex flex-1 items-center justify-center gap-1.5 rounded-t-lg px-3 text-xs font-semibold transition-colors sm:text-sm ${
-                                activeTab ===
-                                "pdf"
-                                    ? "bg-slate-800 text-green-400 shadow-sm"
-                                    : "text-slate-500 hover:bg-slate-800/80 hover:text-slate-200"
-                            }`}
+                            className={`
+                                flex
+                                min-w-0
+                                flex-1
+                                items-center
+                                justify-center
+                                gap-1.5
+                                rounded-t-lg
+                                px-2
+                                text-xs
+                                font-semibold
+                                transition-colors
+                                sm:px-3
+                                sm:text-sm
+
+                                ${
+                                    activeTab ===
+                                    "pdf"
+                                        ? "bg-slate-800 text-green-400 shadow-sm"
+                                        : "text-slate-500 hover:bg-slate-800/80 hover:text-slate-200"
+                                }
+                            `}
                         >
-                            <span>
+                            <span className="shrink-0">
                                 📄
                             </span>
 
-                            PDF
+                            <span className="truncate">
+                                PDF
+                            </span>
                         </button>
 
                         {/* Whiteboard */}
@@ -598,32 +737,77 @@ const Room = () => {
                                     "whiteboard"
                                 )
                             }
-                            className={`flex flex-1 items-center justify-center gap-1.5 rounded-t-lg px-3 text-xs font-semibold transition-colors sm:text-sm ${
-                                activeTab ===
-                                "whiteboard"
-                                    ? "bg-slate-800 text-green-400 shadow-sm"
-                                    : "text-slate-500 hover:bg-slate-800/80 hover:text-slate-200"
-                            }`}
+                            className={`
+                                flex
+                                min-w-0
+                                flex-1
+                                items-center
+                                justify-center
+                                gap-1.5
+                                rounded-t-lg
+                                px-2
+                                text-xs
+                                font-semibold
+                                transition-colors
+                                sm:px-3
+                                sm:text-sm
+
+                                ${
+                                    activeTab ===
+                                    "whiteboard"
+                                        ? "bg-slate-800 text-green-400 shadow-sm"
+                                        : "text-slate-500 hover:bg-slate-800/80 hover:text-slate-200"
+                                }
+                            `}
                         >
-                            <span>
+                            <span className="shrink-0">
                                 ✏️
                             </span>
 
-                            Whiteboard
+                            <span className="truncate">
+                                Whiteboard
+                            </span>
                         </button>
                     </div>
 
-                    {/* STUDY WORKSPACE */}
+                    {/* =================================
+                        STUDY WORKSPACE
+                    ================================= */}
 
-                    <div className="min-h-0 flex-1 overflow-hidden p-1.5 sm:p-2 lg:p-3">
+                    <div
+                        className="
+                            min-h-0
+                            min-w-0
+                            flex-1
+                            overflow-hidden
+                            p-1
+                            sm:p-2
+                            lg:p-3
+                        "
+                    >
 
-                        {/* PDF */}
+                        {/* =================================
+                            PDF
+                        ================================= */}
 
                         {activeTab ===
                             "pdf" &&
                             room._id && (
-                                <div className="h-full min-h-0 overflow-hidden rounded-xl border border-slate-800/80 bg-slate-900 shadow-xl shadow-black/10">
-
+                                <div
+                                    className="
+                                        h-full
+                                        min-h-0
+                                        min-w-0
+                                        overflow-hidden
+                                        rounded-lg
+                                        border
+                                        border-slate-800/80
+                                        bg-slate-900
+                                        shadow-xl
+                                        shadow-black/10
+                                        sm:rounded-xl
+                                    "
+                                >
                                     <PdfViewer
                                         roomId={
                                             room._id
@@ -638,22 +822,35 @@ const Room = () => {
                                             drawingPermission
                                         }
                                     />
-
                                 </div>
                             )}
 
-                        {/* Whiteboard */}
+                        {/* =================================
+                            WHITEBOARD
+                        ================================= */}
 
                         {activeTab ===
                             "whiteboard" && (
-                                <div className="h-full min-h-0 overflow-hidden rounded-xl border border-slate-800/80 bg-white shadow-xl shadow-black/10">
-
+                                <div
+                                    className="
+                                        h-full
+                                        min-h-0
+                                        min-w-0
+                                        overflow-hidden
+                                        rounded-lg
+                                        border
+                                        border-slate-800/80
+                                        bg-white
+                                        shadow-xl
+                                        shadow-black/10
+                                        sm:rounded-xl
+                                    "
+                                >
                                     <Whiteboard
                                         roomId={
                                             room._id
                                         }
                                     />
-
                                 </div>
                             )}
                     </div>
@@ -665,19 +862,19 @@ const Room = () => {
             ================================= */}
 
             {removeMemberModal.open && (
-                <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 px-4 backdrop-blur-sm">
+                <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 px-3 py-4 backdrop-blur-sm sm:px-4">
                     <div className="w-full max-w-sm overflow-hidden rounded-2xl border border-white/[0.08] bg-[#0b0b11] shadow-[0_25px_100px_rgba(0,0,0,.65)]">
 
                         {/* Modal Header */}
 
-                        <div className="flex items-center justify-between border-b border-white/[0.06] px-5 py-4">
-                            <div className="flex items-center gap-3">
-                                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-red-500/[0.08] text-red-400">
+                        <div className="flex items-center justify-between border-b border-white/[0.06] px-4 py-3.5 sm:px-5 sm:py-4">
+                            <div className="flex min-w-0 items-center gap-3">
+                                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-red-500/[0.08] text-red-400">
                                     <FaUserMinus className="text-xs" />
                                 </div>
 
-                                <div>
-                                    <h2 className="text-sm font-bold text-white">
+                                <div className="min-w-0">
+                                    <h2 className="truncate text-sm font-bold text-white">
                                         Remove Member
                                     </h2>
 
@@ -695,7 +892,7 @@ const Room = () => {
                                 disabled={
                                     removingMember
                                 }
-                                className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-600 transition hover:bg-white/[0.05] hover:text-white disabled:opacity-50"
+                                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-zinc-600 transition hover:bg-white/[0.05] hover:text-white disabled:opacity-50"
                                 aria-label="Close"
                             >
                                 <FaTimes className="text-xs" />
@@ -704,14 +901,16 @@ const Room = () => {
 
                         {/* Modal Content */}
 
-                        <div className="px-5 py-5">
-                            <div className="mb-4 flex items-start gap-3 rounded-xl border border-red-400/[0.08] bg-red-500/[0.04] p-3.5">
+                        <div className="px-4 py-4 sm:px-5 sm:py-5">
+                            <div className="mb-4 flex items-start gap-3 rounded-xl border border-red-400/[0.08] bg-red-500/[0.04] p-3">
                                 <FaExclamationTriangle className="mt-0.5 shrink-0 text-xs text-red-400" />
 
                                 <p className="text-[10px] leading-relaxed text-zinc-400">
                                     Are you sure you want to remove{" "}
                                     <span className="font-bold text-white">
-                                        {removeMemberModal.member?.name ||
+                                        {removeMemberModal
+                                            .member
+                                            ?.name ||
                                             "this member"}
                                     </span>{" "}
                                     from this room?
@@ -725,7 +924,7 @@ const Room = () => {
 
                         {/* Modal Actions */}
 
-                        <div className="flex items-center justify-end gap-2 border-t border-white/[0.06] bg-white/[0.015] px-5 py-3.5">
+                        <div className="flex flex-col-reverse gap-2 border-t border-white/[0.06] bg-white/[0.015] px-4 py-3.5 sm:flex-row sm:items-center sm:justify-end sm:px-5">
                             <button
                                 type="button"
                                 onClick={
@@ -734,7 +933,7 @@ const Room = () => {
                                 disabled={
                                     removingMember
                                 }
-                                className="rounded-xl border border-white/[0.07] bg-white/[0.025] px-4 py-2.5 text-[9px] font-bold text-zinc-400 transition hover:bg-white/[0.05] hover:text-white disabled:opacity-50"
+                                className="w-full rounded-xl border border-white/[0.07] bg-white/[0.025] px-4 py-2.5 text-[9px] font-bold text-zinc-400 transition hover:bg-white/[0.05] hover:text-white disabled:opacity-50 sm:w-auto"
                             >
                                 Cancel
                             </button>
@@ -747,7 +946,7 @@ const Room = () => {
                                 disabled={
                                     removingMember
                                 }
-                                className="flex items-center gap-2 rounded-xl border border-red-400/15 bg-red-500/[0.08] px-4 py-2.5 text-[9px] font-bold text-red-300 transition hover:border-red-400/25 hover:bg-red-500/[0.14] disabled:cursor-not-allowed disabled:opacity-50"
+                                className="flex w-full items-center justify-center gap-2 rounded-xl border border-red-400/15 bg-red-500/[0.08] px-4 py-2.5 text-[9px] font-bold text-red-300 transition hover:border-red-400/25 hover:bg-red-500/[0.14] disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
                             >
                                 <FaUserMinus className="text-[8px]" />
 
