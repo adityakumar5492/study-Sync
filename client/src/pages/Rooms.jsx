@@ -11,13 +11,18 @@ import {
 } from "framer-motion";
 
 import {
+    useLocation,
     useNavigate,
     useOutletContext,
 } from "react-router-dom";
 
 import toast from "react-hot-toast";
 
-import { FaPlus, FaSearch, FaLayerGroup } from "react-icons/fa";
+import {
+    FaPlus,
+    FaSearch,
+    FaLayerGroup,
+} from "react-icons/fa";
 
 import { removeRoom } from "../redux/room/roomSlice";
 
@@ -36,10 +41,12 @@ import RoomHeader from "../components/rooms/RoomHeader";
 import SearchBar from "../components/rooms/SearchBar";
 import RoomList from "../components/rooms/RoomList";
 import CreateRoomModal from "../components/rooms/CreateRoomModal";
+import JoinPrivateRoomModal from "../components/rooms/JoinPrivateRoomModal";
 
 const Rooms = () => {
     const dispatch = useAppDispatch();
     const navigate = useNavigate();
+    const location = useLocation();
     const { openSidebar } = useOutletContext();
 
     const shouldReduceMotion = useReducedMotion();
@@ -56,11 +63,45 @@ const Rooms = () => {
         (state) => state.auth
     );
 
+    // =========================================
+    // LOCAL STATE
+    // =========================================
+
     const [openModal, setOpenModal] =
+        useState(false);
+
+    const [openJoinModal, setOpenJoinModal] =
         useState(false);
 
     const [searchTerm, setSearchTerm] =
         useState("");
+
+    // =========================================
+    // OPEN JOIN MODAL FROM DASHBOARD
+    // =========================================
+
+    useEffect(() => {
+        if (location.state?.openJoinRoom) {
+            setOpenJoinModal(true);
+
+            /*
+             * Clear the navigation state after
+             * consuming it.
+             *
+             * This prevents the modal from opening
+             * again if the user refreshes or revisits
+             * this exact history entry.
+             */
+            navigate(location.pathname, {
+                replace: true,
+                state: {},
+            });
+        }
+    }, [
+        location.state,
+        location.pathname,
+        navigate,
+    ]);
 
     // =========================================
     // LOAD ROOMS
@@ -286,6 +327,7 @@ const Rooms = () => {
             />
 
             {/* Very subtle grid */}
+
             <div
                 className="
                     pointer-events-none
@@ -359,7 +401,9 @@ const Rooms = () => {
                                 sm:p-4
                             "
                         >
+
                             {/* Top highlight */}
+
                             <div
                                 className="
                                     pointer-events-none
@@ -375,6 +419,7 @@ const Rooms = () => {
                             />
 
                             {/* Glow */}
+
                             <div
                                 className="
                                     pointer-events-none
@@ -390,12 +435,15 @@ const Rooms = () => {
                             />
 
                             <div className="relative flex flex-col gap-3 sm:flex-row sm:items-center">
+
                                 <div className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-indigo-400/10 bg-indigo-500/[0.07] text-indigo-400 sm:flex">
                                     <FaSearch className="text-xs" />
                                 </div>
 
                                 <div className="min-w-0 flex-1">
+
                                     <div className="mb-2 flex items-center gap-2 sm:hidden">
+
                                         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-500/10 text-indigo-400">
                                             <FaSearch className="text-[10px]" />
                                         </div>
@@ -403,6 +451,7 @@ const Rooms = () => {
                                         <span className="text-xs font-semibold text-slate-300">
                                             Find a study room
                                         </span>
+
                                     </div>
 
                                     <SearchBar
@@ -411,7 +460,9 @@ const Rooms = () => {
                                             setSearchTerm
                                         }
                                     />
+
                                 </div>
+
                             </div>
                         </div>
                     </motion.section>
@@ -450,8 +501,11 @@ const Rooms = () => {
                                 sm:mt-6
                             "
                         >
+
                             {/* Left */}
+
                             <div className="flex items-center gap-2">
+
                                 <div
                                     className="
                                         flex
@@ -470,6 +524,7 @@ const Rooms = () => {
                                 </div>
 
                                 <div>
+
                                     <p className="text-xs font-semibold text-slate-300 sm:text-sm">
                                         {filteredRooms.length}{" "}
                                         {filteredRooms.length ===
@@ -482,11 +537,15 @@ const Rooms = () => {
                                         Available in your
                                         workspace
                                     </p>
+
                                 </div>
+
                             </div>
 
                             {/* Right */}
+
                             <div className="flex items-center gap-2">
+
                                 {searchTerm && (
                                     <motion.button
                                         type="button"
@@ -593,8 +652,11 @@ const Rooms = () => {
                                     <span className="sm:hidden">
                                         Create
                                     </span>
+
                                 </motion.button>
+
                             </div>
+
                         </motion.div>
                     )}
 
@@ -608,8 +670,11 @@ const Rooms = () => {
                         variants={contentVariants}
                         className="relative"
                     >
+
                         <AnimatePresence mode="wait">
+
                             {loading ? (
+
                                 /* =========================
                                    LOADING STATE
                                 ========================= */
@@ -637,7 +702,9 @@ const Rooms = () => {
                                         sm:p-8
                                     "
                                 >
+
                                     {/* Shimmer */}
+
                                     <motion.div
                                         animate={
                                             shouldReduceMotion
@@ -669,7 +736,9 @@ const Rooms = () => {
                                     />
 
                                     <div className="relative mx-auto max-w-md text-center">
+
                                         <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-indigo-400/10 bg-indigo-500/[0.07]">
+
                                             <motion.div
                                                 animate={
                                                     shouldReduceMotion
@@ -693,6 +762,7 @@ const Rooms = () => {
                                                     border-r-indigo-400/30
                                                 "
                                             />
+
                                         </div>
 
                                         <p className="mt-5 text-sm font-semibold text-slate-300">
@@ -707,8 +777,11 @@ const Rooms = () => {
                                         </p>
 
                                         {/* Skeleton bars */}
+
                                         <div className="mt-7 space-y-2">
+
                                             <div className="h-2 overflow-hidden rounded-full bg-slate-800/70">
+
                                                 <motion.div
                                                     animate={
                                                         shouldReduceMotion
@@ -727,13 +800,19 @@ const Rooms = () => {
                                                     }}
                                                     className="h-full w-1/3 rounded-full bg-gradient-to-r from-transparent via-indigo-500/20 to-transparent"
                                                 />
+
                                             </div>
 
                                             <div className="mx-auto h-2 w-2/3 overflow-hidden rounded-full bg-slate-800/50" />
+
                                         </div>
+
                                     </div>
+
                                 </motion.div>
+
                             ) : (
+
                                 /* =========================
                                    ROOMS
                                 ========================= */
@@ -757,10 +836,14 @@ const Rooms = () => {
                                         duration: 0.35,
                                     }}
                                 >
+
                                     {filteredRooms.length >
                                     0 ? (
+
                                         <div className="relative">
+
                                             {/* Grid ambient line */}
+
                                             <div
                                                 className="
                                                     pointer-events-none
@@ -780,8 +863,11 @@ const Rooms = () => {
                                                     filteredRooms
                                                 }
                                             />
+
                                         </div>
+
                                     ) : (
+
                                         /* =====================
                                            SEARCH EMPTY STATE
                                         ===================== */
@@ -818,7 +904,9 @@ const Rooms = () => {
                                                 sm:py-20
                                             "
                                         >
+
                                             {/* Background glows */}
+
                                             <div
                                                 className="
                                                     pointer-events-none
@@ -872,12 +960,15 @@ const Rooms = () => {
                                                     shadow-[0_15px_40px_rgba(99,102,241,0.08)]
                                                 "
                                             >
+
                                                 <FaSearch className="text-lg text-indigo-400" />
 
                                                 <span className="absolute inset-0 rounded-[20px] border border-indigo-400/10" />
+
                                             </motion.div>
 
                                             <div className="relative mx-auto mt-6 max-w-md">
+
                                                 <h3 className="text-base font-bold tracking-tight text-white sm:text-lg">
                                                     {searchTerm
                                                         ? "No rooms found"
@@ -899,6 +990,7 @@ const Rooms = () => {
                                                             setSearchTerm(
                                                                 ""
                                                             );
+
                                                             return;
                                                         }
 
@@ -945,6 +1037,7 @@ const Rooms = () => {
                                                         hover:shadow-[0_16px_40px_rgba(99,102,241,0.28)]
                                                     "
                                                 >
+
                                                     <span
                                                         className="
                                                             pointer-events-none
@@ -962,32 +1055,48 @@ const Rooms = () => {
                                                     />
 
                                                     {searchTerm ? (
+
                                                         <>
                                                             <FaSearch className="relative text-[10px]" />
+
                                                             <span className="relative">
                                                                 Clear
                                                                 Search
                                                             </span>
                                                         </>
+
                                                     ) : (
+
                                                         <>
                                                             <FaPlus className="relative text-[10px]" />
+
                                                             <span className="relative">
                                                                 Create
                                                                 Study
                                                                 Room
                                                             </span>
                                                         </>
+
                                                     )}
+
                                                 </motion.button>
+
                                             </div>
+
                                         </motion.div>
+
                                     )}
+
                                 </motion.div>
+
                             )}
+
                         </AnimatePresence>
+
                     </motion.section>
+
                 </motion.div>
+
             </main>
 
             {/* =========================================
@@ -1000,6 +1109,19 @@ const Rooms = () => {
                     setOpenModal(false)
                 }
             />
+
+            {/* =========================================
+                JOIN PRIVATE ROOM MODAL
+            ========================================= */}
+
+            <JoinPrivateRoomModal
+                isOpen={openJoinModal}
+                room={null}
+                onClose={() =>
+                    setOpenJoinModal(false)
+                }
+            />
+
         </div>
     );
 };

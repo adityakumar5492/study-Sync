@@ -1,4 +1,8 @@
-import { useOutletContext, useNavigate } from "react-router-dom";
+import {
+    useOutletContext,
+    useNavigate,
+} from "react-router-dom";
+
 import {
     motion,
     useReducedMotion,
@@ -15,17 +19,29 @@ const Dashboard = () => {
 
     const shouldReduceMotion = useReducedMotion();
 
+    // =========================================
+    // QUICK ACTION HANDLERS
+    // =========================================
+
     const handleCreateRoom = () => {
         navigate("/rooms");
     };
 
     const handleJoinRoom = () => {
-        navigate("/rooms");
+        navigate("/rooms", {
+            state: {
+                openJoinRoom: true,
+            },
+        });
     };
 
     const handleUploadMaterial = () => {
         navigate("/materials");
     };
+
+    // =========================================
+    // ANIMATION
+    // =========================================
 
     const sectionVariants = {
         hidden: {
@@ -80,6 +96,10 @@ const Dashboard = () => {
                 "
             />
 
+            {/* =========================================
+                MAIN
+            ========================================= */}
+
             <main className="relative min-w-0 overflow-y-auto">
 
                 <div
@@ -97,7 +117,7 @@ const Dashboard = () => {
                 >
 
                     {/* =====================================
-                        TOPBAR — DASHBOARD ONLY
+                        TOPBAR
                     ===================================== */}
 
                     <motion.div
@@ -138,9 +158,15 @@ const Dashboard = () => {
                         className="mb-7 sm:mb-8"
                     >
                         <QuickActions
-                            onCreateRoom={handleCreateRoom}
-                            onJoinRoom={handleJoinRoom}
-                            onUploadMaterial={handleUploadMaterial}
+                            onCreateRoom={
+                                handleCreateRoom
+                            }
+                            onJoinRoom={
+                                handleJoinRoom
+                            }
+                            onUploadMaterial={
+                                handleUploadMaterial
+                            }
                         />
                     </motion.section>
 
