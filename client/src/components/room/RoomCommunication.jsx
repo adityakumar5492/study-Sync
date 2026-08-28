@@ -27,6 +27,10 @@ const RoomCommunication = ({
     const [activePanel, setActivePanel] =
         useState("participants");
 
+    // Mobile bottom-sheet state
+    const [mobilePanelOpen, setMobilePanelOpen] =
+        useState(false);
+
     // ===========================
     // Normalize User ID
     // ===========================
@@ -133,40 +137,75 @@ const RoomCommunication = ({
             )
         );
 
+    // ===========================
+    // Communication Tab Handler
+    // ===========================
+
+    const handlePanelChange = (panel) => {
+        setActivePanel(panel);
+
+        // Mobile:
+        // Clicking the currently open tab closes
+        // the bottom sheet. Clicking another tab
+        // switches the panel and keeps it open.
+        if (
+            typeof window !== "undefined" &&
+            window.innerWidth < 1024
+        ) {
+            if (
+                activePanel === panel &&
+                mobilePanelOpen
+            ) {
+                setMobilePanelOpen(false);
+            } else {
+                setMobilePanelOpen(true);
+            }
+        }
+    };
+
     return (
         <div
-    className="
-        flex
-        h-full
-        min-h-0
-        min-w-0
-        flex-col-reverse
-        overflow-hidden
-        bg-slate-950
-
-        lg:flex-col
-    "
->
+            className="
+                relative
+                flex
+                h-full
+                min-h-0
+                min-w-0
+                flex-col
+                overflow-hidden
+                bg-slate-950
+            "
+        >
             {/* ===========================
                 Communication Tabs
             =========================== */}
 
             <div
                 className="
+                    order-last
+                    z-50
                     grid
                     shrink-0
                     grid-cols-4
                     gap-px
-                    border-b
+                    border-t
                     border-slate-800/80
-                    bg-slate-900/95
+                    bg-slate-950/98
                     px-0.5
-                    pt-0.5
-                    shadow-lg
-                    shadow-black/10
+                    py-0.5
+                    shadow-[0_-10px_30px_rgba(0,0,0,0.35)]
+                    backdrop-blur-xl
+
+                    lg:order-none
+                    lg:z-auto
+                    lg:border-t-0
+                    lg:border-b
+                    lg:bg-slate-900/95
+                    lg:shadow-lg
+                    lg:shadow-black/10
+                    lg:backdrop-blur-none
                 "
             >
-
                 {/* =================================
                     PARTICIPANTS
                 ================================= */}
@@ -174,7 +213,7 @@ const RoomCommunication = ({
                 <button
                     type="button"
                     onClick={() =>
-                        setActivePanel(
+                        handlePanelChange(
                             "participants"
                         )
                     }
@@ -199,7 +238,14 @@ const RoomCommunication = ({
 
                         ${
                             activePanel ===
-                            "participants"
+                                "participants" &&
+                            (
+                                mobilePanelOpen ||
+                                typeof window ===
+                                    "undefined" ||
+                                window.innerWidth >=
+                                    1024
+                            )
                                 ? "bg-slate-800 text-green-400 shadow-sm"
                                 : "text-slate-500 hover:bg-slate-800/80 hover:text-slate-200"
                         }
@@ -207,7 +253,11 @@ const RoomCommunication = ({
                     title={`Participants (${participantsCount})`}
                 >
                     <FaUsers
-                        className="shrink-0 text-[10px] sm:text-[11px]"
+                        className="
+                            shrink-0
+                            text-[10px]
+                            sm:text-[11px]
+                        "
                     />
 
                     <span className="min-w-0 truncate">
@@ -223,9 +273,17 @@ const RoomCommunication = ({
                             text-[8px]
                             font-bold
                             leading-none
+
                             ${
                                 activePanel ===
-                                "participants"
+                                    "participants" &&
+                                (
+                                    mobilePanelOpen ||
+                                    typeof window ===
+                                        "undefined" ||
+                                    window.innerWidth >=
+                                        1024
+                                )
                                     ? "bg-green-500/10 text-green-400"
                                     : "bg-slate-800 text-slate-500"
                             }
@@ -242,7 +300,7 @@ const RoomCommunication = ({
                 <button
                     type="button"
                     onClick={() =>
-                        setActivePanel("chat")
+                        handlePanelChange("chat")
                     }
                     className={`
                         flex
@@ -263,7 +321,14 @@ const RoomCommunication = ({
                         sm:text-[11px]
 
                         ${
-                            activePanel === "chat"
+                            activePanel === "chat" &&
+                            (
+                                mobilePanelOpen ||
+                                typeof window ===
+                                    "undefined" ||
+                                window.innerWidth >=
+                                    1024
+                            )
                                 ? "bg-slate-800 text-green-400 shadow-sm"
                                 : "text-slate-500 hover:bg-slate-800/80 hover:text-slate-200"
                         }
@@ -271,7 +336,11 @@ const RoomCommunication = ({
                     title="Chat"
                 >
                     <FaComments
-                        className="shrink-0 text-[10px] sm:text-[11px]"
+                        className="
+                            shrink-0
+                            text-[10px]
+                            sm:text-[11px]
+                        "
                     />
 
                     <span className="truncate">
@@ -286,7 +355,7 @@ const RoomCommunication = ({
                 <button
                     type="button"
                     onClick={() =>
-                        setActivePanel("voice")
+                        handlePanelChange("voice")
                     }
                     className={`
                         flex
@@ -307,7 +376,14 @@ const RoomCommunication = ({
                         sm:text-[11px]
 
                         ${
-                            activePanel === "voice"
+                            activePanel === "voice" &&
+                            (
+                                mobilePanelOpen ||
+                                typeof window ===
+                                    "undefined" ||
+                                window.innerWidth >=
+                                    1024
+                            )
                                 ? "bg-slate-800 text-green-400 shadow-sm"
                                 : "text-slate-500 hover:bg-slate-800/80 hover:text-slate-200"
                         }
@@ -315,7 +391,11 @@ const RoomCommunication = ({
                     title="Voice"
                 >
                     <FaMicrophone
-                        className="shrink-0 text-[10px] sm:text-[11px]"
+                        className="
+                            shrink-0
+                            text-[10px]
+                            sm:text-[11px]
+                        "
                     />
 
                     <span className="truncate">
@@ -330,7 +410,7 @@ const RoomCommunication = ({
                 <button
                     type="button"
                     onClick={() =>
-                        setActivePanel("drawing")
+                        handlePanelChange("drawing")
                     }
                     className={`
                         flex
@@ -352,7 +432,14 @@ const RoomCommunication = ({
 
                         ${
                             activePanel ===
-                            "drawing"
+                                "drawing" &&
+                            (
+                                mobilePanelOpen ||
+                                typeof window ===
+                                    "undefined" ||
+                                window.innerWidth >=
+                                    1024
+                            )
                                 ? "bg-slate-800 text-green-400 shadow-sm"
                                 : "text-slate-500 hover:bg-slate-800/80 hover:text-slate-200"
                         }
@@ -360,7 +447,11 @@ const RoomCommunication = ({
                     title="Drawing"
                 >
                     <FaPen
-                        className="shrink-0 text-[9px] sm:text-[10px]"
+                        className="
+                            shrink-0
+                            text-[9px]
+                            sm:text-[10px]
+                        "
                     />
 
                     <span className="truncate">
@@ -374,16 +465,75 @@ const RoomCommunication = ({
             =========================== */}
 
             <div
-                className="
+                className={`
+                    absolute
+                    inset-x-0
+                    bottom-[48px]
+                    z-40
                     flex
+                    max-h-[58vh]
                     min-h-0
                     min-w-0
-                    flex-1
                     flex-col
                     overflow-hidden
-                    bg-slate-900/70
-                "
+                    border-t
+                    border-slate-700/70
+                    bg-slate-900
+                    shadow-[0_-20px_50px_rgba(0,0,0,0.55)]
+                    transition-all
+                    duration-300
+                    ease-out
+
+                    ${
+                        mobilePanelOpen
+                            ? "translate-y-0 opacity-100"
+                            : "pointer-events-none translate-y-full opacity-0"
+                    }
+
+                    lg:static
+                    lg:z-auto
+                    lg:flex-1
+                    lg:max-h-none
+                    lg:translate-y-0
+                    lg:opacity-100
+                    lg:pointer-events-auto
+                    lg:border-t-0
+                    lg:bg-slate-900/70
+                    lg:shadow-none
+                `}
             >
+                {/* =================================
+                    Mobile Sheet Handle
+                ================================= */}
+
+                <div
+                    className="
+                        flex
+                        shrink-0
+                        items-center
+                        justify-center
+                        border-b
+                        border-slate-800/70
+                        py-1.5
+                        lg:hidden
+                    "
+                >
+                    <button
+                        type="button"
+                        onClick={() =>
+                            setMobilePanelOpen(false)
+                        }
+                        className="
+                            h-1
+                            w-10
+                            rounded-full
+                            bg-slate-600
+                            transition
+                            hover:bg-slate-400
+                        "
+                        aria-label="Close communication panel"
+                    />
+                </div>
 
                 {/* =================================
                     PARTICIPANTS
@@ -391,8 +541,15 @@ const RoomCommunication = ({
 
                 {activePanel ===
                     "participants" && (
-                    <div className="flex h-full min-h-0 min-w-0 flex-col">
-
+                    <div
+                        className="
+                            flex
+                            h-full
+                            min-h-0
+                            min-w-0
+                            flex-col
+                        "
+                    >
                         {/* Participant Summary */}
 
                         <div
@@ -410,7 +567,14 @@ const RoomCommunication = ({
                                 sm:py-3
                             "
                         >
-                            <div className="flex min-w-0 items-center gap-2">
+                            <div
+                                className="
+                                    flex
+                                    min-w-0
+                                    items-center
+                                    gap-2
+                                "
+                            >
                                 <div
                                     className="
                                         flex
@@ -428,13 +592,29 @@ const RoomCommunication = ({
                                 </div>
 
                                 <div className="min-w-0">
-                                    <p className="truncate text-[10px] font-bold text-white sm:text-[11px]">
+                                    <p
+                                        className="
+                                            truncate
+                                            text-[10px]
+                                            font-bold
+                                            text-white
+                                            sm:text-[11px]
+                                        "
+                                    >
                                         Live Participants
                                     </p>
 
-                                    <p className="mt-0.5 truncate text-[8px] text-slate-600">
+                                    <p
+                                        className="
+                                            mt-0.5
+                                            truncate
+                                            text-[8px]
+                                            text-slate-600
+                                        "
+                                    >
                                         {participantsCount}{" "}
-                                        {participantsCount === 1
+                                        {participantsCount ===
+                                        1
                                             ? "participant"
                                             : "participants"}
                                     </p>
@@ -455,7 +635,14 @@ const RoomCommunication = ({
                                     py-1
                                 "
                             >
-                                <span className="relative flex h-1.5 w-1.5">
+                                <span
+                                    className="
+                                        relative
+                                        flex
+                                        h-1.5
+                                        w-1.5
+                                    "
+                                >
                                     <span
                                         className="
                                             absolute
@@ -477,7 +664,13 @@ const RoomCommunication = ({
                                     />
                                 </span>
 
-                                <span className="text-[8px] font-bold text-emerald-400">
+                                <span
+                                    className="
+                                        text-[8px]
+                                        font-bold
+                                        text-emerald-400
+                                    "
+                                >
                                     {onlineCount} online
                                 </span>
                             </div>
@@ -517,7 +710,17 @@ const RoomCommunication = ({
                 ================================= */}
 
                 {activePanel === "chat" && (
-                    <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+                    <div
+                        className="
+                            flex
+                            h-full
+                            min-h-0
+                            min-w-0
+                            flex-1
+                            flex-col
+                            overflow-hidden
+                        "
+                    >
                         <ChatPanel
                             roomId={roomId}
                             isHost={isHost}
@@ -531,12 +734,20 @@ const RoomCommunication = ({
                 ================================= */}
 
                 {activePanel === "voice" && (
-                    <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+                    <div
+                        className="
+                            flex
+                            h-full
+                            min-h-0
+                            min-w-0
+                            flex-1
+                            flex-col
+                            overflow-hidden
+                        "
+                    >
                         <VoicePanel
                             roomId={roomId}
-                            currentUser={
-                                currentUser
-                            }
+                            currentUser={currentUser}
                         />
                     </div>
                 )}
@@ -559,7 +770,6 @@ const RoomCommunication = ({
                             lg:p-4
                         "
                     >
-
                         {/* Drawing Header */}
 
                         <div
@@ -576,11 +786,28 @@ const RoomCommunication = ({
                                 sm:p-4
                             "
                         >
-                            <h3 className="text-sm font-semibold tracking-tight text-white sm:text-base">
+                            <h3
+                                className="
+                                    text-sm
+                                    font-semibold
+                                    tracking-tight
+                                    text-white
+                                    sm:text-base
+                                "
+                            >
                                 Drawing Access
                             </h3>
 
-                            <p className="mt-1 text-[9px] leading-4 text-slate-500 sm:text-xs sm:leading-5">
+                            <p
+                                className="
+                                    mt-1
+                                    text-[9px]
+                                    leading-4
+                                    text-slate-500
+                                    sm:text-xs
+                                    sm:leading-5
+                                "
+                            >
                                 Choose who can annotate
                                 the PDF.
                             </p>
@@ -604,7 +831,6 @@ const RoomCommunication = ({
                                     sm:p-2
                                 "
                             >
-
                                 {/* Host Only */}
 
                                 <button
@@ -652,6 +878,7 @@ const RoomCommunication = ({
                                             justify-center
                                             rounded-full
                                             border-2
+
                                             ${
                                                 drawingPermission?.mode ===
                                                 "none"
@@ -718,6 +945,7 @@ const RoomCommunication = ({
                                             justify-center
                                             rounded-full
                                             border-2
+
                                             ${
                                                 drawingPermission?.mode ===
                                                 "everyone"
@@ -785,6 +1013,7 @@ const RoomCommunication = ({
                                             justify-center
                                             rounded-full
                                             border-2
+
                                             ${
                                                 drawingPermission?.mode ===
                                                 "selected"
@@ -810,14 +1039,45 @@ const RoomCommunication = ({
 
                                 {drawingPermission?.mode ===
                                     "selected" && (
-                                    <div className="mt-2 border-t border-slate-800/80 pt-3 sm:mt-3 sm:pt-4">
+                                    <div
+                                        className="
+                                            mt-2
+                                            border-t
+                                            border-slate-800/80
+                                            pt-3
 
-                                        <div className="mb-2 flex items-center justify-between gap-2">
-                                            <p className="truncate text-[10px] font-semibold text-slate-400 sm:text-xs">
+                                            sm:mt-3
+                                            sm:pt-4
+                                        "
+                                    >
+                                        <div
+                                            className="
+                                                mb-2
+                                                flex
+                                                items-center
+                                                justify-between
+                                                gap-2
+                                            "
+                                        >
+                                            <p
+                                                className="
+                                                    truncate
+                                                    text-[10px]
+                                                    font-semibold
+                                                    text-slate-400
+                                                    sm:text-xs
+                                                "
+                                            >
                                                 Select users
                                             </p>
 
-                                            <span className="shrink-0 text-[8px] text-slate-600">
+                                            <span
+                                                className="
+                                                    shrink-0
+                                                    text-[8px]
+                                                    text-slate-600
+                                                "
+                                            >
                                                 {
                                                     drawingPermission
                                                         ?.allowedUsers
@@ -930,6 +1190,7 @@ const RoomCommunication = ({
                                                                     justify-center
                                                                     rounded
                                                                     border
+
                                                                     ${
                                                                         selected
                                                                             ? "border-green-500 bg-green-500"
@@ -1011,7 +1272,16 @@ const RoomCommunication = ({
                                         : "Drawing restricted"}
                                 </p>
 
-                                <p className="mt-1 text-[10px] leading-4 text-slate-500 sm:text-xs sm:leading-5">
+                                <p
+                                    className="
+                                        mt-1
+                                        text-[10px]
+                                        leading-4
+                                        text-slate-500
+                                        sm:text-xs
+                                        sm:leading-5
+                                    "
+                                >
                                     {canDraw
                                         ? "The host has allowed you to annotate the PDF."
                                         : "The host has not allowed you to annotate the PDF."}
