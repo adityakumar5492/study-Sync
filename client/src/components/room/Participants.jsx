@@ -172,8 +172,18 @@ const Participants = ({
                 request.status === "pending"
         ) || [];
 
+    // ===========================
+    // Counts
+    // ===========================
+
+    const totalParticipants =
+        participants.length;
+
+    const totalOnline =
+        onlineUsers.length;
+
     return (
-        <div className="relative overflow-hidden border-b border-white/[0.07] bg-[#07070c] p-4 text-white">
+        <div className="relative flex h-full min-h-0 flex-col overflow-hidden border-b border-white/[0.07] bg-[#07070c] p-3 text-white sm:p-4">
 
             {/* ==========================================
                 AMBIENT BACKGROUND
@@ -230,18 +240,20 @@ const Participants = ({
                     opacity: 1,
                     y: 0,
                 }}
-                className="relative z-10 mb-5 flex min-w-0 items-center justify-between gap-3"
+                className="relative z-10 mb-3 flex min-w-0 items-center justify-between gap-2 sm:mb-5 sm:gap-3"
             >
-                <div className="flex min-w-0 items-center gap-3">
+                <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+
+                    {/* Icon */}
 
                     <motion.div
                         whileHover={{
                             scale: 1.08,
                             rotate: 4,
                         }}
-                        className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-violet-400/15 bg-gradient-to-br from-violet-500/15 to-cyan-400/10 shadow-[0_0_35px_rgba(139,92,246,.1)]"
+                        className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-violet-400/15 bg-gradient-to-br from-violet-500/15 to-cyan-400/10 shadow-[0_0_35px_rgba(139,92,246,.1)] sm:h-11 sm:w-11 sm:rounded-2xl"
                     >
-                        <FaUsers className="text-sm text-violet-300" />
+                        <FaUsers className="text-xs text-violet-300 sm:text-sm" />
 
                         <motion.span
                             animate={{
@@ -252,13 +264,15 @@ const Participants = ({
                                 duration: 2.4,
                                 repeat: Infinity,
                             }}
-                            className="absolute inset-0 rounded-2xl border border-violet-400/20"
+                            className="absolute inset-0 rounded-xl border border-violet-400/20 sm:rounded-2xl"
                         />
                     </motion.div>
 
+                    {/* Title */}
+
                     <div className="min-w-0">
-                        <div className="flex items-center gap-2">
-                            <h3 className="truncate text-sm font-bold tracking-tight text-white">
+                        <div className="flex min-w-0 items-center gap-1.5 sm:gap-2">
+                            <h3 className="truncate text-xs font-bold tracking-tight text-white sm:text-sm">
                                 Participants
                             </h3>
 
@@ -270,17 +284,25 @@ const Participants = ({
                                     duration: 2,
                                     repeat: Infinity,
                                 }}
-                                className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_10px_#34d399]"
+                                className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-400 shadow-[0_0_10px_#34d399]"
                             />
                         </div>
 
-                        <p className="mt-1 truncate text-[9px] text-zinc-600">
-                            Room ID: {roomId}
+                        {/* Total participant count */}
+
+                        <p className="mt-1 truncate text-[8px] text-zinc-500 sm:text-[9px]">
+                            {totalParticipants}{" "}
+                            {totalParticipants === 1
+                                ? "participant"
+                                : "participants"}{" "}
+                            in room
                         </p>
                     </div>
                 </div>
 
-                {/* Online counter */}
+                {/* ==========================================
+                    ONLINE / TOTAL COUNTER
+                ========================================== */}
 
                 <motion.div
                     animate={{
@@ -290,7 +312,7 @@ const Participants = ({
                         duration: 3,
                         repeat: Infinity,
                     }}
-                    className="relative shrink-0 overflow-hidden rounded-full border border-emerald-400/15 bg-emerald-400/[0.06] px-3 py-1.5"
+                    className="relative shrink-0 overflow-hidden rounded-full border border-emerald-400/15 bg-emerald-400/[0.06] px-2 py-1 sm:px-3 sm:py-1.5"
                 >
                     <motion.span
                         animate={{
@@ -304,7 +326,7 @@ const Participants = ({
                         className="absolute inset-y-0 w-5 bg-white/10 blur-md"
                     />
 
-                    <span className="relative flex items-center gap-1.5 text-[9px] font-bold text-emerald-300">
+                    <span className="relative flex items-center gap-1 sm:gap-1.5 text-[8px] font-bold text-emerald-300 sm:text-[9px]">
                         <span className="relative flex h-2 w-2 items-center justify-center">
                             <motion.span
                                 animate={{
@@ -317,10 +339,11 @@ const Participants = ({
                                 }}
                                 className="absolute h-full w-full rounded-full bg-emerald-400"
                             />
+
                             <span className="relative h-1.5 w-1.5 rounded-full bg-emerald-400" />
                         </span>
 
-                        {onlineUsers.length} Online
+                        {totalOnline} / {totalParticipants} Online
                     </span>
                 </motion.div>
             </motion.div>
@@ -338,22 +361,29 @@ const Participants = ({
                     opacity: 1,
                     scale: 1,
                 }}
-                className="relative z-10 mb-4 overflow-hidden rounded-2xl border border-white/[0.07] bg-white/[0.025] p-3 backdrop-blur-xl"
+                className="relative z-10 mb-3 shrink-0 overflow-hidden rounded-xl border border-white/[0.07] bg-white/[0.025] p-2.5 backdrop-blur-xl sm:mb-4 sm:rounded-2xl sm:p-3"
             >
-                <div className="flex items-center justify-between">
-                    <div>
-                        <p className="text-[8px] font-black uppercase tracking-[.18em] text-zinc-600">
+                <div className="flex min-w-0 items-center justify-between gap-2">
+
+                    <div className="min-w-0">
+                        <p className="text-[7px] font-black uppercase tracking-[.18em] text-zinc-600 sm:text-[8px]">
                             Live presence
                         </p>
 
-                        <p className="mt-1 text-[10px] text-zinc-400">
-                            {onlineUsers.length > 0
-                                ? "Your study group is active"
+                        <p className="mt-1 truncate text-[9px] text-zinc-400 sm:text-[10px]">
+                            {totalOnline > 0
+                                ? `${totalOnline} ${
+                                      totalOnline === 1
+                                          ? "student is"
+                                          : "students are"
+                                  } currently online`
                                 : "Waiting for your group"}
                         </p>
                     </div>
 
-                    <div className="flex -space-x-2">
+                    {/* Online avatars */}
+
+                    <div className="flex shrink-0 -space-x-1.5 sm:-space-x-2">
                         {onlineUsers
                             .slice(0, 5)
                             .map(
@@ -389,7 +419,7 @@ const Participants = ({
                                                 y: -4,
                                                 scale: 1.12,
                                             }}
-                                            className="relative flex h-8 w-8 items-center justify-center rounded-full border-2 border-[#09090f] text-[8px] font-black text-white"
+                                            className="relative flex h-7 w-7 items-center justify-center rounded-full border-2 border-[#09090f] text-[7px] font-black text-white sm:h-8 sm:w-8 sm:text-[8px]"
                                             style={{
                                                 backgroundColor:
                                                     color,
@@ -398,23 +428,23 @@ const Participants = ({
                                             {onlineUser.name?.[0]?.toUpperCase() ||
                                                 "U"}
 
-                                            <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-[#09090f] bg-emerald-400" />
+                                            <span className="absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full border-2 border-[#09090f] bg-emerald-400 sm:h-2.5 sm:w-2.5" />
                                         </motion.div>
                                     );
                                 }
                             )}
 
-                        {onlineUsers.length > 5 && (
-                            <div className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-[#09090f] bg-zinc-800 text-[8px] font-bold text-zinc-400">
-                                +{onlineUsers.length - 5}
+                        {totalOnline > 5 && (
+                            <div className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-[#09090f] bg-zinc-800 text-[7px] font-bold text-zinc-400 sm:h-8 sm:w-8 sm:text-[8px]">
+                                +{totalOnline - 5}
                             </div>
                         )}
                     </div>
                 </div>
 
-                {/* animated activity line */}
+                {/* Animated activity line */}
 
-                <div className="mt-3 h-px overflow-hidden bg-white/[0.05]">
+                <div className="mt-2.5 h-px overflow-hidden bg-white/[0.05] sm:mt-3">
                     <motion.div
                         animate={{
                             x: [
@@ -455,10 +485,10 @@ const Participants = ({
                                 opacity: 0,
                                 height: 0,
                             }}
-                            className="relative z-10 mb-4 overflow-hidden rounded-2xl border border-orange-400/15 bg-orange-400/[0.045] p-3 shadow-[0_10px_40px_rgba(249,115,22,.05)]"
+                            className="relative z-10 mb-3 shrink-0 overflow-hidden rounded-xl border border-orange-400/15 bg-orange-400/[0.045] p-2.5 shadow-[0_10px_40px_rgba(249,115,22,.05)] sm:mb-4 sm:rounded-2xl sm:p-3"
                         >
-                            <div className="mb-3 flex items-center justify-between">
-                                <div className="flex items-center gap-2">
+                            <div className="mb-2 flex items-center justify-between gap-2 sm:mb-3">
+                                <div className="flex min-w-0 items-center gap-2">
                                     <motion.div
                                         animate={{
                                             rotate: [
@@ -471,30 +501,34 @@ const Participants = ({
                                             duration: 2,
                                             repeat: Infinity,
                                         }}
-                                        className="flex h-8 w-8 items-center justify-center rounded-xl bg-orange-500/10 text-orange-300"
+                                        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-orange-500/10 text-orange-300 sm:h-8 sm:w-8 sm:rounded-xl"
                                     >
-                                        <FaBolt />
+                                        <FaBolt className="text-[10px] sm:text-xs" />
                                     </motion.div>
 
-                                    <div>
-                                        <p className="text-[10px] font-bold text-orange-300">
+                                    <div className="min-w-0">
+                                        <p className="truncate text-[9px] font-bold text-orange-300 sm:text-[10px]">
                                             Rejoin Requests
                                         </p>
-                                        <p className="mt-0.5 text-[8px] text-orange-300/40">
+
+                                        <p className="mt-0.5 hidden text-[8px] text-orange-300/40 sm:block">
                                             Requires your approval
                                         </p>
                                     </div>
                                 </div>
 
-                                <span className="rounded-full bg-orange-400/10 px-2 py-1 text-[8px] font-bold text-orange-300">
+                                <span className="shrink-0 rounded-full bg-orange-400/10 px-1.5 py-0.5 text-[7px] font-bold text-orange-300 sm:px-2 sm:py-1 sm:text-[8px]">
                                     {pendingRequests.length}{" "}
                                     pending
                                 </span>
                             </div>
 
-                            <div className="max-h-40 space-y-2 overflow-y-auto pr-1">
+                            <div className="max-h-32 space-y-1.5 overflow-y-auto pr-1 sm:max-h-40 sm:space-y-2">
                                 {pendingRequests.map(
-                                    (request, index) => (
+                                    (
+                                        request,
+                                        index
+                                    ) => (
                                         <motion.div
                                             key={
                                                 request
@@ -514,19 +548,19 @@ const Participants = ({
                                                     index *
                                                     0.08,
                                             }}
-                                            className="group flex items-center gap-2 rounded-xl border border-white/[0.05] bg-black/20 p-2"
+                                            className="group flex min-w-0 items-center gap-1.5 rounded-lg border border-white/[0.05] bg-black/20 p-1.5 sm:gap-2 sm:rounded-xl sm:p-2"
                                         >
                                             <motion.div
                                                 whileHover={{
                                                     scale: 1.08,
                                                 }}
-                                                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-red-500/10"
+                                                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-red-500/10 sm:h-9 sm:w-9 sm:rounded-xl"
                                             >
-                                                <FaUserCircle className="text-xl text-red-400" />
+                                                <FaUserCircle className="text-lg text-red-400 sm:text-xl" />
                                             </motion.div>
 
                                             <div className="min-w-0 flex-1">
-                                                <p className="truncate text-[10px] font-semibold text-white">
+                                                <p className="truncate text-[9px] font-semibold text-white sm:text-[10px]">
                                                     {
                                                         request
                                                             .user
@@ -534,7 +568,7 @@ const Participants = ({
                                                     }
                                                 </p>
 
-                                                <p className="mt-0.5 text-[8px] text-red-400/80">
+                                                <p className="mt-0.5 text-[7px] text-red-400/80 sm:text-[8px]">
                                                     Previously removed
                                                 </p>
                                             </div>
@@ -555,10 +589,10 @@ const Participants = ({
                                                             ?._id
                                                     )
                                                 }
-                                                className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-400 transition hover:bg-emerald-500/20"
+                                                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-400 transition hover:bg-emerald-500/20 sm:h-8 sm:w-8 sm:rounded-xl"
                                                 title="Allow"
                                             >
-                                                <FaCheck className="text-[10px]" />
+                                                <FaCheck className="text-[9px] sm:text-[10px]" />
                                             </motion.button>
 
                                             <motion.button
@@ -577,10 +611,10 @@ const Participants = ({
                                                             ?._id
                                                     )
                                                 }
-                                                className="flex h-8 w-8 items-center justify-center rounded-xl bg-red-500/10 text-red-400 transition hover:bg-red-500/20"
+                                                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-red-500/10 text-red-400 transition hover:bg-red-500/20 sm:h-8 sm:w-8 sm:rounded-xl"
                                                 title="Reject"
                                             >
-                                                <FaTimes className="text-[10px]" />
+                                                <FaTimes className="text-[9px] sm:text-[10px]" />
                                             </motion.button>
                                         </motion.div>
                                     )
@@ -594,7 +628,7 @@ const Participants = ({
                 PARTICIPANTS LIST
             ========================================== */}
 
-            <div className="relative z-10 max-h-72 space-y-2 overflow-y-auto pr-1 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-white/10">
+            <div className="relative z-10 min-h-0 flex-1 space-y-2 overflow-y-auto pr-1 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-white/10">
 
                 {displayedParticipants.length ===
                 0 ? (
@@ -607,7 +641,7 @@ const Participants = ({
                             opacity: 1,
                             scale: 1,
                         }}
-                        className="flex flex-col items-center justify-center rounded-2xl border border-white/[0.06] bg-white/[0.02] py-10 text-center"
+                        className="flex flex-col items-center justify-center rounded-xl border border-white/[0.06] bg-white/[0.02] py-8 text-center sm:rounded-2xl sm:py-10"
                     >
                         <motion.div
                             animate={{
@@ -623,16 +657,16 @@ const Participants = ({
                                 duration: 4,
                                 repeat: Infinity,
                             }}
-                            className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/[0.03] text-zinc-700"
+                            className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/[0.03] text-zinc-700 sm:h-14 sm:w-14 sm:rounded-2xl"
                         >
                             <FaUsers />
                         </motion.div>
 
-                        <p className="mt-4 text-xs font-semibold text-zinc-500">
+                        <p className="mt-3 text-[11px] font-semibold text-zinc-500 sm:mt-4 sm:text-xs">
                             No participants found.
                         </p>
 
-                        <p className="mt-1 text-[9px] text-zinc-700">
+                        <p className="mt-1 text-[8px] text-zinc-700 sm:text-[9px]">
                             Invite people to start studying.
                         </p>
                     </motion.div>
@@ -703,7 +737,7 @@ const Participants = ({
                                         whileHover={{
                                             x: 4,
                                         }}
-                                        className={`group relative overflow-hidden rounded-2xl border p-3 transition-all ${
+                                        className={`group relative overflow-hidden rounded-xl border p-2.5 transition-all sm:rounded-2xl sm:p-3 ${
                                             wasRemoved
                                                 ? "border-red-500/10 bg-red-500/[0.035]"
                                                 : isYou
@@ -729,7 +763,7 @@ const Participants = ({
                                             />
                                         )}
 
-                                        <div className="relative flex items-center gap-3">
+                                        <div className="relative flex min-w-0 items-center gap-2 sm:gap-3">
 
                                             {/* Avatar */}
 
@@ -741,7 +775,7 @@ const Participants = ({
                                                 className="relative shrink-0"
                                             >
                                                 <div
-                                                    className={`relative flex h-10 w-10 items-center justify-center rounded-xl border ${
+                                                    className={`relative flex h-9 w-9 items-center justify-center rounded-lg border sm:h-10 sm:w-10 sm:rounded-xl ${
                                                         wasRemoved
                                                             ? "border-red-400/15 bg-red-500/10"
                                                             : "border-white/10"
@@ -759,7 +793,7 @@ const Participants = ({
                                                     }
                                                 >
                                                     <FaUserCircle
-                                                        className={`text-2xl ${
+                                                        className={`text-xl sm:text-2xl ${
                                                             wasRemoved
                                                                 ? "text-red-400"
                                                                 : "text-zinc-500"
@@ -816,7 +850,7 @@ const Participants = ({
 
                                             <div className="min-w-0 flex-1">
                                                 <p
-                                                    className={`flex items-center gap-1.5 truncate text-[11px] font-bold ${
+                                                    className={`flex min-w-0 items-center gap-1.5 truncate text-[10px] font-bold sm:text-[11px] ${
                                                         wasRemoved
                                                             ? "text-red-400"
                                                             : "text-white"
@@ -849,13 +883,13 @@ const Participants = ({
                                                                     repeat: Infinity,
                                                                 }}
                                                             >
-                                                                <FaCrown className="shrink-0 text-[9px] text-yellow-400" />
+                                                                <FaCrown className="shrink-0 text-[8px] text-yellow-400 sm:text-[9px]" />
                                                             </motion.span>
                                                         )}
 
                                                     {isYou &&
                                                         !wasRemoved && (
-                                                            <span className="shrink-0 rounded-full bg-violet-400/10 px-1.5 py-0.5 text-[7px] font-bold text-violet-300">
+                                                            <span className="shrink-0 rounded-full bg-violet-400/10 px-1 py-0.5 text-[6px] font-bold text-violet-300 sm:px-1.5 sm:text-[7px]">
                                                                 YOU
                                                             </span>
                                                         )}
@@ -863,7 +897,7 @@ const Participants = ({
 
                                                 <div className="mt-1 flex items-center gap-1.5">
                                                     <span
-                                                        className={`text-[9px] ${
+                                                        className={`truncate text-[8px] sm:text-[9px] ${
                                                             wasRemoved
                                                                 ? "text-red-400/70"
                                                                 : online
@@ -881,7 +915,7 @@ const Participants = ({
                                                     {online &&
                                                         !wasRemoved && (
                                                             <motion.div
-                                                                className="flex items-center gap-[2px]"
+                                                                className="flex shrink-0 items-center gap-[2px]"
                                                                 aria-hidden="true"
                                                             >
                                                                 {[
@@ -929,7 +963,7 @@ const Participants = ({
 
                                             {isHost &&
                                                 !wasRemoved && (
-                                                    <span className="hidden rounded-full border border-yellow-400/10 bg-yellow-400/[0.05] px-2 py-1 text-[7px] font-bold uppercase tracking-wider text-yellow-400/70 sm:block">
+                                                    <span className="hidden shrink-0 rounded-full border border-yellow-400/10 bg-yellow-400/[0.05] px-2 py-1 text-[7px] font-bold uppercase tracking-wider text-yellow-400/70 sm:block">
                                                         Host
                                                     </span>
                                                 )}
@@ -954,11 +988,11 @@ const Participants = ({
                                                                 participant._id
                                                             )
                                                         }
-                                                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-transparent text-zinc-600 opacity-0 transition-all hover:border-red-500/10 hover:bg-red-500/10 hover:text-red-400 group-hover:opacity-100"
+                                                        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-transparent text-zinc-600 opacity-100 transition-all hover:border-red-500/10 hover:bg-red-500/10 hover:text-red-400 sm:h-8 sm:w-8 sm:rounded-xl sm:opacity-0 sm:group-hover:opacity-100"
                                                         title="Remove member"
                                                         aria-label={`Remove ${participant.name}`}
                                                     >
-                                                        <FaUserMinus className="text-[10px]" />
+                                                        <FaUserMinus className="text-[9px] sm:text-[10px]" />
                                                     </motion.button>
                                                 )}
                                         </div>
@@ -967,7 +1001,7 @@ const Participants = ({
 
                                         {online &&
                                             !wasRemoved && (
-                                                <div className="mt-3 h-px overflow-hidden bg-white/[0.04]">
+                                                <div className="mt-2 h-px overflow-hidden bg-white/[0.04] sm:mt-3">
                                                     <motion.div
                                                         animate={{
                                                             x: [
@@ -1017,9 +1051,9 @@ const Participants = ({
                         opacity: 1,
                         y: 0,
                     }}
-                    className="relative z-10 mt-4 flex items-center justify-between rounded-xl border border-white/[0.05] bg-white/[0.02] px-3 py-2"
+                    className="relative z-10 mt-2 flex shrink-0 items-center justify-between rounded-lg border border-white/[0.05] bg-white/[0.02] px-2.5 py-1.5 sm:mt-4 sm:rounded-xl sm:px-3 sm:py-2"
                 >
-                    <div className="flex items-center gap-2">
+                    <div className="flex min-w-0 items-center gap-1.5 sm:gap-2">
                         <motion.span
                             animate={{
                                 rotate: [0, 360],
@@ -1029,19 +1063,22 @@ const Participants = ({
                                 repeat: Infinity,
                                 ease: "linear",
                             }}
-                            className="text-[9px] text-violet-400"
+                            className="shrink-0 text-[8px] text-violet-400 sm:text-[9px]"
                         >
                             <BsLightningChargeFill />
                         </motion.span>
 
-                        <span className="text-[8px] text-zinc-600">
-                            Real-time presence synced
+                        <span className="truncate text-[7px] text-zinc-600 sm:text-[8px]">
+                            {totalOnline} online of{" "}
+                            {totalParticipants}{" "}
+                            participants
                         </span>
                     </div>
 
-                    <div className="flex items-center gap-1">
-                        <FaCircle className="text-[4px] text-emerald-400" />
-                        <span className="text-[8px] text-zinc-700">
+                    <div className="flex shrink-0 items-center gap-1">
+                        <FaCircle className="text-[3px] text-emerald-400 sm:text-[4px]" />
+
+                        <span className="text-[7px] text-zinc-700 sm:text-[8px]">
                             Live
                         </span>
                     </div>

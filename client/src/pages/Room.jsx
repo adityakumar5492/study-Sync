@@ -45,11 +45,12 @@ const Room = () => {
      * RESPONSIVE SIDEBAR
      *
      * Desktop:
-     * Sidebar remains open by default.
+     * Communication panel is displayed as a
+     * left-side sidebar and can be collapsed.
      *
      * Mobile:
-     * Sidebar starts closed so the study workspace
-     * gets the maximum available width.
+     * Communication is moved below the study
+     * workspace instead of behaving like an overlay.
      */
     const [sidebarOpen, setSidebarOpen] =
         useState(true);
@@ -103,40 +104,6 @@ const Room = () => {
                 memberId === user?._id?.toString()
             );
         }) || false;
-
-    // ===========================
-    // RESPONSIVE SIDEBAR
-    // ===========================
-
-    useEffect(() => {
-        const handleResize = () => {
-            /*
-             * Keep desktop behavior exactly as before.
-             *
-             * On mobile, close the sidebar so the workspace
-             * receives the full available width.
-             */
-            if (window.innerWidth < 1024) {
-                setSidebarOpen(false);
-            } else {
-                setSidebarOpen(true);
-            }
-        };
-
-        handleResize();
-
-        window.addEventListener(
-            "resize",
-            handleResize
-        );
-
-        return () => {
-            window.removeEventListener(
-                "resize",
-                handleResize
-            );
-        };
-    }, []);
 
     // ===========================
     // Load Room
@@ -532,37 +499,32 @@ const Room = () => {
                 MAIN ROOM AREA
             ================================= */}
 
-            <div className="relative flex min-h-0 min-w-0 flex-1 overflow-hidden bg-slate-950">
+            <div
+                className="
+                    flex
+                    min-h-0
+                    min-w-0
+                    flex-1
+                    flex-col
+                    overflow-y-auto
+                    overflow-x-hidden
+                    bg-slate-950
+
+                    lg:flex-row
+                    lg:overflow-hidden
+                "
+            >
 
                 {/* =================================
-                    MOBILE SIDEBAR OVERLAY
-                ================================= */}
-
-                {sidebarOpen && (
-                    <button
-                        type="button"
-                        aria-label="Close room sidebar"
-                        onClick={() =>
-                            setSidebarOpen(false)
-                        }
-                        className="absolute inset-0 z-30 bg-black/50 backdrop-blur-[2px] lg:hidden"
-                    />
-                )}
-
-                {/* =================================
-                    LEFT SIDEBAR
+                    DESKTOP LEFT SIDEBAR
                 ================================= */}
 
                 <aside
                     className={`
-                        absolute
-                        inset-y-0
-                        left-0
-                        z-40
-                        flex
+                        relative
+                        hidden
                         min-h-0
-                        w-[min(320px,calc(100vw-16px))]
-                        max-w-[320px]
+                        shrink-0
                         flex-col
                         overflow-hidden
                         border-r
@@ -570,22 +532,16 @@ const Room = () => {
                         bg-slate-900
                         shadow-2xl
                         shadow-black/40
-                        transition-transform
+                        transition-[width]
                         duration-200
                         ease-out
 
-                        lg:relative
-                        lg:z-40
-                        lg:w-[320px]
-                        lg:max-w-[38vw]
-                        lg:shrink-0
-                        lg:translate-x-0
-                        lg:shadow-2xl
+                        lg:flex
 
                         ${
                             sidebarOpen
-                                ? "translate-x-0"
-                                : "-translate-x-full"
+                                ? "lg:w-[320px] lg:max-w-[38vw]"
+                                : "lg:w-0 lg:border-r-0"
                         }
                     `}
                 >
@@ -615,7 +571,7 @@ const Room = () => {
                 </aside>
 
                 {/* =================================
-                    SIDEBAR TOGGLE
+                    DESKTOP SIDEBAR TOGGLE
                 ================================= */}
 
                 <button
@@ -627,9 +583,10 @@ const Room = () => {
                     }
                     className={`
                         absolute
+                        left-0
                         top-1/2
                         z-[100]
-                        flex
+                        hidden
                         h-9
                         w-9
                         -translate-y-1/2
@@ -647,10 +604,12 @@ const Room = () => {
                         hover:bg-slate-700
                         hover:text-white
 
+                        lg:flex
+
                         ${
                             sidebarOpen
-                                ? "left-[calc(min(320px,100vw-16px)-18px)] lg:left-[304px]"
-                                : "left-2"
+                                ? "lg:left-[302px]"
+                                : "lg:left-2"
                         }
                     `}
                     title={
@@ -676,185 +635,291 @@ const Room = () => {
                 </button>
 
                 {/* =================================
-                    MAIN STUDY WORKSPACE
+                    STUDY + MOBILE COMMUNICATION
                 ================================= */}
 
-                <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-slate-950">
+                <div
+                    className="
+                        flex
+                        min-h-0
+                        min-w-0
+                        flex-col
+
+                        lg:flex-1
+                    "
+                >
 
                     {/* =================================
-                        WORKSPACE TABS
+                        MAIN STUDY WORKSPACE
                     ================================= */}
 
-                    <div className="flex h-12 min-h-12 shrink-0 border-b border-slate-800/80 bg-slate-900/95 px-1 pt-1 shadow-sm sm:h-11 sm:min-h-11 sm:px-1">
-
-                        {/* PDF */}
-
-                        <button
-                            type="button"
-                            onClick={() =>
-                                setActiveTab(
-                                    "pdf"
-                                )
-                            }
-                            className={`
-                                flex
-                                min-w-0
-                                flex-1
-                                items-center
-                                justify-center
-                                gap-1.5
-                                rounded-t-lg
-                                px-2
-                                text-xs
-                                font-semibold
-                                transition-colors
-                                sm:px-3
-                                sm:text-sm
-
-                                ${
-                                    activeTab ===
-                                    "pdf"
-                                        ? "bg-slate-800 text-green-400 shadow-sm"
-                                        : "text-slate-500 hover:bg-slate-800/80 hover:text-slate-200"
-                                }
-                            `}
-                        >
-                            <span className="shrink-0">
-                                📄
-                            </span>
-
-                            <span className="truncate">
-                                PDF
-                            </span>
-                        </button>
-
-                        {/* Whiteboard */}
-
-                        <button
-                            type="button"
-                            onClick={() =>
-                                setActiveTab(
-                                    "whiteboard"
-                                )
-                            }
-                            className={`
-                                flex
-                                min-w-0
-                                flex-1
-                                items-center
-                                justify-center
-                                gap-1.5
-                                rounded-t-lg
-                                px-2
-                                text-xs
-                                font-semibold
-                                transition-colors
-                                sm:px-3
-                                sm:text-sm
-
-                                ${
-                                    activeTab ===
-                                    "whiteboard"
-                                        ? "bg-slate-800 text-green-400 shadow-sm"
-                                        : "text-slate-500 hover:bg-slate-800/80 hover:text-slate-200"
-                                }
-                            `}
-                        >
-                            <span className="shrink-0">
-                                ✏️
-                            </span>
-
-                            <span className="truncate">
-                                Whiteboard
-                            </span>
-                        </button>
-                    </div>
-
-                    {/* =================================
-                        STUDY WORKSPACE
-                    ================================= */}
-
-                    <div
+                    <main
                         className="
-                            min-h-0
+                            flex
+                            h-[68dvh]
+                            min-h-[420px]
                             min-w-0
-                            flex-1
+                            shrink-0
+                            flex-col
                             overflow-hidden
-                            p-1
-                            sm:p-2
-                            lg:p-3
+                            bg-slate-950
+
+                            sm:h-[70dvh]
+
+                            lg:h-auto
+                            lg:min-h-0
+                            lg:flex-1
                         "
                     >
 
                         {/* =================================
-                            PDF
+                            WORKSPACE TABS
                         ================================= */}
 
-                        {activeTab ===
-                            "pdf" &&
-                            room._id && (
-                                <div
-                                    className="
-                                        h-full
-                                        min-h-0
-                                        min-w-0
-                                        overflow-hidden
-                                        rounded-lg
-                                        border
-                                        border-slate-800/80
-                                        bg-slate-900
-                                        shadow-xl
-                                        shadow-black/10
-                                        sm:rounded-xl
-                                    "
-                                >
-                                    <PdfViewer
-                                        roomId={
-                                            room._id
-                                        }
-                                        room={
-                                            room
-                                        }
-                                        currentUser={
-                                            user
-                                        }
-                                        drawingPermission={
-                                            drawingPermission
-                                        }
-                                    />
-                                </div>
-                            )}
+                        <div
+                            className="
+                                flex
+                                h-10
+                                min-h-10
+                                shrink-0
+                                border-b
+                                border-slate-800/80
+                                bg-slate-900/95
+                                px-1
+                                pt-1
+                                shadow-sm
+
+                                sm:h-10
+                                sm:min-h-10
+
+                                lg:h-11
+                                lg:min-h-11
+                            "
+                        >
+
+                            {/* PDF */}
+
+                            <button
+                                type="button"
+                                onClick={() =>
+                                    setActiveTab(
+                                        "pdf"
+                                    )
+                                }
+                                className={`
+                                    flex
+                                    min-w-0
+                                    flex-1
+                                    items-center
+                                    justify-center
+                                    gap-1
+                                    rounded-t-lg
+                                    px-1.5
+                                    text-[10px]
+                                    font-semibold
+                                    transition-colors
+
+                                    sm:gap-1.5
+                                    sm:px-2
+                                    sm:text-xs
+
+                                    lg:px-3
+                                    lg:text-sm
+
+                                    ${
+                                        activeTab ===
+                                        "pdf"
+                                            ? "bg-slate-800 text-green-400 shadow-sm"
+                                            : "text-slate-500 hover:bg-slate-800/80 hover:text-slate-200"
+                                    }
+                                `}
+                            >
+                                <span className="shrink-0 text-[11px] sm:text-xs">
+                                    📄
+                                </span>
+
+                                <span className="truncate">
+                                    PDF
+                                </span>
+                            </button>
+
+                            {/* Whiteboard */}
+
+                            <button
+                                type="button"
+                                onClick={() =>
+                                    setActiveTab(
+                                        "whiteboard"
+                                    )
+                                }
+                                className={`
+                                    flex
+                                    min-w-0
+                                    flex-1
+                                    items-center
+                                    justify-center
+                                    gap-1
+                                    rounded-t-lg
+                                    px-1.5
+                                    text-[10px]
+                                    font-semibold
+                                    transition-colors
+
+                                    sm:gap-1.5
+                                    sm:px-2
+                                    sm:text-xs
+
+                                    lg:px-3
+                                    lg:text-sm
+
+                                    ${
+                                        activeTab ===
+                                        "whiteboard"
+                                            ? "bg-slate-800 text-green-400 shadow-sm"
+                                            : "text-slate-500 hover:bg-slate-800/80 hover:text-slate-200"
+                                    }
+                                `}
+                            >
+                                <span className="shrink-0 text-[11px] sm:text-xs">
+                                    ✏️
+                                </span>
+
+                                <span className="truncate">
+                                    Whiteboard
+                                </span>
+                            </button>
+                        </div>
 
                         {/* =================================
-                            WHITEBOARD
+                            STUDY WORKSPACE
                         ================================= */}
 
-                        {activeTab ===
-                            "whiteboard" && (
-                                <div
-                                    className="
-                                        h-full
-                                        min-h-0
-                                        min-w-0
-                                        overflow-hidden
-                                        rounded-lg
-                                        border
-                                        border-slate-800/80
-                                        bg-white
-                                        shadow-xl
-                                        shadow-black/10
-                                        sm:rounded-xl
-                                    "
-                                >
-                                    <Whiteboard
-                                        roomId={
-                                            room._id
-                                        }
-                                    />
-                                </div>
-                            )}
-                    </div>
-                </main>
+                        <div
+                            className="
+                                min-h-0
+                                min-w-0
+                                flex-1
+                                overflow-hidden
+                                p-1
+
+                                sm:p-2
+
+                                lg:p-3
+                            "
+                        >
+
+                            {/* =================================
+                                PDF
+                            ================================= */}
+
+                            {activeTab ===
+                                "pdf" &&
+                                room._id && (
+                                    <div
+                                        className="
+                                            h-full
+                                            min-h-0
+                                            min-w-0
+                                            overflow-hidden
+                                            rounded-lg
+                                            border
+                                            border-slate-800/80
+                                            bg-slate-900
+                                            shadow-xl
+                                            shadow-black/10
+
+                                            sm:rounded-xl
+                                        "
+                                    >
+                                        <PdfViewer
+                                            roomId={
+                                                room._id
+                                            }
+                                            room={
+                                                room
+                                            }
+                                            currentUser={
+                                                user
+                                            }
+                                            drawingPermission={
+                                                drawingPermission
+                                            }
+                                        />
+                                    </div>
+                                )}
+
+                            {/* =================================
+                                WHITEBOARD
+                            ================================= */}
+
+                            {activeTab ===
+                                "whiteboard" && (
+                                    <div
+                                        className="
+                                            h-full
+                                            min-h-0
+                                            min-w-0
+                                            overflow-hidden
+                                            rounded-lg
+                                            border
+                                            border-slate-800/80
+                                            bg-white
+                                            shadow-xl
+                                            shadow-black/10
+
+                                            sm:rounded-xl
+                                        "
+                                    >
+                                        <Whiteboard
+                                            roomId={
+                                                room._id
+                                            }
+                                        />
+                                    </div>
+                                )}
+                        </div>
+                    </main>
+
+                    {/* =================================
+                        MOBILE COMMUNICATION
+                    ================================= */}
+
+                    <section
+                        className="
+                            flex
+                            min-h-[420px]
+                            w-full
+                            shrink-0
+                            flex-col
+                            overflow-hidden
+                            border-t
+                            border-slate-800/80
+                            bg-slate-900
+
+                            lg:hidden
+                        "
+                    >
+                        <RoomCommunication
+                            room={room}
+                            roomId={room._id}
+                            currentUser={user}
+                            onlineUsers={
+                                onlineUsers
+                            }
+                            isHost={isHost}
+                            isMember={isMember}
+                            onRemoveMember={
+                                handleRemoveMember
+                            }
+                            drawingPermission={
+                                drawingPermission
+                            }
+                            onDrawingPermissionChange={
+                                handleDrawingPermissionChange
+                            }
+                        />
+                    </section>
+                </div>
             </div>
 
             {/* =================================
