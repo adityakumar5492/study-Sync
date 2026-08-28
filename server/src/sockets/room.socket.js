@@ -1,10 +1,11 @@
 const Room = require("../models/room.model");
 
+const StudySession = require("../models/studySession.model");
+
 const {
     hostSocketId,
     drawingPermission,
 } = require("./roomState");
-
 
 const onlineUsers = new Map();
 const currentPdfPages = new Map();
@@ -12,222 +13,428 @@ const currentPdfPages = new Map();
 // userId -> socket.id
 const connectedUsers = new Map();
 
+// socket.id -> active study session
+const activeStudySessions = new Map();
+
 module.exports = (io, socket) => {
     // ===========================
-// Register User Socket
-// ===========================
-
-socket.on("user:register", ({ userId }) => {
-    if (!userId) return;
-
-    socket.data.userId =
-        userId.toString();
-
-    connectedUsers.set(
-        userId.toString(),
-        socket.id
-    );
-});
+    // Register User Socket
     // ===========================
-    // Join Room
+
+    socket.on("user:register", ({ userId }) => {
+        if (!userId) return;
+
+        socket.data.userId =
+            userId.toString();
+
+        connectedUsers.set(
+            userId.toString(),
+            socket.id
+        );
+    });
+
     // ===========================
-socket.on(
-    "room:join",
-    async ({ roomId, user, isHost }) => {
-        try {
-            if (!roomId || !user?._id) {
-                return;
-            }
+    // Study Session - Start
+    // ===========================
 
-            const room = await Room.findById(roomId);
+    const startStudySession = (
+        roomId,
+        userId
+    ) => {
+        if (!roomId || !userId) {
+            return;
+        }
 
-            if (!room) {
-                socket.emit(
-                    "room:error",
-                    "Room not found."
-                );
-                return;
-            }
+        // Prevent duplicate active sessions
+        if (activeStudySessions.has(socket.id)) {
+            return;
+        }
 
-            const userId = user._id.toString();
+        activeStudySessions.set(socket.id, {
+            roomId: roomId.toString(),
+            userId: userId.toString(),
+            startedAt: new Date(),
+        });
+    };
 
-            const hostId = room.host.toString();
+    // ===========================
+    // Study Session - End
+    // ===========================
 
-            const isActualHost =
-                hostId === userId;
-
-            const isMember =
-                room.members.some(
-                    (member) =>
-                        member.toString() === userId
-                );
-
-            // ===========================
-            // Public room
-            // ===========================
-
-            if (!room.isPrivate) {
-                if (
-                    !isActualHost &&
-                    !isMember
-                ) {
-                    if (
-                        room.members.length >=
-                        room.maxMembers
-                    ) {
-                        socket.emit(
-                            "room:error",
-                            "Room is full."
-                        );
-                        return;
-                    }
-
-                    room.members.push(user._id);
-
-                    await room.save();
-                }
-            }
-
-            // ===========================
-            // Private room
-            // ===========================
-
-            if (
-                room.isPrivate &&
-                !isActualHost &&
-                !isMember
-            ) {
-                socket.emit(
-                    "room:error",
-                    "You must join this room first."
-                );
-                return;
-            }
-
-            // ===========================
-            // Join Socket.IO room
-            // ===========================
-
-            socket.join(roomId);
-
-            connectedUsers.set(
-                userId,
+    const endStudySession = async () => {
+        const session =
+            activeStudySessions.get(
                 socket.id
             );
 
-            if (!onlineUsers.has(roomId)) {
-                onlineUsers.set(
-                    roomId,
-                    new Map()
-                );
-            }
+        if (!session) {
+            return;
+        }
 
-            onlineUsers
-                .get(roomId)
-                .set(socket.id, user);
+        activeStudySessions.delete(
+            socket.id
+        );
 
-            if (isActualHost) {
-                hostSocketId.set(
-                    roomId,
-                    socket.id
-                );
-            }
+        const endedAt = new Date();
 
-            // ===========================
-            // Default PDF page
-            // ===========================
+        const durationSeconds = Math.max(
+            0,
+            Math.floor(
+                (endedAt.getTime() -
+                    session.startedAt.getTime()) /
+                    1000
+            )
+        );
 
-            if (
-                !currentPdfPages.has(roomId)
-            ) {
-                currentPdfPages.set(
-                    roomId,
-                    1
-                );
-            }
+        if (durationSeconds <= 0) {
+            return;
+        }
 
-            socket.emit(
-                "pdf:current-page",
+        try {
+            await StudySession.create({
+                user: session.userId,
+                room: session.roomId,
+                startedAt:
+                    session.startedAt,
+                endedAt,
+                durationSeconds,
+            });
+
+            // Tell profile pages to refresh
+            io.emit(
+                "profile:study-stats-updated",
                 {
-                    pageNumber:
-                        currentPdfPages.get(
-                            roomId
-                        ),
+                    userId:
+                        session.userId,
                 }
             );
-
-            // ===========================
-            // Drawing permission
-            // ===========================
-
-            const permission =
-    drawingPermission.get(roomId) || {
-        mode: "everyone",
-        allowedUsers: [],
-    };
-
-socket.emit(
-    "drawing:permission-change",
-    {
-        mode: permission.mode,
-        allowedUsers: permission.allowedUsers,
-    }
-);
-
-            // ===========================
-            // Online users
-            // ===========================
-
-            io.to(roomId).emit(
-                "room:online-users",
-                {
-                    users: Array.from(
-                        onlineUsers
-                            .get(roomId)
-                            .values()
-                    ),
-                }
-            );
-
-            // ===========================
-            // User joined
-            // ===========================
-
-            io.to(roomId).emit(
-                "room:user-joined",
-                {
-                    user,
-                    message:
-                        `${user.name} joined the room.`,
-                }
-            );
-
-            // ===========================
-            // IMPORTANT:
-            // Update room members
-            // ===========================
-
-            io.to(roomId).emit(
-                "room:members-updated",
-                {
-                    roomId,
-                    memberId: user._id,
-                }
-            );
-
         } catch (error) {
             console.error(
-                "Join room error:",
+                "Study session save error:",
                 error
             );
-
-            socket.emit(
-                "room:error",
-                "Failed to join room."
-            );
         }
-    }
-);
+    };
+
+    // ===========================
+    // Study Statistics
+    // ===========================
+
+    socket.on(
+        "study:stats-request",
+        async () => {
+            try {
+                const userId =
+                    socket.data.userId;
+
+                if (!userId) {
+                    return;
+                }
+
+                const totalResult =
+                    await StudySession.aggregate([
+                        {
+                            $match: {
+                                user: userId,
+                            },
+                        },
+                        {
+                            $group: {
+                                _id: null,
+                                totalSeconds: {
+                                    $sum: "$durationSeconds",
+                                },
+                            },
+                        },
+                    ]);
+
+                // Last 400 days are enough for
+                // streak/calendar display.
+                const since =
+                    new Date();
+
+                since.setDate(
+                    since.getDate() - 400
+                );
+
+                const sessions =
+                    await StudySession.find({
+                        user: userId,
+                        startedAt: {
+                            $gte: since,
+                        },
+                    })
+                        .select(
+                            "startedAt endedAt durationSeconds"
+                        )
+                        .sort({
+                            startedAt: 1,
+                        })
+                        .lean();
+
+                socket.emit(
+                    "study:stats",
+                    {
+                        userId,
+                        totalSeconds:
+                            totalResult[0]
+                                ?.totalSeconds ||
+                            0,
+                        sessions,
+                    }
+                );
+            } catch (error) {
+                console.error(
+                    "Study stats error:",
+                    error
+                );
+
+                socket.emit(
+                    "study:stats",
+                    {
+                        userId:
+                            socket.data.userId,
+                        totalSeconds: 0,
+                        sessions: [],
+                    }
+                );
+            }
+        }
+    );
+
+    // ===========================
+    // Join Room
+    // ===========================
+
+    socket.on(
+        "room:join",
+        async ({ roomId, user, isHost }) => {
+            try {
+                if (!roomId || !user?._id) {
+                    return;
+                }
+
+                const room =
+                    await Room.findById(
+                        roomId
+                    );
+
+                if (!room) {
+                    socket.emit(
+                        "room:error",
+                        "Room not found."
+                    );
+
+                    return;
+                }
+
+                const userId =
+                    user._id.toString();
+
+                const hostId =
+                    room.host.toString();
+
+                const isActualHost =
+                    hostId === userId;
+
+                const isMember =
+                    room.members.some(
+                        (member) =>
+                            member.toString() ===
+                            userId
+                    );
+
+                // ===========================
+                // Public room
+                // ===========================
+
+                if (!room.isPrivate) {
+                    if (
+                        !isActualHost &&
+                        !isMember
+                    ) {
+                        if (
+                            room.members.length >=
+                            room.maxMembers
+                        ) {
+                            socket.emit(
+                                "room:error",
+                                "Room is full."
+                            );
+
+                            return;
+                        }
+
+                        room.members.push(
+                            user._id
+                        );
+
+                        await room.save();
+                    }
+                }
+
+                // ===========================
+                // Private room
+                // ===========================
+
+                if (
+                    room.isPrivate &&
+                    !isActualHost &&
+                    !isMember
+                ) {
+                    socket.emit(
+                        "room:error",
+                        "You must join this room first."
+                    );
+
+                    return;
+                }
+
+                // ===========================
+                // Join Socket.IO room
+                // ===========================
+
+                socket.join(roomId);
+
+                connectedUsers.set(
+                    userId,
+                    socket.id
+                );
+
+                if (
+                    !onlineUsers.has(
+                        roomId
+                    )
+                ) {
+                    onlineUsers.set(
+                        roomId,
+                        new Map()
+                    );
+                }
+
+                onlineUsers
+                    .get(roomId)
+                    .set(
+                        socket.id,
+                        user
+                    );
+
+                if (isActualHost) {
+                    hostSocketId.set(
+                        roomId,
+                        socket.id
+                    );
+                }
+
+                // ===========================
+                // START STUDY SESSION
+                // ===========================
+
+                startStudySession(
+                    roomId,
+                    userId
+                );
+
+                // ===========================
+                // Default PDF page
+                // ===========================
+
+                if (
+                    !currentPdfPages.has(
+                        roomId
+                    )
+                ) {
+                    currentPdfPages.set(
+                        roomId,
+                        1
+                    );
+                }
+
+                socket.emit(
+                    "pdf:current-page",
+                    {
+                        pageNumber:
+                            currentPdfPages.get(
+                                roomId
+                            ),
+                    }
+                );
+
+                // ===========================
+                // Drawing permission
+                // ===========================
+
+                const permission =
+                    drawingPermission.get(
+                        roomId
+                    ) || {
+                        mode: "everyone",
+                        allowedUsers: [],
+                    };
+
+                socket.emit(
+                    "drawing:permission-change",
+                    {
+                        mode:
+                            permission.mode,
+                        allowedUsers:
+                            permission.allowedUsers,
+                    }
+                );
+
+                // ===========================
+                // Online users
+                // ===========================
+
+                io.to(roomId).emit(
+                    "room:online-users",
+                    {
+                        users: Array.from(
+                            onlineUsers
+                                .get(roomId)
+                                .values()
+                        ),
+                    }
+                );
+
+                // ===========================
+                // User joined
+                // ===========================
+
+                io.to(roomId).emit(
+                    "room:user-joined",
+                    {
+                        user,
+                        message:
+                            `${user.name} joined the room.`,
+                    }
+                );
+
+                // ===========================
+                // Update room members
+                // ===========================
+
+                io.to(roomId).emit(
+                    "room:members-updated",
+                    {
+                        roomId,
+                        memberId:
+                            user._id,
+                    }
+                );
+            } catch (error) {
+                console.error(
+                    "Join room error:",
+                    error
+                );
+
+                socket.emit(
+                    "room:error",
+                    "Failed to join room."
+                );
+            }
+        }
+    );
 
     // ===========================
     // Remove Member
@@ -365,7 +572,7 @@ socket.emit(
                 }
 
                 removedSockets.forEach(
-                    (socketId) => {
+                    async (socketId) => {
                         const targetSocket =
                             io.sockets.sockets.get(
                                 socketId
@@ -382,6 +589,66 @@ socket.emit(
                                         "You have been removed from this room by the host.",
                                 }
                             );
+
+                            // End study session
+                            const activeSession =
+                                activeStudySessions.get(
+                                    socketId
+                                );
+
+                            if (
+                                activeSession
+                            ) {
+                                activeStudySessions.delete(
+                                    socketId
+                                );
+
+                                const endedAt =
+                                    new Date();
+
+                                const durationSeconds =
+                                    Math.max(
+                                        0,
+                                        Math.floor(
+                                            (endedAt.getTime() -
+                                                activeSession.startedAt.getTime()) /
+                                                1000
+                                        )
+                                    );
+
+                                if (
+                                    durationSeconds >
+                                    0
+                                ) {
+                                    try {
+                                        await StudySession.create(
+                                            {
+                                                user:
+                                                    activeSession.userId,
+                                                room:
+                                                    activeSession.roomId,
+                                                startedAt:
+                                                    activeSession.startedAt,
+                                                endedAt,
+                                                durationSeconds,
+                                            }
+                                        );
+
+                                        io.emit(
+                                            "profile:study-stats-updated",
+                                            {
+                                                userId:
+                                                    activeSession.userId,
+                                            }
+                                        );
+                                    } catch (error) {
+                                        console.error(
+                                            "Removed member study session error:",
+                                            error
+                                        );
+                                    }
+                                }
+                            }
 
                             targetSocket.leave(
                                 roomId
@@ -439,7 +706,10 @@ socket.emit(
 
     socket.on(
         "room:leave",
-        ({ roomId, user }) => {
+        async ({ roomId, user }) => {
+            // End study session FIRST
+            await endStudySession();
+
             socket.leave(roomId);
 
             if (
@@ -480,116 +750,127 @@ socket.emit(
                 }
             }
 
-            io.to(roomId).emit(
-                "room:user-left",
-                {
-                    user,
-                    message: `${user.name} left the room.`,
-                }
-            );
+            if (user) {
+                io.to(roomId).emit(
+                    "room:user-left",
+                    {
+                        user,
+                        message:
+                            `${user.name} left the room.`,
+                    }
+                );
+            }
         }
     );
 
     // ===========================
-// PDF - PDF Replacement Sync
-// ===========================
+    // PDF - PDF Replacement Sync
+    // ===========================
 
-socket.on(
-    "pdf:updated",
-    async ({ roomId, pdfUrl }) => {
-        try {
-            if (!roomId || !pdfUrl) {
-                return;
-            }
-
-            const room = await Room.findById(roomId);
-
-            if (!room) {
-                return;
-            }
-
-            // Only the actual host can replace the PDF
-            const hostUserId = getUserIdFromSocket(
-                roomId,
-                socket
-            );
-
-            if (
-                !hostUserId ||
-                room.host.toString() !== hostUserId
-            ) {
-                return;
-            }
-
-            // Reset synchronized page for the new PDF
-            currentPdfPages.set(roomId, 1);
-
-            // Send the new PDF to everyone in the room
-            io.to(roomId).emit(
-                "pdf:updated",
-                {
-                    pdfUrl,
+    socket.on(
+        "pdf:updated",
+        async ({ roomId, pdfUrl }) => {
+            try {
+                if (!roomId || !pdfUrl) {
+                    return;
                 }
-            );
-        } catch (error) {
-            console.error(
-                "PDF update socket error:",
-                error
-            );
-        }
-    }
-);
-// ===========================
-// PDF - PDF Delete Sync
-// ===========================
 
-socket.on(
-    "pdf:deleted",
-    async ({ roomId }) => {
-        try {
-            if (!roomId) return;
+                const room =
+                    await Room.findById(
+                        roomId
+                    );
 
-            const room =
-                await Room.findById(roomId);
+                if (!room) {
+                    return;
+                }
 
-            if (!room) return;
+                const hostUserId =
+                    getUserIdFromSocket(
+                        roomId,
+                        socket
+                    );
 
-            const hostUserId =
-                getUserIdFromSocket(
+                if (
+                    !hostUserId ||
+                    room.host.toString() !==
+                        hostUserId
+                ) {
+                    return;
+                }
+
+                currentPdfPages.set(
                     roomId,
-                    socket
+                    1
                 );
 
-            // Only actual host can broadcast PDF deletion
-            if (
-                !hostUserId ||
-                room.host.toString() !==
-                    hostUserId
-            ) {
-                return;
-            }
-
-            currentPdfPages.set(
-                roomId,
-                1
-            );
-
-            socket
-                .to(roomId)
-                .emit(
-                    "pdf:deleted",
+                io.to(roomId).emit(
+                    "pdf:updated",
                     {
-                        roomId,
+                        pdfUrl,
                     }
                 );
-        } catch (error) {
-            console.error(
-                "PDF delete socket error:",
-                error
-            );
+            } catch (error) {
+                console.error(
+                    "PDF update socket error:",
+                    error
+                );
+            }
         }
-    }
-);
+    );
+
+    // ===========================
+    // PDF - PDF Delete Sync
+    // ===========================
+
+    socket.on(
+        "pdf:deleted",
+        async ({ roomId }) => {
+            try {
+                if (!roomId) return;
+
+                const room =
+                    await Room.findById(
+                        roomId
+                    );
+
+                if (!room) return;
+
+                const hostUserId =
+                    getUserIdFromSocket(
+                        roomId,
+                        socket
+                    );
+
+                if (
+                    !hostUserId ||
+                    room.host.toString() !==
+                        hostUserId
+                ) {
+                    return;
+                }
+
+                currentPdfPages.set(
+                    roomId,
+                    1
+                );
+
+                socket
+                    .to(roomId)
+                    .emit(
+                        "pdf:deleted",
+                        {
+                            roomId,
+                        }
+                    );
+            } catch (error) {
+                console.error(
+                    "PDF delete socket error:",
+                    error
+                );
+            }
+        }
+    );
+
     // ===========================
     // PDF - Host Page Change
     // ===========================
@@ -677,59 +958,63 @@ socket.on(
     // ===========================
 
     socket.on(
-    "drawing:permission-change",
-    ({
-        roomId,
-        mode,
-        allowedUsers = [],
-    }) => {
-        if (!roomId) {
-            return;
-        }
-
-        if (
-            !["none", "everyone", "selected"].includes(
-                mode
-            )
-        ) {
-            return;
-        }
-
-        // Server-authoritative host check.
-        if (
-            hostSocketId.get(roomId) !==
-            socket.id
-        ) {
-            return;
-        }
-
-        const safeAllowedUsers =
-            mode === "selected"
-                ? allowedUsers
-                    .map((id) => id?.toString())
-                    .filter(Boolean)
-                : [];
-
-        const permission = {
-            mode,
-            allowedUsers: [
-                ...new Set(
-                    safeAllowedUsers
-                ),
-            ],
-        };
-
-        drawingPermission.set(
+        "drawing:permission-change",
+        ({
             roomId,
-            permission
-        );
+            mode,
+            allowedUsers = [],
+        }) => {
+            if (!roomId) {
+                return;
+            }
 
-        io.to(roomId).emit(
-            "drawing:permission-change",
-            permission
-        );
-    }
-);
+            if (
+                ![
+                    "none",
+                    "everyone",
+                    "selected",
+                ].includes(mode)
+            ) {
+                return;
+            }
+
+            if (
+                hostSocketId.get(
+                    roomId
+                ) !== socket.id
+            ) {
+                return;
+            }
+
+            const safeAllowedUsers =
+                mode === "selected"
+                    ? allowedUsers
+                          .map((id) =>
+                              id?.toString()
+                          )
+                          .filter(Boolean)
+                    : [];
+
+            const permission = {
+                mode,
+                allowedUsers: [
+                    ...new Set(
+                        safeAllowedUsers
+                    ),
+                ],
+            };
+
+            drawingPermission.set(
+                roomId,
+                permission
+            );
+
+            io.to(roomId).emit(
+                "drawing:permission-change",
+                permission
+            );
+        }
+    );
 
     // ===========================
     // Rejoin Request Notification
@@ -749,7 +1034,6 @@ socket.on(
                     return;
                 }
 
-                // Verify request exists
                 const room =
                     await Room.findById(
                         roomId
@@ -781,7 +1065,6 @@ socket.on(
                     return;
                 }
 
-                // Notify host/current room users
                 io.to(roomId).emit(
                     "room:rejoin-request",
                     {
@@ -828,8 +1111,6 @@ socket.on(
                     return;
                 }
 
-                // Only the actual host
-                // can approve/release this event.
                 const hostUserId =
                     getUserIdFromSocket(
                         roomId,
@@ -844,8 +1125,6 @@ socket.on(
                     return;
                 }
 
-                // Make sure user is actually
-                // a member after approval.
                 const isMember =
                     room.members.some(
                         (member) =>
@@ -896,7 +1175,10 @@ socket.on(
 
     socket.on(
         "disconnecting",
-        () => {
+        async () => {
+            // End active study session
+            await endStudySession();
+
             // Remove this socket from
             // connectedUsers only if it is
             // still the user's active socket.
