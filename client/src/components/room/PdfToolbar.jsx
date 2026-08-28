@@ -1,3 +1,5 @@
+import { useState } from "react";
+
 import {
     FaFilePdf,
     FaUpload,
@@ -10,7 +12,9 @@ import {
     FaPlay,
     FaPause,
     FaCircle,
+    FaSlidersH,
 } from "react-icons/fa";
+
 import { motion, AnimatePresence } from "framer-motion";
 
 const PdfToolbar = ({
@@ -47,6 +51,9 @@ const PdfToolbar = ({
      * Only dimensions/spacing are reduced so the toolbar
      * can fit better on tablet/mobile screens.
      */
+    const [mobileControlsOpen, setMobileControlsOpen] =
+    useState(false);
+
     const controlButton =
         "group relative flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-white/[0.07] bg-white/[0.035] text-zinc-400 transition-all duration-300 hover:-translate-y-0.5 hover:border-violet-400/20 hover:bg-violet-500/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-25 sm:h-8 sm:w-8";
 
@@ -233,26 +240,87 @@ const PdfToolbar = ({
                 </div>
             </motion.div>
 
+
+                    {/* ==========================================
+    MOBILE CONTROLS TOGGLE
+========================================== */}
+
+{pdfUrl && (
+    <motion.button
+        type="button"
+        whileTap={{ scale: 0.96 }}
+        onClick={() =>
+            setMobileControlsOpen(
+                (open) => !open
+            )
+        }
+        className="
+            relative
+            flex
+            h-9
+            shrink-0
+            items-center
+            gap-2
+            rounded-xl
+            border
+            border-white/[0.08]
+            bg-white/[0.04]
+            px-3
+            text-[9px]
+            font-bold
+            text-zinc-300
+            transition
+            hover:border-violet-400/20
+            hover:bg-violet-500/10
+            hover:text-white
+
+            lg:hidden
+        "
+        aria-expanded={mobileControlsOpen}
+        aria-label="PDF controls"
+    >
+        <FaSlidersH className="text-[9px]" />
+
+        <span>
+            {mobileControlsOpen
+                ? "Hide Controls"
+                : "Controls"}
+        </span>
+
+        <span
+            className={`transition-transform ${
+                mobileControlsOpen
+                    ? "rotate-180"
+                    : ""
+            }`}
+        >
+            ↓
+        </span>
+    </motion.button>
+)}
             {/* ==========================================
                 CONTROLS
             ========================================== */}
 
             {pdfUrl && (
                 <div
-                    className="
-                        relative
-                        flex
-                        min-w-0
-                        max-w-full
-                        flex-wrap
-                        items-center
-                        justify-start
-                        gap-1.5
-                        sm:gap-2
-                        lg:flex-1
-                        lg:justify-end
-                    "
-                >
+    className={`
+        relative
+        min-w-0
+        max-w-full
+        flex-wrap
+        items-center
+        justify-start
+        gap-1.5
+        sm:gap-2
+
+        ${mobileControlsOpen ? "flex" : "hidden"}
+
+        lg:flex
+        lg:flex-1
+        lg:justify-end
+    `}
+>
                     {/* ==========================================
                         PAGE NAVIGATION
                     ========================================== */}

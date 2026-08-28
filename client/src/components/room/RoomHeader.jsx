@@ -709,134 +709,122 @@ const RoomHeader = ({
                                 Mobile: compact version
                             ================================================= */}
 
-                            {room.isPrivate &&
-                                isHost && (
-                                    <motion.div
-                                        initial={{
-                                            opacity: 0,
-                                            scale: 0.95,
-                                        }}
-                                        animate={{
-                                            opacity: 1,
-                                            scale: 1,
-                                        }}
-                                        className="
-                                            ml-0.5
-                                            flex
-                                            shrink-0
-                                            items-center
-                                            gap-1
+                            {room.isPrivate && isHost && (
+    <motion.div
+        initial={{
+            opacity: 0,
+            scale: 0.95,
+        }}
+        animate={{
+            opacity: 1,
+            scale: 1,
+        }}
+        className="
+            ml-0
+            flex
+            min-w-0
+            shrink-0
+            items-center
+            gap-1
 
-                                            sm:ml-1
-                                            sm:gap-1.5
-                                        "
-                                    >
-                                        {/* Desktop / Tablet */}
+            sm:ml-1
+            sm:gap-1.5
+        "
+    >
+        <div
+            className="
+                flex
+                min-w-0
+                flex-col
+                items-start
+                justify-center
+                rounded-xl
+                border
+                border-white/[0.06]
+                bg-white/[0.025]
+                px-2
+                py-1
 
-                                        <div
-                                            className="
-                                                hidden
-                                                items-center
-                                                gap-1.5
-                                                rounded-xl
-                                                border
-                                                border-white/[0.06]
-                                                bg-white/[0.025]
-                                                px-2
-                                                py-1.5
+                sm:flex-row
+                sm:items-center
+                sm:gap-1.5
+                sm:px-2
+                sm:py-1.5
+            "
+        >
+            <span
+                className="
+                    text-[6px]
+                    font-bold
+                    uppercase
+                    leading-none
+                    tracking-wider
+                    text-zinc-600
 
-                                                md:flex
-                                            "
-                                        >
-                                            <span className="text-[7px] font-bold uppercase tracking-wider text-zinc-700">
-                                                Invite Code
-                                            </span>
+                    sm:text-[7px]
+                "
+            >
+                Invite Code
+            </span>
 
-                                            <span className="font-mono text-[9px] font-bold tracking-[0.18em] text-violet-300">
-                                                {
-                                                    room.inviteCode
-                                                }
-                                            </span>
-                                        </div>
+            <span
+                className="
+                    max-w-[75px]
+                    truncate
+                    font-mono
+                    text-[8px]
+                    font-bold
+                    tracking-[0.14em]
+                    text-violet-300
 
-                                        {/* Mobile / Small screen */}
+                    sm:max-w-none
+                    sm:text-[9px]
+                    sm:tracking-[0.18em]
+                "
+            >
+                {room.inviteCode}
+            </span>
+        </div>
 
-                                        <div
-                                            className="
-                                                flex
-                                                h-7
-                                                items-center
-                                                rounded-lg
-                                                border
-                                                border-white/[0.06]
-                                                bg-white/[0.025]
-                                                px-1.5
+        <motion.button
+            type="button"
+            whileHover={{ y: -1 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={copyInviteCode}
+            className={`
+                flex
+                h-8
+                shrink-0
+                items-center
+                gap-1.5
+                rounded-xl
+                border
+                px-2
+                text-[8px]
+                font-bold
+                transition-all
 
-                                                md:hidden
-                                            "
-                                            title={`Invite code: ${room.inviteCode}`}
-                                        >
-                                            <span className="font-mono text-[8px] font-bold tracking-[0.12em] text-violet-300">
-                                                {
-                                                    room.inviteCode
-                                                }
-                                            </span>
-                                        </div>
+                sm:px-2.5
 
-                                        {/* Copy */}
+                ${
+                    copied
+                        ? "border-emerald-400/15 bg-emerald-500/[0.08] text-emerald-300"
+                        : "border-violet-400/10 bg-violet-500/[0.06] text-violet-300 hover:border-violet-400/20 hover:bg-violet-500/[0.12]"
+                }
+            `}
+        >
+            {copied ? (
+                <FaCheck className="text-[8px]" />
+            ) : (
+                <FaCopy className="text-[8px]" />
+            )}
 
-                                        <motion.button
-                                            type="button"
-                                            whileHover={{
-                                                y: -1,
-                                            }}
-                                            whileTap={{
-                                                scale: 0.95,
-                                            }}
-                                            onClick={
-                                                copyInviteCode
-                                            }
-                                            className={`
-                                                flex
-                                                h-7
-                                                shrink-0
-                                                items-center
-                                                justify-center
-                                                gap-1
-                                                rounded-lg
-                                                border
-                                                px-2
-                                                text-[8px]
-                                                font-bold
-                                                transition-all
-
-                                                sm:h-8
-                                                sm:rounded-xl
-                                                sm:px-2.5
-
-                                                ${
-                                                    copied
-                                                        ? "border-emerald-400/15 bg-emerald-500/[0.08] text-emerald-300"
-                                                        : "border-violet-400/10 bg-violet-500/[0.06] text-violet-300 hover:border-violet-400/20 hover:bg-violet-500/[0.12]"
-                                                }
-                                            `}
-                                        >
-                                            {copied ? (
-                                                <FaCheck className="text-[8px]" />
-                                            ) : (
-                                                <FaCopy className="text-[8px]" />
-                                            )}
-
-                                            {/* Text only from sm upward */}
-
-                                            <span className="hidden sm:inline">
-                                                {copied
-                                                    ? "Copied"
-                                                    : "Copy"}
-                                            </span>
-                                        </motion.button>
-                                    </motion.div>
-                                )}
+            <span className="hidden sm:inline">
+                {copied ? "Copied" : "Copy"}
+            </span>
+        </motion.button>
+    </motion.div>
+)}
                         </div>
                     </div>
                 </div>

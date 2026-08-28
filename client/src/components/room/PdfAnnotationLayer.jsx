@@ -1374,8 +1374,25 @@ const PdfAnnotationLayer = ({
     // ===========================
 
     const toolbar = (
-        <div className="pointer-events-auto absolute right-4 top-3 z-[100] flex items-start gap-2">
+             <div
+        className="
+            pointer-events-auto
+            absolute
+            right-3
+            top-3
+            z-[100]
+            flex
+            flex-col-reverse
+            items-end
+            gap-2
 
+            sm:right-4
+            sm:top-3
+
+            lg:flex-row
+            lg:items-start
+        "
+    >
             <AnimatePresence>
                 {annotationToolbarOpen && (
                     <motion.div
@@ -1406,7 +1423,24 @@ const PdfAnnotationLayer = ({
                                 1,
                             ],
                         }}
-                        className="flex items-center gap-1.5 rounded-2xl border border-white/[0.09] bg-[#09090f]/90 p-1.5 shadow-[0_20px_70px_rgba(0,0,0,.45)] backdrop-blur-2xl"
+                        className="
+    flex
+    max-w-[calc(100vw-4.5rem)]
+    flex-wrap
+    items-center
+    justify-end
+    gap-1.5
+    rounded-2xl
+    border
+    border-white/[0.09]
+    bg-[#09090f]/90
+    p-1.5
+    shadow-[0_20px_70px_rgba(0,0,0,.45)]
+    backdrop-blur-2xl
+
+    lg:max-w-none
+    lg:flex-nowrap
+"
                     >
                         {/* SELECT */}
 

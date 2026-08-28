@@ -134,8 +134,19 @@ const RoomCommunication = ({
         );
 
     return (
-        <div className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden bg-slate-950">
+        <div
+    className="
+        flex
+        h-full
+        min-h-0
+        min-w-0
+        flex-col-reverse
+        overflow-hidden
+        bg-slate-950
 
+        lg:flex-col
+    "
+>
             {/* ===========================
                 Communication Tabs
             =========================== */}
