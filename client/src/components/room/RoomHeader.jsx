@@ -30,14 +30,10 @@ const RoomHeader = ({
     const navigate = useNavigate();
     const dispatch = useAppDispatch();
 
-    const [menuOpen, setMenuOpen] =
-        useState(false);
-    const [deleting, setDeleting] =
-        useState(false);
-    const [leaving, setLeaving] =
-        useState(false);
-    const [copied, setCopied] =
-        useState(false);
+    const [menuOpen, setMenuOpen] = useState(false);
+    const [deleting, setDeleting] = useState(false);
+    const [leaving, setLeaving] = useState(false);
+    const [copied, setCopied] = useState(false);
 
     if (!room) return null;
 
@@ -53,20 +49,16 @@ const RoomHeader = ({
     const currentUserId =
         currentUser?._id?.toString();
 
-    const isHost =
-        hostId === currentUserId;
+    const isHost = hostId === currentUserId;
 
-    const isMember =
-        room.members?.some((member) => {
-            const memberId =
-                typeof member === "object"
-                    ? member._id?.toString()
-                    : member?.toString();
+    const isMember = room.members?.some((member) => {
+        const memberId =
+            typeof member === "object"
+                ? member._id?.toString()
+                : member?.toString();
 
-            return (
-                memberId === currentUserId
-            );
-        });
+        return memberId === currentUserId;
+    });
 
     // ===========================
     // Copy Invite Code
@@ -80,17 +72,13 @@ const RoomHeader = ({
 
             setCopied(true);
 
-            toast.success(
-                "Invite code copied."
-            );
+            toast.success("Invite code copied.");
 
             setTimeout(() => {
                 setCopied(false);
             }, 1800);
         } catch {
-            toast.error(
-                "Failed to copy invite code."
-            );
+            toast.error("Failed to copy invite code.");
         }
     };
 
@@ -98,101 +86,53 @@ const RoomHeader = ({
     // Delete Room
     // ===========================
 
-    const handleDeleteRoom =
-        async () => {
-            setMenuOpen(false);
+    const handleDeleteRoom = async () => {
+        setMenuOpen(false);
 
-            const confirmed =
-                window.confirm(
-                    `Delete "${room.name}"? This cannot be undone — all members will lose access immediately.`
-                );
+        const confirmed = window.confirm(
+            `Delete "${room.name}"? This cannot be undone — all members will lose access immediately.`
+        );
 
-            if (!confirmed) return;
+        if (!confirmed) return;
 
-            setDeleting(true);
+        setDeleting(true);
 
-            try {
-                await dispatch(
-                    deleteRoomThunk(
-                        room._id
-                    )
-                ).unwrap();
+        try {
+            await dispatch(
+                deleteRoomThunk(room._id)
+            ).unwrap();
 
-                toast.success(
-                    "Room deleted."
-                );
+            toast.success("Room deleted.");
 
-                navigate("/rooms");
-            } catch (err) {
-                toast.error(
-                    typeof err ===
-                        "string"
-                        ? err
-                        : err?.message ||
-                              "Failed to delete room."
-                );
+            navigate("/rooms");
+        } catch (err) {
+            toast.error(
+                typeof err === "string"
+                    ? err
+                    : err?.message ||
+                          "Failed to delete room."
+            );
 
-                setDeleting(false);
-            }
-        };
+            setDeleting(false);
+        }
+    };
 
     // ===========================
     // Leave Room
     // ===========================
 
-    const handleLeaveRoom =
-        async () => {
-            setMenuOpen(false);
+    const handleLeaveRoom = async () => {
+        setMenuOpen(false);
 
-            if (!room.isPrivate) {
-                setLeaving(true);
-
-                try {
-                    await dispatch(
-                        leaveRoomThunk(
-                            room._id
-                        )
-                    ).unwrap();
-
-                    toast.success(
-                        "You left the room."
-                    );
-
-                    navigate("/rooms");
-                } catch (err) {
-                    toast.error(
-                        typeof err ===
-                            "string"
-                            ? err
-                            : err?.message ||
-                                  "Failed to leave room."
-                    );
-
-                    setLeaving(false);
-                }
-
-                return;
-            }
-
-            const confirmed =
-                window.confirm(
-                    `Leave "${room.name}"? You'll need the invite code to rejoin.`
-                );
-
-            if (!confirmed) return;
-
+        if (!room.isPrivate) {
             setLeaving(true);
 
             try {
                 await dispatch(
-                    leaveRoomThunk(
-                        room._id
-                    )
+                    leaveRoomThunk(room._id)
                 ).unwrap();
 
-                toast.success(
-                    "You left the room."
-                );
+                toast.success("You left the room.");
 
                 navigate("/rooms");
             } catch (err) {
@@ -205,41 +145,53 @@ const RoomHeader = ({
 
                 setLeaving(false);
             }
-        };
+
+            return;
+        }
+
+        const confirmed = window.confirm(
+            `Leave "${room.name}"? You'll need the invite code to rejoin.`
+        );
+
+        if (!confirmed) return;
+
+        setLeaving(true);
+
+        try {
+            await dispatch(
+                leaveRoomThunk(room._id)
+            ).unwrap();
+
+            toast.success("You left the room.");
+
+            navigate("/rooms");
+        } catch (err) {
+            toast.error(
+                typeof err === "string"
+                    ? err
+                    : err?.message ||
+                          "Failed to leave room."
+            );
+
+            setLeaving(false);
+        }
+    };
 
     return (
         <motion.header
-            initial={{
-                opacity: 0,
-                y: -10,
-            }}
-            animate={{
-                opacity: 1,
-                y: 0,
-            }}
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
             transition={{
                 duration: 0.35,
-                ease: [
-                    0.22,
-                    1,
-                    0.36,
-                    1,
-                ],
+                ease: [0.22, 1, 0.36, 1],
             }}
             className="relative z-50 flex min-h-[62px] shrink-0 items-center justify-between overflow-visible border-b border-white/[0.07] bg-[#08080d]/95 px-3 shadow-[0_15px_50px_rgba(0,0,0,.28)] backdrop-blur-2xl sm:px-4"
         >
-            {/* =====================================================
-                AMBIENT HEADER EFFECT
-            ====================================================== */}
+            {/* Ambient Header Effect */}
 
             <div className="pointer-events-none absolute inset-0 overflow-hidden">
                 <motion.div
-                    animate={{
-                        x: [
-                            "-20%",
-                            "120%",
-                        ],
-                    }}
+                    animate={{ x: ["-20%", "120%"] }}
                     transition={{
                         duration: 8,
                         repeat: Infinity,
@@ -250,16 +202,8 @@ const RoomHeader = ({
 
                 <motion.div
                     animate={{
-                        opacity: [
-                            0.02,
-                            0.05,
-                            0.02,
-                        ],
-                        scale: [
-                            1,
-                            1.1,
-                            1,
-                        ],
+                        opacity: [0.02, 0.05, 0.02],
+                        scale: [1, 1.1, 1],
                     }}
                     transition={{
                         duration: 6,
@@ -273,27 +217,19 @@ const RoomHeader = ({
                     style={{
                         backgroundImage:
                             "radial-gradient(rgba(255,255,255,.8) 1px, transparent 1px)",
-                        backgroundSize:
-                            "24px 24px",
+                        backgroundSize: "24px 24px",
                     }}
                 />
             </div>
 
-            {/* =====================================================
-                LEFT SIDE
-            ====================================================== */}
+            {/* Left Side */}
 
             <div className="relative flex min-w-0 items-center gap-2.5">
-
                 {/* Back */}
 
                 <motion.div
-                    whileHover={{
-                        x: -2,
-                    }}
-                    whileTap={{
-                        scale: 0.92,
-                    }}
+                    whileHover={{ x: -2 }}
+                    whileTap={{ scale: 0.92 }}
                 >
                     <Link
                         to="/rooms"
@@ -304,22 +240,15 @@ const RoomHeader = ({
                     </Link>
                 </motion.div>
 
-                {/* =================================================
-                    ROOM IDENTITY
-                ================================================== */}
+                {/* Room Identity */}
 
                 <div className="min-w-0">
                     <div className="flex min-w-0 items-center gap-2.5">
-
-                        {/* Animated room icon */}
+                        {/* Animated Room Icon */}
 
                         <motion.div
                             animate={{
-                                y: [
-                                    0,
-                                    -1.5,
-                                    0,
-                                ],
+                                y: [0, -1.5, 0],
                             }}
                             transition={{
                                 duration: 3,
@@ -330,11 +259,7 @@ const RoomHeader = ({
                         >
                             <motion.div
                                 animate={{
-                                    scale: [
-                                        1,
-                                        1.5,
-                                        1,
-                                    ],
+                                    scale: [1, 1.5, 1],
                                     opacity: [
                                         0.15,
                                         0.4,
@@ -352,8 +277,7 @@ const RoomHeader = ({
                         </motion.div>
 
                         <div className="min-w-0">
-
-                            {/* Room name */}
+                            {/* Room Name */}
 
                             <div className="flex min-w-0 items-center gap-2">
                                 <h1 className="max-w-[150px] truncate text-xs font-black tracking-tight text-white sm:max-w-[260px] sm:text-sm md:max-w-[360px]">
@@ -394,17 +318,14 @@ const RoomHeader = ({
                             {/* Metadata */}
 
                             <div className="mt-1 flex items-center gap-2.5">
-
                                 {/* Members */}
 
                                 <span className="flex items-center gap-1 text-[8px] font-medium text-zinc-600">
                                     <FaUsers className="text-[7px]" />
 
                                     <span>
-                                        {room.members
-                                            ?.length ||
+                                        {room.members?.length ||
                                             0}
-
                                         {room.maxMembers
                                             ? `/${room.maxMembers}`
                                             : ""}{" "}
@@ -435,92 +356,74 @@ const RoomHeader = ({
                                         </>
                                     )}
                                 </span>
-
                             </div>
                         </div>
 
-                        {/* =================================================
-                            INVITE CODE
-                        ================================================== */}
+                        {/* Invite Code */}
 
-                        {room.isPrivate &&
-                            isHost && (
-                                <motion.div
-                                    initial={{
-                                        opacity: 0,
+                        {room.isPrivate && isHost && (
+                            <motion.div
+                                initial={{
+                                    opacity: 0,
+                                    scale: 0.95,
+                                }}
+                                animate={{
+                                    opacity: 1,
+                                    scale: 1,
+                                }}
+                                className="ml-1 flex shrink-0 items-center gap-1 sm:gap-1.5"
+                            >
+                                <div className="flex items-center gap-1.5 rounded-xl border border-white/[0.06] bg-white/[0.025] px-2 py-1.5">
+                                    <span className="text-[7px] font-bold uppercase tracking-wider text-zinc-700">
+                                        Invite Code
+                                    </span>
+
+                                    <span className="font-mono text-[9px] font-bold tracking-[0.18em] text-violet-300">
+                                        {room.inviteCode}
+                                    </span>
+                                </div>
+
+                                <motion.button
+                                    type="button"
+                                    whileHover={{ y: -1 }}
+                                    whileTap={{
                                         scale: 0.95,
                                     }}
-                                    animate={{
-                                        opacity: 1,
-                                        scale: 1,
-                                    }}
-                                    className="ml-1 flex shrink-0 items-center gap-1 sm:gap-1.5"
+                                    onClick={
+                                        copyInviteCode
+                                    }
+                                    className={`flex h-8 items-center gap-1.5 rounded-xl border px-2.5 text-[8px] font-bold transition-all ${
+                                        copied
+                                            ? "border-emerald-400/15 bg-emerald-500/[0.08] text-emerald-300"
+                                            : "border-violet-400/10 bg-violet-500/[0.06] text-violet-300 hover:border-violet-400/20 hover:bg-violet-500/[0.12]"
+                                    }`}
                                 >
-                                    <div className="flex items-center gap-1.5 rounded-xl border border-white/[0.06] bg-white/[0.025] px-2 py-1.5">
-                                        <span className="text-[7px] font-bold uppercase tracking-wider text-zinc-700">
-                                           Invite Code
-                                        </span>
+                                    {copied ? (
+                                        <FaCheck className="text-[8px]" />
+                                    ) : (
+                                        <FaCopy className="text-[8px]" />
+                                    )}
 
-                                        <span className="font-mono text-[9px] font-bold tracking-[0.18em] text-violet-300">
-                                            {
-                                                room.inviteCode
-                                            }
-                                        </span>
-                                    </div>
-
-                                    <motion.button
-                                        type="button"
-                                        whileHover={{
-                                            y: -1,
-                                        }}
-                                        whileTap={{
-                                            scale: 0.95,
-                                        }}
-                                        onClick={
-                                            copyInviteCode
-                                        }
-                                        className={`flex h-8 items-center gap-1.5 rounded-xl border px-2.5 text-[8px] font-bold transition-all ${
-                                            copied
-                                                ? "border-emerald-400/15 bg-emerald-500/[0.08] text-emerald-300"
-                                                : "border-violet-400/10 bg-violet-500/[0.06] text-violet-300 hover:border-violet-400/20 hover:bg-violet-500/[0.12]"
-                                        }`}
-                                    >
-                                        {copied ? (
-                                            <FaCheck className="text-[8px]" />
-                                        ) : (
-                                            <FaCopy className="text-[8px]" />
-                                        )}
-
-                                        {copied
-                                            ? "Copied"
-                                            : "Copy"}
-                                    </motion.button>
-                                </motion.div>
-                            )}
+                                    {copied
+                                        ? "Copied"
+                                        : "Copy"}
+                                </motion.button>
+                            </motion.div>
+                        )}
                     </div>
                 </div>
             </div>
 
-            {/* =====================================================
-                RIGHT SIDE / MENU
-            ====================================================== */}
+            {/* Right Side / Menu */}
 
             <div className="relative shrink-0">
-
                 <motion.button
                     type="button"
                     onClick={() =>
-                        setMenuOpen(
-                            (open) =>
-                                !open
-                        )
+                        setMenuOpen((open) => !open)
                     }
-                    whileHover={{
-                        scale: 1.05,
-                    }}
-                    whileTap={{
-                        scale: 0.9,
-                    }}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.9 }}
                     className={`relative flex h-9 w-9 items-center justify-center rounded-xl border transition-all ${
                         menuOpen
                             ? "border-violet-400/20 bg-violet-500/[0.1] text-white"
@@ -531,160 +434,171 @@ const RoomHeader = ({
                 >
                     <motion.div
                         animate={{
-                            rotate: menuOpen
-                                ? 90
-                                : 0,
+                            rotate: menuOpen ? 90 : 0,
                         }}
-                        transition={{
-                            duration: 0.2,
-                        }}
+                        transition={{ duration: 0.2 }}
                     >
                         <FaEllipsisV size={12} />
                     </motion.div>
                 </motion.button>
 
                 {createPortal(
-    <AnimatePresence>
-        {menuOpen && (
-            <>
-                {/* Outside click */}
-                <motion.div
-                    initial={{
-                        opacity: 0,
-                    }}
-                    animate={{
-                        opacity: 1,
-                    }}
-                    exit={{
-                        opacity: 0,
-                    }}
-                    className="fixed inset-0 z-[9998]"
-                    onClick={() =>
-                        setMenuOpen(false)
-                    }
-                />
+                    <AnimatePresence>
+                        {menuOpen && (
+                            <>
+                                {/* Outside Click */}
 
-                {/* Room Options Menu */}
-                <motion.div
-                    initial={{
-                        opacity: 0,
-                        y: -8,
-                        scale: 0.96,
-                    }}
-                    animate={{
-                        opacity: 1,
-                        y: 0,
-                        scale: 1,
-                    }}
-                    exit={{
-                        opacity: 0,
-                        y: -6,
-                        scale: 0.97,
-                    }}
-                    transition={{
-                        duration: 0.18,
-                    }}
-                    className="fixed right-3 top-[58px] z-[9999] w-56 overflow-hidden rounded-2xl border border-white/[0.08] bg-[#0b0b11]/95 p-1.5 shadow-[0_25px_80px_rgba(0,0,0,.55)] backdrop-blur-2xl"
-                >
-                    {/* Menu header */}
-                    <div className="border-b border-white/[0.05] px-3 py-2.5">
-                        <p className="text-[9px] font-bold uppercase tracking-[0.15em] text-zinc-700">
-                            Room options
-                        </p>
-                    </div>
+                                <motion.div
+                                    initial={{
+                                        opacity: 0,
+                                    }}
+                                    animate={{
+                                        opacity: 1,
+                                    }}
+                                    exit={{
+                                        opacity: 0,
+                                    }}
+                                    className="fixed inset-0 z-[9998]"
+                                    onClick={() =>
+                                        setMenuOpen(
+                                            false
+                                        )
+                                    }
+                                />
 
-                    {/* Delete */}
-                    {isHost && (
-                        <motion.button
-                            type="button"
-                            onClick={handleDeleteRoom}
-                            disabled={deleting}
-                            whileHover={{
-                                x: 2,
-                            }}
-                            whileTap={{
-                                scale: 0.98,
-                            }}
-                            className="group mt-1 flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition hover:bg-red-500/[0.08] disabled:opacity-50"
-                        >
-                            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-500/[0.07] text-red-400 transition group-hover:bg-red-500/10">
-                                <FaTrash className="text-[10px]" />
-                            </span>
+                                {/* Room Options Menu */}
 
-                            <span className="min-w-0 flex-1">
-                                <span className="block text-[10px] font-bold text-zinc-300 group-hover:text-red-300">
-                                    {deleting
-                                        ? "Deleting..."
-                                        : "Delete Room"}
-                                </span>
+                                <motion.div
+                                    initial={{
+                                        opacity: 0,
+                                        y: -8,
+                                        scale: 0.96,
+                                    }}
+                                    animate={{
+                                        opacity: 1,
+                                        y: 0,
+                                        scale: 1,
+                                    }}
+                                    exit={{
+                                        opacity: 0,
+                                        y: -6,
+                                        scale: 0.97,
+                                    }}
+                                    transition={{
+                                        duration: 0.18,
+                                    }}
+                                    className="fixed right-3 top-[58px] z-[9999] w-56 overflow-hidden rounded-2xl border border-white/[0.08] bg-[#0b0b11]/95 p-1.5 shadow-[0_25px_80px_rgba(0,0,0,.55)] backdrop-blur-2xl"
+                                >
+                                    {/* Menu Header */}
 
-                                <span className="mt-0.5 block text-[7px] text-zinc-700">
-                                    Permanently remove this room
-                                </span>
-                            </span>
-                        </motion.button>
-                    )}
+                                    <div className="border-b border-white/[0.05] px-3 py-2.5">
+                                        <p className="text-[9px] font-bold uppercase tracking-[0.15em] text-zinc-700">
+                                            Room options
+                                        </p>
+                                    </div>
 
-                    {/* Leave */}
-                    {!isHost && isMember && (
-                        <motion.button
-                            type="button"
-                            onClick={handleLeaveRoom}
-                            disabled={leaving}
-                            whileHover={{
-                                x: 2,
-                            }}
-                            whileTap={{
-                                scale: 0.98,
-                            }}
-                            className="group flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition hover:bg-amber-500/[0.07] disabled:opacity-50"
-                        >
-                            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-500/[0.07] text-amber-400">
-                                <FaSignOutAlt className="text-[10px]" />
-                            </span>
+                                    {/* Delete */}
 
-                            <span className="min-w-0 flex-1">
-                                <span className="block text-[10px] font-bold text-zinc-300 group-hover:text-amber-300">
-                                    {leaving
-                                        ? "Leaving..."
-                                        : "Leave Room"}
-                                </span>
+                                    {isHost && (
+                                        <motion.button
+                                            type="button"
+                                            onClick={
+                                                handleDeleteRoom
+                                            }
+                                            disabled={
+                                                deleting
+                                            }
+                                            whileHover={{
+                                                x: 2,
+                                            }}
+                                            whileTap={{
+                                                scale: 0.98,
+                                            }}
+                                            className="group mt-1 flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition hover:bg-red-500/[0.08] disabled:opacity-50"
+                                        >
+                                            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-500/[0.07] text-red-400 transition group-hover:bg-red-500/10">
+                                                <FaTrash className="text-[10px]" />
+                                            </span>
 
-                                <span className="mt-0.5 block text-[7px] text-zinc-700">
-                                    Exit this study session
-                                </span>
-                            </span>
-                        </motion.button>
-                    )}
+                                            <span className="min-w-0 flex-1">
+                                                <span className="block text-[10px] font-bold text-zinc-300 group-hover:text-red-300">
+                                                    {deleting
+                                                        ? "Deleting..."
+                                                        : "Delete Room"}
+                                                </span>
 
-                    {/* No Actions */}
-                    {!isHost && !isMember && (
-                        <div className="px-3 py-4 text-center">
-                            <FaLock className="mx-auto mb-2 text-xs text-zinc-800" />
+                                                <span className="mt-0.5 block text-[7px] text-zinc-700">
+                                                    Permanently
+                                                    remove this
+                                                    room
+                                                </span>
+                                            </span>
+                                        </motion.button>
+                                    )}
 
-                            <p className="text-[9px] font-semibold text-zinc-600">
-                                No actions available
-                            </p>
-                        </div>
-                    )}
-                </motion.div>
-            </>
-        )}
-    </AnimatePresence>,
-    document.body
-)}
+                                    {/* Leave */}
+
+                                    {!isHost && isMember && (
+                                        <motion.button
+                                            type="button"
+                                            onClick={
+                                                handleLeaveRoom
+                                            }
+                                            disabled={
+                                                leaving
+                                            }
+                                            whileHover={{
+                                                x: 2,
+                                            }}
+                                            whileTap={{
+                                                scale: 0.98,
+                                            }}
+                                            className="group flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition hover:bg-amber-500/[0.07] disabled:opacity-50"
+                                        >
+                                            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-500/[0.07] text-amber-400">
+                                                <FaSignOutAlt className="text-[10px]" />
+                                            </span>
+
+                                            <span className="min-w-0 flex-1">
+                                                <span className="block text-[10px] font-bold text-zinc-300 group-hover:text-amber-300">
+                                                    {leaving
+                                                        ? "Leaving..."
+                                                        : "Leave Room"}
+                                                </span>
+
+                                                <span className="mt-0.5 block text-[7px] text-zinc-700">
+                                                    Exit this study
+                                                    session
+                                                </span>
+                                            </span>
+                                        </motion.button>
+                                    )}
+
+                                    {/* No Actions */}
+
+                                    {!isHost && !isMember && (
+                                        <div className="px-3 py-4 text-center">
+                                            <FaLock className="mx-auto mb-2 text-xs text-zinc-800" />
+
+                                            <p className="text-[9px] font-semibold text-zinc-600">
+                                                No actions
+                                                available
+                                            </p>
+                                        </div>
+                                    )}
+                                </motion.div>
+                            </>
+                        )}
+                    </AnimatePresence>,
+                    document.body
+                )}
             </div>
 
-            {/* =====================================================
-                BOTTOM ACCENT
-            ====================================================== */}
+            {/* Bottom Accent */}
 
             <motion.div
                 animate={{
-                    x: [
-                        "-100%",
-                        "400%",
-                    ],
+                    x: ["-100%", "400%"],
                 }}
                 transition={{
                     duration: 7,
