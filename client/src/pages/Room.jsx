@@ -9,6 +9,9 @@ import {
 import {
     FaChevronLeft,
     FaChevronRight,
+    FaUserMinus,
+    FaExclamationTriangle,
+    FaTimes,
 } from "react-icons/fa";
 
 import {
@@ -45,10 +48,19 @@ const Room = () => {
         useState([]);
 
     const [drawingPermission, setDrawingPermission] =
-    useState({
-        mode: "everyone",
-        allowedUsers: [],
-    });
+        useState({
+            mode: "everyone",
+            allowedUsers: [],
+        });
+
+    const [removeMemberModal, setRemoveMemberModal] =
+        useState({
+            open: false,
+            member: null,
+        });
+
+    const [removingMember, setRemovingMember] =
+        useState(false);
 
     const {
         currentRoom: room,
@@ -69,18 +81,19 @@ const Room = () => {
 
     const isHost =
         hostId === user?._id?.toString();
-        
-    const isMember =
-    room?.members?.some((member) => {
-        const memberId =
-            typeof member === "object"
-                ? member._id?.toString()
-                : member?.toString();
 
-        return (
-            memberId === user?._id?.toString()
-        );
-    }) || false;
+    const isMember =
+        room?.members?.some((member) => {
+            const memberId =
+                typeof member === "object"
+                    ? member._id?.toString()
+                    : member?.toString();
+
+            return (
+                memberId === user?._id?.toString()
+            );
+        }) || false;
+
     // ===========================
     // Load Room
     // ===========================
@@ -95,190 +108,189 @@ const Room = () => {
     // Room Socket
     // ===========================
 
+    useEffect(() => {
+        if (!room?._id || !user) return;
 
-useEffect(() => {
-    if (!room?._id || !user) return;
-
-    if (!socket.connected) {
-        socket.connect();
-    }
-
-    // ===========================
-    // Online Users
-    // ===========================
-
-    const handleOnlineUsers = ({ users }) => {
-        setOnlineUsers(users || []);
-    };
-
-    // ===========================
-    // Socket Error
-    // ===========================
-
-    const handleSocketError = (message) => {
-        toast.error(
-            message || "Socket connection error."
-        );
-    };
-
-    // ===========================
-    // Members Updated
-    // ===========================
-
-    const handleMembersUpdated = () => {
-        dispatch(getRoomThunk(room._id));
-    };
-
-    // ===========================
-    // User Removed
-    // ===========================
-
-    const handleRoomRemoved = ({ message }) => {
-        toast.error(
-            message ||
-                "You have been removed from this room."
-        );
-
-        navigate("/rooms");
-    };
-
-    // ===========================
-    // Rejoin Request
-    // ===========================
-
-    const handleRejoinRequest = ({
-        roomId: requestRoomId,
-        user: requestedUser,
-    }) => {
-        if (requestRoomId !== room._id) {
-            return;
+        if (!socket.connected) {
+            socket.connect();
         }
 
-        if (!isHost) {
-            return;
-        }
+        // ===========================
+        // Online Users
+        // ===========================
 
-        toast(
-            `${
-                requestedUser?.name || "A user"
-            } requested to rejoin.`,
-            {
-                icon: "🔴",
+        const handleOnlineUsers = ({ users }) => {
+            setOnlineUsers(users || []);
+        };
+
+        // ===========================
+        // Socket Error
+        // ===========================
+
+        const handleSocketError = (message) => {
+            toast.error(
+                message || "Socket connection error."
+            );
+        };
+
+        // ===========================
+        // Members Updated
+        // ===========================
+
+        const handleMembersUpdated = () => {
+            dispatch(getRoomThunk(room._id));
+        };
+
+        // ===========================
+        // User Removed
+        // ===========================
+
+        const handleRoomRemoved = ({ message }) => {
+            toast.error(
+                message ||
+                    "You have been removed from this room."
+            );
+
+            navigate("/rooms");
+        };
+
+        // ===========================
+        // Rejoin Request
+        // ===========================
+
+        const handleRejoinRequest = ({
+            roomId: requestRoomId,
+            user: requestedUser,
+        }) => {
+            if (requestRoomId !== room._id) {
+                return;
             }
-        );
 
-        dispatch(getRoomThunk(room._id));
-    };
+            if (!isHost) {
+                return;
+            }
 
-    // ===========================
-    // REGISTER LISTENERS FIRST
-    // ===========================
+            toast(
+                `${
+                    requestedUser?.name || "A user"
+                } requested to rejoin.`,
+                {
+                    icon: "🔴",
+                }
+            );
 
-    socket.on(
-        "room:online-users",
-        handleOnlineUsers
-    );
+            dispatch(getRoomThunk(room._id));
+        };
 
-    socket.on(
-        "room:error",
-        handleSocketError
-    );
+        // ===========================
+        // REGISTER LISTENERS FIRST
+        // ===========================
 
-    socket.on(
-        "room:members-updated",
-        handleMembersUpdated
-    );
-
-    socket.on(
-        "room:removed",
-        handleRoomRemoved
-    );
-
-    socket.on(
-        "room:rejoin-request",
-        handleRejoinRequest
-    );
-
-    // ===========================
-    // NOW JOIN ROOM
-    // ===========================
-socket.emit("user:register", {
-    userId: user._id,
-});
-
-// NOW JOIN ROOM
-socket.emit("room:join", {
-    roomId: room._id,
-    user,
-    isHost,
-});
-
-    // ===========================
-    // CLEANUP
-    // ===========================
-
-    return () => {
-        socket.emit("room:leave", {
-            roomId: room._id,
-            user,
-        });
-
-        socket.off(
+        socket.on(
             "room:online-users",
             handleOnlineUsers
         );
 
-        socket.off(
+        socket.on(
             "room:error",
             handleSocketError
         );
 
-        socket.off(
+        socket.on(
             "room:members-updated",
             handleMembersUpdated
         );
 
-        socket.off(
+        socket.on(
             "room:removed",
             handleRoomRemoved
         );
 
-        socket.off(
+        socket.on(
             "room:rejoin-request",
             handleRejoinRequest
         );
-    };
-}, [
-    room?._id,
-    user,
-    isHost,
-    dispatch,
-    navigate,
-]);
 
-useEffect(() => {
-    const handleDrawingPermissionChange = ({
-        mode,
-        allowedUsers = [],
-    }) => {
-        setDrawingPermission({
-            mode: mode || "everyone",
-            allowedUsers,
+        // ===========================
+        // NOW JOIN ROOM
+        // ===========================
+
+        socket.emit("user:register", {
+            userId: user._id,
         });
-    };
 
-    socket.on(
-        "drawing:permission-change",
-        handleDrawingPermissionChange
-    );
+        socket.emit("room:join", {
+            roomId: room._id,
+            user,
+            isHost,
+        });
 
-    return () => {
-        socket.off(
+        // ===========================
+        // CLEANUP
+        // ===========================
+
+        return () => {
+            socket.emit("room:leave", {
+                roomId: room._id,
+                user,
+            });
+
+            socket.off(
+                "room:online-users",
+                handleOnlineUsers
+            );
+
+            socket.off(
+                "room:error",
+                handleSocketError
+            );
+
+            socket.off(
+                "room:members-updated",
+                handleMembersUpdated
+            );
+
+            socket.off(
+                "room:removed",
+                handleRoomRemoved
+            );
+
+            socket.off(
+                "room:rejoin-request",
+                handleRejoinRequest
+            );
+        };
+    }, [
+        room?._id,
+        user,
+        isHost,
+        dispatch,
+        navigate,
+    ]);
+
+    useEffect(() => {
+        const handleDrawingPermissionChange = ({
+            mode,
+            allowedUsers = [],
+        }) => {
+            setDrawingPermission({
+                mode: mode || "everyone",
+                allowedUsers,
+            });
+        };
+
+        socket.on(
             "drawing:permission-change",
             handleDrawingPermissionChange
         );
-    };
-}, []);
+
+        return () => {
+            socket.off(
+                "drawing:permission-change",
+                handleDrawingPermissionChange
+            );
+        };
+    }, []);
 
     // ===========================
     // Remove Member
@@ -310,45 +322,87 @@ useEffect(() => {
             return;
         }
 
-        const confirmed =
-            window.confirm(
-                `Remove ${member.name} from this room?`
-            );
+        setRemoveMemberModal({
+            open: true,
+            member,
+        });
+    };
 
-        if (!confirmed) {
+    // ===========================
+    // Confirm Remove Member
+    // ===========================
+
+    const confirmRemoveMember = () => {
+        const member =
+            removeMemberModal.member;
+
+        if (!room?._id || !member?._id) {
+            setRemoveMemberModal({
+                open: false,
+                member: null,
+            });
+
             return;
         }
+
+        setRemovingMember(true);
 
         socket.emit(
             "room:remove-member",
             {
                 roomId: room._id,
-                memberId,
+                memberId: member._id,
+            }
+        );
+
+        setRemoveMemberModal({
+            open: false,
+            member: null,
+        });
+
+        setRemovingMember(false);
+    };
+
+    // ===========================
+    // Cancel Remove Member
+    // ===========================
+
+    const cancelRemoveMember = () => {
+        if (removingMember) {
+            return;
+        }
+
+        setRemoveMemberModal({
+            open: false,
+            member: null,
+        });
+    };
+
+    // ===========================
+    // Drawing Permission
+    // ===========================
+
+    const handleDrawingPermissionChange = ({
+        mode,
+        allowedUsers = [],
+    }) => {
+        if (!isHost) return;
+
+        const permission = {
+            mode,
+            allowedUsers,
+        };
+
+        setDrawingPermission(permission);
+
+        socket.emit(
+            "drawing:permission-change",
+            {
+                roomId: room._id,
+                ...permission,
             }
         );
     };
-
-const handleDrawingPermissionChange = ({
-    mode,
-    allowedUsers = [],
-}) => {
-    if (!isHost) return;
-
-    const permission = {
-        mode,
-        allowedUsers,
-    };
-
-    setDrawingPermission(permission);
-
-    socket.emit(
-        "drawing:permission-change",
-        {
-            roomId: room._id,
-            ...permission,
-        }
-    );
-};
 
     // ===========================
     // Loading
@@ -369,7 +423,6 @@ const handleDrawingPermissionChange = ({
     if (error && !room) {
         return (
             <div className="flex min-h-screen flex-col items-center justify-center bg-slate-950 text-white">
-
                 <h1 className="mb-3 text-2xl font-bold">
                     Room Unavailable
                 </h1>
@@ -384,7 +437,6 @@ const handleDrawingPermissionChange = ({
                 >
                     Back to Rooms
                 </Link>
-
             </div>
         );
     }
@@ -396,7 +448,6 @@ const handleDrawingPermissionChange = ({
     if (!room) {
         return (
             <div className="flex min-h-screen flex-col items-center justify-center bg-slate-950 text-white">
-
                 <h1 className="mb-3 text-2xl font-bold">
                     Room Not Found
                 </h1>
@@ -411,7 +462,6 @@ const handleDrawingPermissionChange = ({
                 >
                     Back to Rooms
                 </Link>
-
             </div>
         );
     }
@@ -448,20 +498,24 @@ const handleDrawingPermissionChange = ({
                     }`}
                 >
                     {sidebarOpen && (
-    <RoomCommunication
-    room={room}
-    roomId={room._id}
-    currentUser={user}
-    onlineUsers={onlineUsers}
-    isHost={isHost}
-    isMember={isMember}
-    onRemoveMember={handleRemoveMember}
-    drawingPermission={drawingPermission}
-    onDrawingPermissionChange={
-        handleDrawingPermissionChange
-    }
-/>
-)}
+                        <RoomCommunication
+                            room={room}
+                            roomId={room._id}
+                            currentUser={user}
+                            onlineUsers={onlineUsers}
+                            isHost={isHost}
+                            isMember={isMember}
+                            onRemoveMember={
+                                handleRemoveMember
+                            }
+                            drawingPermission={
+                                drawingPermission
+                            }
+                            onDrawingPermissionChange={
+                                handleDrawingPermissionChange
+                            }
+                        />
+                    )}
                 </aside>
 
                 {/* =================================
@@ -557,7 +611,6 @@ const handleDrawingPermissionChange = ({
 
                             Whiteboard
                         </button>
-
                     </div>
 
                     {/* STUDY WORKSPACE */}
@@ -581,7 +634,9 @@ const handleDrawingPermissionChange = ({
                                         currentUser={
                                             user
                                         }
-                                        drawingPermission={drawingPermission}
+                                        drawingPermission={
+                                            drawingPermission
+                                        }
                                     />
 
                                 </div>
@@ -601,13 +656,109 @@ const handleDrawingPermissionChange = ({
 
                                 </div>
                             )}
-
                     </div>
-
                 </main>
-
             </div>
 
+            {/* =================================
+                REMOVE MEMBER MODAL
+            ================================= */}
+
+            {removeMemberModal.open && (
+                <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 px-4 backdrop-blur-sm">
+                    <div className="w-full max-w-sm overflow-hidden rounded-2xl border border-white/[0.08] bg-[#0b0b11] shadow-[0_25px_100px_rgba(0,0,0,.65)]">
+
+                        {/* Modal Header */}
+
+                        <div className="flex items-center justify-between border-b border-white/[0.06] px-5 py-4">
+                            <div className="flex items-center gap-3">
+                                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-red-500/[0.08] text-red-400">
+                                    <FaUserMinus className="text-xs" />
+                                </div>
+
+                                <div>
+                                    <h2 className="text-sm font-bold text-white">
+                                        Remove Member
+                                    </h2>
+
+                                    <p className="mt-0.5 text-[9px] text-zinc-600">
+                                        Room management
+                                    </p>
+                                </div>
+                            </div>
+
+                            <button
+                                type="button"
+                                onClick={
+                                    cancelRemoveMember
+                                }
+                                disabled={
+                                    removingMember
+                                }
+                                className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-600 transition hover:bg-white/[0.05] hover:text-white disabled:opacity-50"
+                                aria-label="Close"
+                            >
+                                <FaTimes className="text-xs" />
+                            </button>
+                        </div>
+
+                        {/* Modal Content */}
+
+                        <div className="px-5 py-5">
+                            <div className="mb-4 flex items-start gap-3 rounded-xl border border-red-400/[0.08] bg-red-500/[0.04] p-3.5">
+                                <FaExclamationTriangle className="mt-0.5 shrink-0 text-xs text-red-400" />
+
+                                <p className="text-[10px] leading-relaxed text-zinc-400">
+                                    Are you sure you want to remove{" "}
+                                    <span className="font-bold text-white">
+                                        {removeMemberModal.member?.name ||
+                                            "this member"}
+                                    </span>{" "}
+                                    from this room?
+                                </p>
+                            </div>
+
+                            <p className="text-[9px] leading-relaxed text-zinc-600">
+                                This member will immediately lose access to the room and its study session.
+                            </p>
+                        </div>
+
+                        {/* Modal Actions */}
+
+                        <div className="flex items-center justify-end gap-2 border-t border-white/[0.06] bg-white/[0.015] px-5 py-3.5">
+                            <button
+                                type="button"
+                                onClick={
+                                    cancelRemoveMember
+                                }
+                                disabled={
+                                    removingMember
+                                }
+                                className="rounded-xl border border-white/[0.07] bg-white/[0.025] px-4 py-2.5 text-[9px] font-bold text-zinc-400 transition hover:bg-white/[0.05] hover:text-white disabled:opacity-50"
+                            >
+                                Cancel
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={
+                                    confirmRemoveMember
+                                }
+                                disabled={
+                                    removingMember
+                                }
+                                className="flex items-center gap-2 rounded-xl border border-red-400/15 bg-red-500/[0.08] px-4 py-2.5 text-[9px] font-bold text-red-300 transition hover:border-red-400/25 hover:bg-red-500/[0.14] disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                                <FaUserMinus className="text-[8px]" />
+
+                                {removingMember
+                                    ? "Removing..."
+                                    : "Remove Member"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
