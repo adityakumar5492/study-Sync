@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import {
     Link,
@@ -42,15 +42,14 @@ const Room = () => {
         useState("pdf");
 
     /*
-     * RESPONSIVE SIDEBAR
+     * DESKTOP SIDEBAR
      *
      * Desktop:
-     * Communication panel is displayed as a
-     * left-side sidebar and can be collapsed.
+     * Communication panel stays on the left.
      *
      * Mobile:
-     * Communication is moved below the study
-     * workspace instead of behaving like an overlay.
+     * Communication panel is rendered BELOW
+     * the study workspace.
      */
     const [sidebarOpen, setSidebarOpen] =
         useState(true);
@@ -85,6 +84,124 @@ const Room = () => {
         (state) => state.auth
     );
 
+    // ===========================
+    // USER ID HELPER
+    // ===========================
+
+    const getUserId = (item) => {
+        if (!item) return null;
+
+        if (
+            typeof item === "object"
+        ) {
+            return (
+                item._id?.toString() ||
+                item.id?.toString() ||
+                item.userId?.toString() ||
+                null
+            );
+        }
+
+        return item?.toString() || null;
+    };
+
+    // ===========================
+    // UNIQUE ONLINE USERS
+    // ===========================
+
+    /*
+     * Socket events can sometimes contain
+     * duplicate entries for the same user.
+     *
+     * A user must count only once.
+     */
+    const uniqueOnlineUsers = useMemo(() => {
+        const users = Array.isArray(
+            onlineUsers
+        )
+            ? onlineUsers
+            : [];
+
+        const seen = new Set();
+
+        return users.filter((onlineUser) => {
+            const userId =
+                getUserId(onlineUser);
+
+            /*
+             * If a socket user does not contain
+             * an identifiable ID, keep it instead
+             * of accidentally removing valid data.
+             */
+            if (!userId) {
+                return true;
+            }
+
+            if (seen.has(userId)) {
+                return false;
+            }
+
+            seen.add(userId);
+
+            return true;
+        });
+    }, [onlineUsers]);
+
+    // ===========================
+    // UNIQUE ROOM MEMBERS
+    // ===========================
+
+    /*
+     * Same user should never visually appear
+     * multiple times in the participant list.
+     */
+    const uniqueRoomMembers = useMemo(() => {
+        const members = Array.isArray(
+            room?.members
+        )
+            ? room.members
+            : [];
+
+        const seen = new Set();
+
+        return members.filter((member) => {
+            const memberId =
+                getUserId(member);
+
+            if (!memberId) {
+                return true;
+            }
+
+            if (seen.has(memberId)) {
+                return false;
+            }
+
+            seen.add(memberId);
+
+            return true;
+        });
+    }, [room?.members]);
+
+    /*
+     * Pass a deduplicated room object to the
+     * communication UI without mutating Redux state.
+     *
+     * All other room logic still uses the original
+     * room object.
+     */
+    const communicationRoom = useMemo(() => {
+        if (!room) return room;
+
+        return {
+            ...room,
+            members: uniqueRoomMembers,
+        };
+    }, [room, uniqueRoomMembers]);
+
+    // ===========================
+    // HOST
+    // ===========================
+
     const hostId =
         typeof room?.host === "object"
             ? room.host?._id?.toString()
@@ -93,20 +210,23 @@ const Room = () => {
     const isHost =
         hostId === user?._id?.toString();
 
+    // ===========================
+    // MEMBERSHIP
+    // ===========================
+
     const isMember =
-        room?.members?.some((member) => {
+        uniqueRoomMembers.some((member) => {
             const memberId =
-                typeof member === "object"
-                    ? member._id?.toString()
-                    : member?.toString();
+                getUserId(member);
 
             return (
-                memberId === user?._id?.toString()
+                memberId ===
+                user?._id?.toString()
             );
         }) || false;
 
     // ===========================
-    // Load Room
+    // LOAD ROOM
     // ===========================
 
     useEffect(() => {
@@ -116,47 +236,102 @@ const Room = () => {
     }, [dispatch, id]);
 
     // ===========================
-    // Room Socket
+    // ROOM SOCKET
     // ===========================
 
     useEffect(() => {
-        if (!room?._id || !user) return;
+        if (!room?._id || !user) {
+            return;
+        }
 
         if (!socket.connected) {
             socket.connect();
         }
 
         // ===========================
-        // Online Users
+        // ONLINE USERS
         // ===========================
 
-        const handleOnlineUsers = ({ users }) => {
-            setOnlineUsers(users || []);
-        };
+        const handleOnlineUsers = ({
+            users,
+        }) => {
+            /*
+             * Deduplicate immediately when receiving
+             * the socket event.
+             *
+             * This prevents duplicate socket entries
+             * from reaching the UI.
+             */
+            const incomingUsers =
+                Array.isArray(users)
+                    ? users
+                    : [];
 
-        // ===========================
-        // Socket Error
-        // ===========================
+            const seen = new Set();
 
-        const handleSocketError = (message) => {
-            toast.error(
-                message || "Socket connection error."
+            const uniqueUsers =
+                incomingUsers.filter(
+                    (onlineUser) => {
+                        const userId =
+                            getUserId(
+                                onlineUser
+                            );
+
+                        if (!userId) {
+                            return true;
+                        }
+
+                        if (
+                            seen.has(
+                                userId
+                            )
+                        ) {
+                            return false;
+                        }
+
+                        seen.add(userId);
+
+                        return true;
+                    }
+                );
+
+            setOnlineUsers(
+                uniqueUsers
             );
         };
 
         // ===========================
-        // Members Updated
+        // SOCKET ERROR
         // ===========================
 
-        const handleMembersUpdated = () => {
-            dispatch(getRoomThunk(room._id));
+        const handleSocketError = (
+            message
+        ) => {
+            toast.error(
+                message ||
+                    "Socket connection error."
+            );
         };
 
         // ===========================
-        // User Removed
+        // MEMBERS UPDATED
         // ===========================
 
-        const handleRoomRemoved = ({ message }) => {
+        const handleMembersUpdated = () => {
+            dispatch(
+                getRoomThunk(
+                    room._id
+                )
+            );
+        };
+
+        // ===========================
+        // USER REMOVED
+        // ===========================
+
+        const handleRoomRemoved = ({
+            message,
+        }) => {
             toast.error(
                 message ||
                     "You have been removed from this room."
@@ -166,14 +341,17 @@ const Room = () => {
         };
 
         // ===========================
-        // Rejoin Request
+        // REJOIN REQUEST
         // ===========================
 
         const handleRejoinRequest = ({
             roomId: requestRoomId,
             user: requestedUser,
         }) => {
-            if (requestRoomId !== room._id) {
+            if (
+                requestRoomId !==
+                room._id
+            ) {
                 return;
             }
 
@@ -183,14 +361,19 @@ const Room = () => {
 
             toast(
                 `${
-                    requestedUser?.name || "A user"
+                    requestedUser?.name ||
+                    "A user"
                 } requested to rejoin.`,
                 {
                     icon: "🔴",
                 }
             );
 
-            dispatch(getRoomThunk(room._id));
+            dispatch(
+                getRoomThunk(
+                    room._id
+                )
+            );
         };
 
         // ===========================
@@ -223,28 +406,41 @@ const Room = () => {
         );
 
         // ===========================
-        // NOW JOIN ROOM
+        // REGISTER USER
         // ===========================
 
-        socket.emit("user:register", {
-            userId: user._id,
-        });
+        socket.emit(
+            "user:register",
+            {
+                userId: user._id,
+            }
+        );
 
-        socket.emit("room:join", {
-            roomId: room._id,
-            user,
-            isHost,
-        });
+        // ===========================
+        // JOIN ROOM
+        // ===========================
+
+        socket.emit(
+            "room:join",
+            {
+                roomId: room._id,
+                user,
+                isHost,
+            }
+        );
 
         // ===========================
         // CLEANUP
         // ===========================
 
         return () => {
-            socket.emit("room:leave", {
-                roomId: room._id,
-                user,
-            });
+            socket.emit(
+                "room:leave",
+                {
+                    roomId: room._id,
+                    user,
+                }
+            );
 
             socket.off(
                 "room:online-users",
@@ -280,7 +476,7 @@ const Room = () => {
     ]);
 
     // ===========================
-    // Drawing Permission Listener
+    // DRAWING PERMISSION LISTENER
     // ===========================
 
     useEffect(() => {
@@ -289,7 +485,9 @@ const Room = () => {
             allowedUsers = [],
         }) => {
             setDrawingPermission({
-                mode: mode || "everyone",
+                mode:
+                    mode ||
+                    "everyone",
                 allowedUsers,
             });
         };
@@ -308,13 +506,16 @@ const Room = () => {
     }, []);
 
     // ===========================
-    // Remove Member
+    // REMOVE MEMBER
     // ===========================
 
     const handleRemoveMember = (
         memberId
     ) => {
-        if (!room?._id || !memberId) {
+        if (
+            !room?._id ||
+            !memberId
+        ) {
             return;
         }
 
@@ -327,9 +528,11 @@ const Room = () => {
         }
 
         const member =
-            room.members?.find(
+            uniqueRoomMembers.find(
                 (participant) =>
-                    participant._id?.toString() ===
+                    getUserId(
+                        participant
+                    ) ===
                     memberId?.toString()
             );
 
@@ -344,14 +547,17 @@ const Room = () => {
     };
 
     // ===========================
-    // Confirm Remove Member
+    // CONFIRM REMOVE MEMBER
     // ===========================
 
     const confirmRemoveMember = () => {
         const member =
             removeMemberModal.member;
 
-        if (!room?._id || !member?._id) {
+        if (
+            !room?._id ||
+            !member?._id
+        ) {
             setRemoveMemberModal({
                 open: false,
                 member: null,
@@ -366,7 +572,8 @@ const Room = () => {
             "room:remove-member",
             {
                 roomId: room._id,
-                memberId: member._id,
+                memberId:
+                    member._id,
             }
         );
 
@@ -379,7 +586,7 @@ const Room = () => {
     };
 
     // ===========================
-    // Cancel Remove Member
+    // CANCEL REMOVE MEMBER
     // ===========================
 
     const cancelRemoveMember = () => {
@@ -394,33 +601,38 @@ const Room = () => {
     };
 
     // ===========================
-    // Drawing Permission
+    // DRAWING PERMISSION
     // ===========================
 
     const handleDrawingPermissionChange = ({
         mode,
         allowedUsers = [],
     }) => {
-        if (!isHost) return;
+        if (!isHost) {
+            return;
+        }
 
         const permission = {
             mode,
             allowedUsers,
         };
 
-        setDrawingPermission(permission);
+        setDrawingPermission(
+            permission
+        );
 
         socket.emit(
             "drawing:permission-change",
             {
-                roomId: room._id,
+                roomId:
+                    room._id,
                 ...permission,
             }
         );
     };
 
     // ===========================
-    // Loading
+    // LOADING
     // ===========================
 
     if (loading && !room) {
@@ -432,7 +644,7 @@ const Room = () => {
     }
 
     // ===========================
-    // Error
+    // ERROR
     // ===========================
 
     if (error && !room) {
@@ -457,7 +669,7 @@ const Room = () => {
     }
 
     // ===========================
-    // Room Not Found
+    // ROOM NOT FOUND
     // ===========================
 
     if (!room) {
@@ -508,6 +720,7 @@ const Room = () => {
                     flex-col
                     overflow-y-auto
                     overflow-x-hidden
+                    overscroll-contain
                     bg-slate-950
 
                     lg:flex-row
@@ -548,14 +761,24 @@ const Room = () => {
                     {sidebarOpen && (
                         <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
                             <RoomCommunication
-                                room={room}
-                                roomId={room._id}
-                                currentUser={user}
-                                onlineUsers={
-                                    onlineUsers
+                                room={
+                                    communicationRoom
                                 }
-                                isHost={isHost}
-                                isMember={isMember}
+                                roomId={
+                                    room._id
+                                }
+                                currentUser={
+                                    user
+                                }
+                                onlineUsers={
+                                    uniqueOnlineUsers
+                                }
+                                isHost={
+                                    isHost
+                                }
+                                isMember={
+                                    isMember
+                                }
                                 onRemoveMember={
                                     handleRemoveMember
                                 }
@@ -578,7 +801,8 @@ const Room = () => {
                     type="button"
                     onClick={() =>
                         setSidebarOpen(
-                            (open) => !open
+                            (open) =>
+                                !open
                         )
                     }
                     className={`
@@ -646,6 +870,7 @@ const Room = () => {
                         flex-col
 
                         lg:flex-1
+                        lg:overflow-hidden
                     "
                 >
 
@@ -656,15 +881,17 @@ const Room = () => {
                     <main
                         className="
                             flex
-                            h-[68dvh]
-                            min-h-[420px]
+                            min-h-[55dvh]
+                            h-[60dvh]
+                            w-full
                             min-w-0
                             shrink-0
                             flex-col
                             overflow-hidden
                             bg-slate-950
 
-                            sm:h-[70dvh]
+                            sm:min-h-[60dvh]
+                            sm:h-[65dvh]
 
                             lg:h-auto
                             lg:min-h-0
@@ -679,8 +906,8 @@ const Room = () => {
                         <div
                             className="
                                 flex
-                                h-10
-                                min-h-10
+                                h-9
+                                min-h-9
                                 shrink-0
                                 border-b
                                 border-slate-800/80
@@ -734,7 +961,7 @@ const Room = () => {
                                     }
                                 `}
                             >
-                                <span className="shrink-0 text-[11px] sm:text-xs">
+                                <span className="shrink-0 text-[10px] sm:text-xs">
                                     📄
                                 </span>
 
@@ -743,7 +970,7 @@ const Room = () => {
                                 </span>
                             </button>
 
-                            {/* Whiteboard */}
+                            {/* WHITEBOARD */}
 
                             <button
                                 type="button"
@@ -780,7 +1007,7 @@ const Room = () => {
                                     }
                                 `}
                             >
-                                <span className="shrink-0 text-[11px] sm:text-xs">
+                                <span className="shrink-0 text-[10px] sm:text-xs">
                                     ✏️
                                 </span>
 
@@ -854,29 +1081,29 @@ const Room = () => {
 
                             {activeTab ===
                                 "whiteboard" && (
-                                    <div
-                                        className="
-                                            h-full
-                                            min-h-0
-                                            min-w-0
-                                            overflow-hidden
-                                            rounded-lg
-                                            border
-                                            border-slate-800/80
-                                            bg-white
-                                            shadow-xl
-                                            shadow-black/10
+                                <div
+                                    className="
+                                        h-full
+                                        min-h-0
+                                        min-w-0
+                                        overflow-hidden
+                                        rounded-lg
+                                        border
+                                        border-slate-800/80
+                                        bg-white
+                                        shadow-xl
+                                        shadow-black/10
 
-                                            sm:rounded-xl
-                                        "
-                                    >
-                                        <Whiteboard
-                                            roomId={
-                                                room._id
-                                            }
-                                        />
-                                    </div>
-                                )}
+                                        sm:rounded-xl
+                                    "
+                                >
+                                    <Whiteboard
+                                        roomId={
+                                            room._id
+                                        }
+                                    />
+                                </div>
+                            )}
                         </div>
                     </main>
 
@@ -887,7 +1114,7 @@ const Room = () => {
                     <section
                         className="
                             flex
-                            min-h-[420px]
+                            min-h-[360px]
                             w-full
                             shrink-0
                             flex-col
@@ -896,18 +1123,30 @@ const Room = () => {
                             border-slate-800/80
                             bg-slate-900
 
+                            sm:min-h-[380px]
+
                             lg:hidden
                         "
                     >
                         <RoomCommunication
-                            room={room}
-                            roomId={room._id}
-                            currentUser={user}
-                            onlineUsers={
-                                onlineUsers
+                            room={
+                                communicationRoom
                             }
-                            isHost={isHost}
-                            isMember={isMember}
+                            roomId={
+                                room._id
+                            }
+                            currentUser={
+                                user
+                            }
+                            onlineUsers={
+                                uniqueOnlineUsers
+                            }
+                            isHost={
+                                isHost
+                            }
+                            isMember={
+                                isMember
+                            }
                             onRemoveMember={
                                 handleRemoveMember
                             }
@@ -930,7 +1169,7 @@ const Room = () => {
                 <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 px-3 py-4 backdrop-blur-sm sm:px-4">
                     <div className="w-full max-w-sm overflow-hidden rounded-2xl border border-white/[0.08] bg-[#0b0b11] shadow-[0_25px_100px_rgba(0,0,0,.65)]">
 
-                        {/* Modal Header */}
+                        {/* MODAL HEADER */}
 
                         <div className="flex items-center justify-between border-b border-white/[0.06] px-4 py-3.5 sm:px-5 sm:py-4">
                             <div className="flex min-w-0 items-center gap-3">
@@ -964,7 +1203,7 @@ const Room = () => {
                             </button>
                         </div>
 
-                        {/* Modal Content */}
+                        {/* MODAL CONTENT */}
 
                         <div className="px-4 py-4 sm:px-5 sm:py-5">
                             <div className="mb-4 flex items-start gap-3 rounded-xl border border-red-400/[0.08] bg-red-500/[0.04] p-3">
@@ -987,7 +1226,7 @@ const Room = () => {
                             </p>
                         </div>
 
-                        {/* Modal Actions */}
+                        {/* MODAL ACTIONS */}
 
                         <div className="flex flex-col-reverse gap-2 border-t border-white/[0.06] bg-white/[0.015] px-4 py-3.5 sm:flex-row sm:items-center sm:justify-end sm:px-5">
                             <button

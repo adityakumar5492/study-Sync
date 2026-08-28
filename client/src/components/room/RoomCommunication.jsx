@@ -28,14 +28,92 @@ const RoomCommunication = ({
         useState("participants");
 
     // ===========================
+    // Normalize User ID
+    // ===========================
+
+    const getUserId = (user) => {
+        if (!user) {
+            return null;
+        }
+
+        if (typeof user === "string") {
+            return user;
+        }
+
+        if (typeof user === "object") {
+            return (
+                user._id?.toString() ||
+                user.id?.toString() ||
+                user.userId?.toString() ||
+                null
+            );
+        }
+
+        return user?.toString() || null;
+    };
+
+    // ===========================
+    // Unique Room Members
+    // ===========================
+
+    const uniqueMembers = Array.from(
+        new Map(
+            (room?.members || [])
+                .map((member) => {
+                    const userId =
+                        getUserId(member);
+
+                    if (!userId) {
+                        return null;
+                    }
+
+                    return [
+                        userId,
+                        member,
+                    ];
+                })
+                .filter(Boolean)
+        ).values()
+    );
+
+    // ===========================
+    // Unique Online Users
+    //
+    // A user may reconnect/rejoin
+    // multiple times. Presence must
+    // represent unique users, not
+    // socket connections.
+    // ===========================
+
+    const uniqueOnlineUsers = Array.from(
+        new Map(
+            (onlineUsers || [])
+                .map((onlineUser) => {
+                    const userId =
+                        getUserId(onlineUser);
+
+                    if (!userId) {
+                        return null;
+                    }
+
+                    return [
+                        userId,
+                        onlineUser,
+                    ];
+                })
+                .filter(Boolean)
+        ).values()
+    );
+
+    // ===========================
     // Participant Counts
     // ===========================
 
     const participantsCount =
-        room?.members?.length || 0;
+        uniqueMembers.length;
 
     const onlineCount =
-        onlineUsers?.length || 0;
+        uniqueOnlineUsers.length;
 
     // ===========================
     // Check Current User
@@ -102,6 +180,7 @@ const RoomCommunication = ({
                         text-[10px]
                         font-semibold
                         transition-colors
+
                         sm:gap-1.5
                         sm:px-1.5
                         sm:py-3
@@ -167,6 +246,7 @@ const RoomCommunication = ({
                         text-[10px]
                         font-semibold
                         transition-colors
+
                         sm:px-1.5
                         sm:py-3
                         sm:text-[11px]
@@ -210,6 +290,7 @@ const RoomCommunication = ({
                         text-[10px]
                         font-semibold
                         transition-colors
+
                         sm:px-1.5
                         sm:py-3
                         sm:text-[11px]
@@ -253,6 +334,7 @@ const RoomCommunication = ({
                         text-[10px]
                         font-semibold
                         transition-colors
+
                         sm:px-1.5
                         sm:py-3
                         sm:text-[11px]
@@ -282,9 +364,11 @@ const RoomCommunication = ({
 
             <div
                 className="
+                    flex
                     min-h-0
                     min-w-0
                     flex-1
+                    flex-col
                     overflow-hidden
                     bg-slate-900/70
                 "
@@ -296,7 +380,7 @@ const RoomCommunication = ({
 
                 {activePanel ===
                     "participants" && (
-                    <div className="flex h-full min-h-0 flex-col">
+                    <div className="flex h-full min-h-0 min-w-0 flex-col">
 
                         {/* Participant Summary */}
 
@@ -310,6 +394,7 @@ const RoomCommunication = ({
                                 border-slate-800/70
                                 px-3
                                 py-2.5
+
                                 sm:px-4
                                 sm:py-3
                             "
@@ -389,15 +474,24 @@ const RoomCommunication = ({
 
                         {/* Actual Participants Component */}
 
-                        <div className="min-h-0 flex-1 overflow-hidden">
+                        <div
+                            className="
+                                min-h-0
+                                min-w-0
+                                flex-1
+                                overflow-y-auto
+                                overflow-x-hidden
+                                overscroll-contain
+                            "
+                        >
                             <Participants
                                 room={room}
                                 roomId={roomId}
                                 participants={
-                                    room.members || []
+                                    uniqueMembers
                                 }
                                 onlineUsers={
-                                    onlineUsers
+                                    uniqueOnlineUsers
                                 }
                                 onRemoveMember={
                                     onRemoveMember
@@ -412,7 +506,7 @@ const RoomCommunication = ({
                 ================================= */}
 
                 {activePanel === "chat" && (
-                    <div className="h-full min-h-0 min-w-0 overflow-hidden">
+                    <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
                         <ChatPanel
                             roomId={roomId}
                             isHost={isHost}
@@ -426,7 +520,7 @@ const RoomCommunication = ({
                 ================================= */}
 
                 {activePanel === "voice" && (
-                    <div className="h-full min-h-0 min-w-0 overflow-hidden">
+                    <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
                         <VoicePanel
                             roomId={roomId}
                             currentUser={
@@ -445,9 +539,11 @@ const RoomCommunication = ({
                         className="
                             h-full
                             min-h-0
+                            min-w-0
                             overflow-y-auto
                             overflow-x-hidden
                             p-2.5
+
                             sm:p-3
                             lg:p-4
                         "
@@ -464,6 +560,7 @@ const RoomCommunication = ({
                                 bg-slate-950/50
                                 p-3
                                 shadow-sm
+
                                 sm:mb-4
                                 sm:p-4
                             "
@@ -491,6 +588,7 @@ const RoomCommunication = ({
                                     border-slate-800/80
                                     bg-slate-950/40
                                     p-1.5
+
                                     sm:space-y-2
                                     sm:p-2
                                 "
@@ -526,6 +624,7 @@ const RoomCommunication = ({
                                         hover:border-slate-700/70
                                         hover:bg-slate-800/80
                                         hover:text-white
+
                                         sm:gap-3
                                         sm:px-3
                                         sm:py-2.5
@@ -591,6 +690,7 @@ const RoomCommunication = ({
                                         hover:border-slate-700/70
                                         hover:bg-slate-800/80
                                         hover:text-white
+
                                         sm:gap-3
                                         sm:px-3
                                         sm:py-2.5
@@ -657,6 +757,7 @@ const RoomCommunication = ({
                                         hover:border-slate-700/70
                                         hover:bg-slate-800/80
                                         hover:text-white
+
                                         sm:gap-3
                                         sm:px-3
                                         sm:py-2.5
@@ -724,15 +825,14 @@ const RoomCommunication = ({
                                                 pr-1
                                             "
                                         >
-                                            {(
-                                                room?.members ||
-                                                []
-                                            ).map(
+                                            {uniqueMembers.map(
                                                 (
                                                     member
                                                 ) => {
                                                     const userId =
-                                                        member?._id?.toString();
+                                                        getUserId(
+                                                            member
+                                                        );
 
                                                     if (
                                                         !userId
@@ -746,9 +846,9 @@ const RoomCommunication = ({
                                                         );
 
                                                     const name =
-                                                        member.name ||
-                                                        member.username ||
-                                                        member.email ||
+                                                        member?.name ||
+                                                        member?.username ||
+                                                        member?.email ||
                                                         "User";
 
                                                     return (
@@ -802,6 +902,7 @@ const RoomCommunication = ({
                                                                 hover:border-slate-700/70
                                                                 hover:bg-slate-800/80
                                                                 hover:text-white
+
                                                                 sm:gap-3
                                                                 sm:px-3
                                                                 sm:py-2.5
@@ -863,6 +964,7 @@ const RoomCommunication = ({
                                     p-3
                                     shadow-lg
                                     shadow-black/10
+
                                     sm:rounded-2xl
                                     sm:p-4
                                     lg:p-5
@@ -877,9 +979,11 @@ const RoomCommunication = ({
                                         items-center
                                         justify-center
                                         rounded-xl
+
                                         sm:mb-4
                                         sm:h-11
                                         sm:w-11
+
                                         ${
                                             canDraw
                                                 ? "bg-green-500/10 text-green-400"
