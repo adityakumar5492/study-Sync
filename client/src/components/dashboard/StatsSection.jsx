@@ -3,15 +3,18 @@ import {
     FaClock,
     FaFire,
     FaCalendarAlt,
+    FaTimes,
 } from "react-icons/fa";
 import { motion, useReducedMotion } from "framer-motion";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { useAppSelector } from "../../redux/hooks";
 import socket from "../../socket/socket";
+import StudyStreakCalendar from "./StudyStreakCalendar";
 
 const StatsSection = () => {
     const shouldReduceMotion = useReducedMotion();
+    const calendarRef = useRef(null);
 
     const { rooms } = useAppSelector((state) => state.room);
 
@@ -19,6 +22,8 @@ const StatsSection = () => {
         totalSeconds: 0,
         sessions: [],
     });
+
+    const [showCalendar, setShowCalendar] = useState(false);
 
     useEffect(() => {
         const handleStats = (data) => {
@@ -37,10 +42,7 @@ const StatsSection = () => {
         };
 
         socket.on("study:stats", handleStats);
-        socket.on(
-            "profile:study-stats-updated",
-            handleStatsUpdated
-        );
+        socket.on("profile:study-stats-updated", handleStatsUpdated);
 
         if (socket.connected) {
             requestStats();
@@ -50,12 +52,31 @@ const StatsSection = () => {
 
         return () => {
             socket.off("study:stats", handleStats);
-            socket.off(
-                "profile:study-stats-updated",
-                handleStatsUpdated
-            );
+            socket.off("profile:study-stats-updated", handleStatsUpdated);
         };
     }, []);
+
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (
+                calendarRef.current &&
+                !calendarRef.current.contains(event.target)
+            ) {
+                setShowCalendar(false);
+            }
+        };
+
+        if (showCalendar) {
+            document.addEventListener("mousedown", handleClickOutside);
+        }
+
+        return () => {
+            document.removeEventListener(
+                "mousedown",
+                handleClickOutside
+            );
+        };
+    }, [showCalendar]);
 
     const totalHours = Math.floor(
         studyStats.totalSeconds / 3600
@@ -91,6 +112,7 @@ const StatsSection = () => {
             if (!studyDays.has(key)) break;
 
             streak++;
+
             currentDate.setDate(
                 currentDate.getDate() - 1
             );
@@ -101,13 +123,15 @@ const StatsSection = () => {
 
     const currentStreak = calculateCurrentStreak();
 
-    const activityDays = new Set(
-        (studyStats.sessions || []).map((session) => {
-            const date = new Date(session.startedAt);
+    const activityDays = useMemo(() => {
+        return new Set(
+            (studyStats.sessions || []).map((session) => {
+                const date = new Date(session.startedAt);
 
-            return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
-        })
-    ).size;
+                return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+            })
+        ).size;
+    }, [studyStats.sessions]);
 
     const stats = [
         {
@@ -197,6 +221,8 @@ const StatsSection = () => {
 
     return (
         <section className="relative">
+            {/* SECTION HEADER */}
+
             <motion.div
                 initial={
                     shouldReduceMotion
@@ -236,6 +262,8 @@ const StatsSection = () => {
                 </div>
             </motion.div>
 
+            {/* STAT GRID */}
+
             <motion.div
                 variants={containerVariants}
                 initial="hidden"
@@ -246,80 +274,219 @@ const StatsSection = () => {
                     const Icon = stat.icon;
                     const colors = accentStyles[stat.accent];
 
+                    const isActivity =
+                        stat.id === "activity";
+
                     return (
-                        <motion.div
+                        <div
                             key={stat.id}
-                            variants={itemVariants}
-                            whileHover={
-                                shouldReduceMotion
-                                    ? undefined
-                                    : { y: -4 }
-                            }
-                            className={`group relative min-w-0 overflow-hidden rounded-[20px] border border-slate-800/80 bg-[#0a0f17] p-4 shadow-[0_12px_40px_rgba(0,0,0,0.14)] transition-[border-color,background-color,box-shadow] duration-500 hover:bg-[#0c121c] hover:shadow-[0_18px_48px_rgba(0,0,0,0.22)] sm:p-5 ${colors.border}`}
+                            ref={isActivity ? calendarRef : null}
+                            className="relative min-w-0"
                         >
-                            <div className={`pointer-events-none absolute -right-14 -top-14 h-32 w-32 rounded-full opacity-[0.035] blur-[45px] transition-all duration-700 group-hover:scale-125 group-hover:opacity-[0.12] ${colors.glow}`} />
+                            <motion.div
+                                variants={itemVariants}
+                                whileHover={
+                                    shouldReduceMotion
+                                        ? undefined
+                                        : { y: -4 }
+                                }
+                                onClick={
+                                    isActivity
+                                        ? () =>
+                                              setShowCalendar(
+                                                  (prev) => !prev
+                                              )
+                                        : undefined
+                                }
+                                role={
+                                    isActivity
+                                        ? "button"
+                                        : undefined
+                                }
+                                tabIndex={
+                                    isActivity ? 0 : undefined
+                                }
+                                onKeyDown={
+                                    isActivity
+                                        ? (event) => {
+                                              if (
+                                                  event.key ===
+                                                      "Enter" ||
+                                                  event.key ===
+                                                      " "
+                                              ) {
+                                                  event.preventDefault();
+                                                  setShowCalendar(
+                                                      (prev) =>
+                                                          !prev
+                                                  );
+                                              }
+                                          }
+                                        : undefined
+                                }
+                                className={`group relative min-w-0 overflow-hidden rounded-[20px] border border-slate-800/80 bg-[#0a0f17] p-4 shadow-[0_12px_40px_rgba(0,0,0,0.14)] transition-[border-color,background-color,box-shadow] duration-500 hover:bg-[#0c121c] hover:shadow-[0_18px_48px_rgba(0,0,0,0.22)] sm:p-5 ${colors.border} ${
+                                    isActivity
+                                        ? "cursor-pointer"
+                                        : ""
+                                }`}
+                            >
+                                {/* Ambient glow */}
 
-                            <div className={`pointer-events-none absolute left-6 right-6 top-0 h-px opacity-0 transition-opacity duration-500 group-hover:opacity-70 ${colors.dot}`} />
+                                <div
+                                    className={`pointer-events-none absolute -right-14 -top-14 h-32 w-32 rounded-full opacity-[0.035] blur-[45px] transition-all duration-700 group-hover:scale-125 group-hover:opacity-[0.12] ${colors.glow}`}
+                                />
 
-                            <div className="relative flex items-center justify-between">
+                                {/* Top accent */}
+
+                                <div
+                                    className={`pointer-events-none absolute left-6 right-6 top-0 h-px opacity-0 transition-opacity duration-500 group-hover:opacity-70 ${colors.dot}`}
+                                />
+
+                                {/* Header */}
+
+                                <div className="relative flex items-center justify-between">
+                                    <motion.div
+                                        whileHover={
+                                            shouldReduceMotion
+                                                ? undefined
+                                                : {
+                                                      scale: 1.06,
+                                                      rotate: -3,
+                                                  }
+                                        }
+                                        transition={{
+                                            type: "spring",
+                                            stiffness: 400,
+                                            damping: 20,
+                                        }}
+                                        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-[13px] border border-white/[0.035] shadow-[0_8px_22px_rgba(0,0,0,0.16)] sm:h-11 sm:w-11 ${colors.bg} ${colors.icon}`}
+                                    >
+                                        <Icon className="text-[15px] sm:text-base" />
+                                    </motion.div>
+
+                                    <span className="flex h-5 min-w-5 items-center justify-center rounded-full border border-slate-800/80 bg-slate-900/70 px-1.5 text-[8px] font-semibold tracking-wider text-slate-600 transition-colors duration-300 group-hover:text-slate-400">
+                                        0{index + 1}
+                                    </span>
+                                </div>
+
+                                {/* Value */}
+
+                                <div className="relative mt-5">
+                                    <motion.div
+                                        key={String(
+                                            stat.value
+                                        )}
+                                        initial={
+                                            shouldReduceMotion
+                                                ? false
+                                                : {
+                                                      opacity: 0,
+                                                      y: 5,
+                                                  }
+                                        }
+                                        animate={
+                                            shouldReduceMotion
+                                                ? undefined
+                                                : {
+                                                      opacity: 1,
+                                                      y: 0,
+                                                  }
+                                        }
+                                        transition={{
+                                            duration: 0.3,
+                                        }}
+                                        className="truncate text-[25px] font-bold leading-none tracking-[-0.045em] text-white sm:text-[29px]"
+                                    >
+                                        {stat.value}
+                                    </motion.div>
+
+                                    <p className="mt-2 truncate text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500 sm:text-[11px]">
+                                        {stat.title}
+                                    </p>
+                                </div>
+
+                                {/* Bottom status */}
+
+                                <div className="relative mt-4 flex items-center gap-2">
+                                    <span
+                                        className={`h-1.5 w-1.5 shrink-0 rounded-full opacity-70 transition-all duration-300 group-hover:opacity-100 group-hover:shadow-[0_0_8px_currentColor] ${colors.dot}`}
+                                    />
+
+                                    <span className="truncate text-[9px] font-medium text-slate-600 transition-colors duration-300 group-hover:text-slate-500">
+                                        {isActivity
+                                            ? "Click to view activity"
+                                            : "Study activity"}
+                                    </span>
+                                </div>
+
+                                {/* Inner border */}
+
+                                <div className="pointer-events-none absolute inset-0 rounded-[20px] ring-1 ring-inset ring-white/[0.025] transition-all duration-500 group-hover:ring-white/[0.06]" />
+                            </motion.div>
+
+                            {/* SMALL CALENDAR POPUP */}
+
+                            {isActivity && (
                                 <motion.div
-                                    whileHover={
-                                        shouldReduceMotion
-                                            ? undefined
+                                    initial={false}
+                                    animate={
+                                        showCalendar
+                                            ? {
+                                                  opacity: 1,
+                                                  y: 0,
+                                                  scale: 1,
+                                              }
                                             : {
-                                                  scale: 1.06,
-                                                  rotate: -3,
+                                                  opacity: 0,
+                                                  y: -8,
+                                                  scale: 0.97,
                                               }
                                     }
                                     transition={{
-                                        type: "spring",
-                                        stiffness: 400,
-                                        damping: 20,
+                                        duration: shouldReduceMotion
+                                            ? 0
+                                            : 0.2,
                                     }}
-                                    className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-[13px] border border-white/[0.035] shadow-[0_8px_22px_rgba(0,0,0,0.16)] sm:h-11 sm:w-11 ${colors.bg} ${colors.icon}`}
+                                    className={`absolute left-0 right-0 top-full z-50 mt-3 origin-top ${
+                                        showCalendar
+                                            ? "pointer-events-auto"
+                                            : "pointer-events-none"
+                                    }`}
                                 >
-                                    <Icon className="text-[15px] sm:text-base" />
+                                    <div className="relative rounded-[18px] border border-slate-800/90 bg-[#080d15] p-3 shadow-[0_20px_60px_rgba(0,0,0,0.45)] sm:p-4">
+                                        <div className="mb-3 flex items-center justify-between">
+                                            <div>
+                                                <p className="text-xs font-semibold text-white">
+                                                    Study Activity
+                                                </p>
+                                                <p className="mt-0.5 text-[9px] text-slate-500">
+                                                    Last 12 weeks
+                                                </p>
+                                            </div>
+
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    setShowCalendar(
+                                                        false
+                                                    )
+                                                }
+                                                className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-800/70 hover:text-white"
+                                                aria-label="Close calendar"
+                                            >
+                                                <FaTimes className="text-[10px]" />
+                                            </button>
+                                        </div>
+
+                                        <StudyStreakCalendar
+                                            sessions={
+                                                studyStats.sessions
+                                            }
+                                        />
+                                    </div>
                                 </motion.div>
-
-                                <span className="flex h-5 min-w-5 items-center justify-center rounded-full border border-slate-800/80 bg-slate-900/70 px-1.5 text-[8px] font-semibold tracking-wider text-slate-600 transition-colors duration-300 group-hover:text-slate-400">
-                                    0{index + 1}
-                                </span>
-                            </div>
-
-                            <div className="relative mt-5">
-                                <motion.div
-                                    key={String(stat.value)}
-                                    initial={
-                                        shouldReduceMotion
-                                            ? false
-                                            : { opacity: 0, y: 5 }
-                                    }
-                                    animate={
-                                        shouldReduceMotion
-                                            ? undefined
-                                            : { opacity: 1, y: 0 }
-                                    }
-                                    transition={{ duration: 0.3 }}
-                                    className="truncate text-[25px] font-bold leading-none tracking-[-0.045em] text-white sm:text-[29px]"
-                                >
-                                    {stat.value}
-                                </motion.div>
-
-                                <p className="mt-2 truncate text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500 sm:text-[11px]">
-                                    {stat.title}
-                                </p>
-                            </div>
-
-                            <div className="relative mt-4 flex items-center gap-2">
-                                <span className={`h-1.5 w-1.5 shrink-0 rounded-full opacity-70 transition-all duration-300 group-hover:opacity-100 group-hover:shadow-[0_0_8px_currentColor] ${colors.dot}`} />
-
-                                <span className="truncate text-[9px] font-medium text-slate-600 transition-colors duration-300 group-hover:text-slate-500">
-                                    Study activity
-                                </span>
-                            </div>
-
-                            <div className="pointer-events-none absolute inset-0 rounded-[20px] ring-1 ring-inset ring-white/[0.025] transition-all duration-500 group-hover:ring-white/[0.06]" />
-                        </motion.div>
+                            )}
+                        </div>
                     );
                 })}
             </motion.div>

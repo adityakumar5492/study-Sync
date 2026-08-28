@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
-import { FaCalendarAlt } from "react-icons/fa";
+import { FaCalendarAlt, FaChevronLeft, FaChevronRight } from "react-icons/fa";
 import { motion, useReducedMotion } from "framer-motion";
 
 import socket from "../../socket/socket";
 
-const StudyStreakCalendar = () => {
+const StudyStreakCalendar = ({ isOpen, onClose }) => {
     const shouldReduceMotion = useReducedMotion();
 
     const [sessions, setSessions] = useState([]);
+    const [currentMonth, setCurrentMonth] = useState(new Date());
 
     useEffect(() => {
         const handleStats = (data) => {
@@ -35,7 +36,11 @@ const StudyStreakCalendar = () => {
         const map = new Map();
 
         sessions.forEach((session) => {
+            if (!session?.startedAt) return;
+
             const date = new Date(session.startedAt);
+
+            if (Number.isNaN(date.getTime())) return;
 
             const key = [
                 date.getFullYear(),
@@ -54,18 +59,27 @@ const StudyStreakCalendar = () => {
     }, [sessions]);
 
     const calendarDays = useMemo(() => {
+        const year = currentMonth.getFullYear();
+        const month = currentMonth.getMonth();
+
+        const firstDay = new Date(year, month, 1);
+        const lastDay = new Date(year, month + 1, 0);
+
+        const daysInMonth = lastDay.getDate();
+
+        let startDay = firstDay.getDay();
+
+        // Monday as first day of week
+        startDay = startDay === 0 ? 6 : startDay - 1;
+
         const days = [];
-        const today = new Date();
 
-        today.setHours(0, 0, 0, 0);
+        for (let i = 0; i < startDay; i++) {
+            days.push(null);
+        }
 
-        // Last 12 weeks
-        const start = new Date(today);
-        start.setDate(today.getDate() - 83);
-
-        for (let i = 0; i < 84; i++) {
-            const date = new Date(start);
-            date.setDate(start.getDate() + i);
+        for (let day = 1; day <= daysInMonth; day++) {
+            const date = new Date(year, month, day);
 
             const key = [
                 date.getFullYear(),
@@ -81,7 +95,27 @@ const StudyStreakCalendar = () => {
         }
 
         return days;
-    }, [activityMap]);
+    }, [currentMonth, activityMap]);
+
+    const monthName = currentMonth.toLocaleDateString(
+        undefined,
+        {
+            month: "long",
+            year: "numeric",
+        }
+    );
+
+    const changeMonth = (direction) => {
+        setCurrentMonth((previous) => {
+            const next = new Date(previous);
+
+            next.setMonth(
+                previous.getMonth() + direction
+            );
+
+            return next;
+        });
+    };
 
     const getIntensity = (seconds) => {
         if (!seconds) return "bg-slate-800/70";
@@ -94,146 +128,190 @@ const StudyStreakCalendar = () => {
 
     const totalActiveDays = useMemo(() => {
         return calendarDays.filter(
-            (day) => day.seconds > 0
+            (day) => day && day.seconds > 0
         ).length;
     }, [calendarDays]);
 
+    if (!isOpen) return null;
+
     return (
-        <section className="mt-6 relative">
-            <motion.div
-                initial={
-                    shouldReduceMotion
-                        ? false
-                        : { opacity: 0, y: 8 }
-                }
-                animate={
-                    shouldReduceMotion
-                        ? undefined
-                        : { opacity: 1, y: 0 }
-                }
-                transition={{
-                    duration: 0.4,
-                    ease: [0.16, 1, 0.3, 1],
-                }}
-                className="mb-5 flex items-end justify-between gap-4"
-            >
-                <div>
-                    <div className="mb-2 flex items-center gap-2">
-                        <span className="relative flex h-1.5 w-1.5">
-                            <span className="absolute inset-0 animate-ping rounded-full bg-indigo-400/40" />
-                            <span className="relative h-1.5 w-1.5 rounded-full bg-indigo-400" />
-                        </span>
-
-                        <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-indigo-400/80">
-                            Activity
-                        </span>
+        <motion.div
+            initial={
+                shouldReduceMotion
+                    ? false
+                    : {
+                          opacity: 0,
+                          y: 8,
+                          scale: 0.98,
+                      }
+            }
+            animate={
+                shouldReduceMotion
+                    ? undefined
+                    : {
+                          opacity: 1,
+                          y: 0,
+                          scale: 1,
+                      }
+            }
+            exit={
+                shouldReduceMotion
+                    ? undefined
+                    : {
+                          opacity: 0,
+                          y: 8,
+                          scale: 0.98,
+                      }
+            }
+            transition={{
+                duration: 0.2,
+                ease: [0.16, 1, 0.3, 1],
+            }}
+            className="absolute right-0 top-full z-50 mt-3 w-[calc(100vw-24px)] max-w-[360px] overflow-hidden rounded-2xl border border-slate-800/80 bg-[#0a0f17] p-4 shadow-[0_20px_60px_rgba(0,0,0,0.45)] sm:w-[360px]"
+        >
+            {/* Header */}
+            <div className="mb-4 flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-500/[0.09] text-indigo-300">
+                        <FaCalendarAlt className="text-xs" />
                     </div>
 
-                    <h2 className="text-xl font-bold tracking-[-0.035em] text-white sm:text-2xl">
-                        Study Activity
-                    </h2>
+                    <div>
+                        <h3 className="text-sm font-semibold text-white">
+                            Study Activity
+                        </h3>
 
-                    <p className="mt-1.5 text-xs leading-5 text-slate-500 sm:text-sm">
-                        Your study activity over the last 12 weeks.
-                    </p>
+                        <p className="text-[9px] font-medium uppercase tracking-wider text-slate-600">
+                            {totalActiveDays} active days
+                        </p>
+                    </div>
                 </div>
 
-                <div className="hidden items-center gap-2 rounded-xl border border-slate-800/80 bg-[#0a0f17] px-3 py-2 sm:flex">
-                    <FaCalendarAlt className="text-xs text-indigo-400" />
-                    <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
-                        {totalActiveDays} active days
-                    </span>
-                </div>
-            </motion.div>
+                <button
+                    type="button"
+                    onClick={onClose}
+                    className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-500 transition-colors duration-200 hover:bg-slate-800/60 hover:text-slate-300"
+                    aria-label="Close calendar"
+                >
+                    ×
+                </button>
+            </div>
 
-            <motion.div
-                initial={
-                    shouldReduceMotion
-                        ? false
-                        : { opacity: 0, y: 12 }
-                }
-                animate={
-                    shouldReduceMotion
-                        ? undefined
-                        : { opacity: 1, y: 0 }
-                }
-                transition={{
-                    duration: 0.5,
-                    delay: shouldReduceMotion ? 0 : 0.08,
-                    ease: [0.16, 1, 0.3, 1],
-                }}
-                className="overflow-x-auto rounded-[20px] border border-slate-800/80 bg-[#0a0f17] p-4 shadow-[0_12px_40px_rgba(0,0,0,0.14)] sm:p-5"
-            >
-                <div className="min-w-[620px]">
-                    <div className="mb-3 flex items-center justify-between">
-                        <span className="text-xs font-medium text-slate-500">
-                            Less
-                        </span>
+            {/* Month Navigation */}
+            <div className="mb-3 flex items-center justify-between">
+                <button
+                    type="button"
+                    onClick={() => changeMonth(-1)}
+                    className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-500 transition-colors duration-200 hover:bg-slate-800/60 hover:text-white"
+                    aria-label="Previous month"
+                >
+                    <FaChevronLeft className="text-[9px]" />
+                </button>
 
-                        <div className="flex items-center gap-1.5">
-                            <span className="h-3 w-3 rounded-[3px] bg-slate-800/70" />
-                            <span className="h-3 w-3 rounded-[3px] bg-indigo-900" />
-                            <span className="h-3 w-3 rounded-[3px] bg-indigo-700" />
-                            <span className="h-3 w-3 rounded-[3px] bg-indigo-500" />
-                            <span className="h-3 w-3 rounded-[3px] bg-indigo-400" />
+                <span className="text-xs font-semibold text-slate-300">
+                    {monthName}
+                </span>
+
+                <button
+                    type="button"
+                    onClick={() => changeMonth(1)}
+                    className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-500 transition-colors duration-200 hover:bg-slate-800/60 hover:text-white"
+                    aria-label="Next month"
+                >
+                    <FaChevronRight className="text-[9px]" />
+                </button>
+            </div>
+
+            {/* Week Days */}
+            <div className="mb-2 grid grid-cols-7 gap-1">
+                {["M", "T", "W", "T", "F", "S", "S"].map(
+                    (day, index) => (
+                        <div
+                            key={`${day}-${index}`}
+                            className="flex h-7 items-center justify-center text-[9px] font-semibold uppercase text-slate-600"
+                        >
+                            {day}
                         </div>
-                    </div>
+                    )
+                )}
+            </div>
 
-                    <div className="grid grid-cols-12 gap-1.5">
-                        {calendarDays.map((day, index) => (
-                            <motion.div
-                                key={day.key}
-                                initial={
-                                    shouldReduceMotion
-                                        ? false
-                                        : {
-                                              opacity: 0,
-                                              scale: 0.85,
-                                          }
-                                }
-                                animate={
-                                    shouldReduceMotion
-                                        ? undefined
-                                        : {
-                                              opacity: 1,
-                                              scale: 1,
-                                          }
-                                }
-                                transition={{
-                                    duration: 0.2,
-                                    delay: shouldReduceMotion
-                                        ? 0
-                                        : index * 0.008,
-                                }}
-                                title={`${day.date.toLocaleDateString(
-                                    undefined,
-                                    {
-                                        month: "short",
-                                        day: "numeric",
-                                        year: "numeric",
-                                    }
-                                )} • ${Math.floor(
-                                    day.seconds / 60
-                                )} minutes`}
-                                className={`aspect-square rounded-[4px] border border-white/[0.025] ${getIntensity(
-                                    day.seconds
-                                )} transition-all duration-200 hover:scale-110 hover:border-white/10`}
+            {/* Calendar */}
+            <div className="grid grid-cols-7 gap-1">
+                {calendarDays.map((day, index) => {
+                    if (!day) {
+                        return (
+                            <div
+                                key={`empty-${index}`}
+                                className="aspect-square"
                             />
-                        ))}
-                    </div>
+                        );
+                    }
 
-                    <div className="mt-4 flex items-center justify-between border-t border-slate-800/60 pt-3">
-                        <span className="text-[10px] text-slate-600">
-                            Last 12 weeks
-                        </span>
+                    return (
+                        <motion.div
+                            key={day.key}
+                            initial={
+                                shouldReduceMotion
+                                    ? false
+                                    : {
+                                          opacity: 0,
+                                          scale: 0.9,
+                                      }
+                            }
+                            animate={
+                                shouldReduceMotion
+                                    ? undefined
+                                    : {
+                                          opacity: 1,
+                                          scale: 1,
+                                      }
+                            }
+                            transition={{
+                                duration: 0.15,
+                                delay: shouldReduceMotion
+                                    ? 0
+                                    : index * 0.01,
+                            }}
+                            title={`${day.date.toLocaleDateString(
+                                undefined,
+                                {
+                                    month: "short",
+                                    day: "numeric",
+                                    year: "numeric",
+                                }
+                            )} • ${Math.floor(
+                                day.seconds / 60
+                            )} minutes`}
+                            className={`flex aspect-square cursor-default items-center justify-center rounded-md border border-white/[0.025] text-[9px] font-medium text-slate-400 transition-all duration-200 hover:scale-105 hover:border-white/10 ${getIntensity(
+                                day.seconds
+                            )}`}
+                        >
+                            {day.date.getDate()}
+                        </motion.div>
+                    );
+                })}
+            </div>
 
-                        <span className="text-[10px] font-medium text-slate-600">
-                            More
-                        </span>
-                    </div>
+            {/* Legend */}
+            <div className="mt-4 flex items-center justify-between border-t border-slate-800/60 pt-3">
+                <span className="text-[9px] text-slate-600">
+                    Less
+                </span>
+
+                <div className="flex items-center gap-1">
+                    <span className="h-2.5 w-2.5 rounded-[3px] bg-slate-800/70" />
+                    <span className="h-2.5 w-2.5 rounded-[3px] bg-indigo-900" />
+                    <span className="h-2.5 w-2.5 rounded-[3px] bg-indigo-700" />
+                    <span className="h-2.5 w-2.5 rounded-[3px] bg-indigo-500" />
+                    <span className="h-2.5 w-2.5 rounded-[3px] bg-indigo-400" />
                 </div>
-            </motion.div>
-        </section>
+
+                <span className="text-[9px] text-slate-600">
+                    More
+                </span>
+            </div>
+        </motion.div>
     );
 };
 
