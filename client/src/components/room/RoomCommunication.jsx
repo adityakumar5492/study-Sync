@@ -30,24 +30,8 @@ const RoomCommunication = ({
     const [activePanel, setActivePanel] =
         useState("participants");
 
-    /*
-     * Mobile communication UI state.
-     *
-     * mobileControlsOpen:
-     * Controls bar containing the 4 buttons.
-     *
-     * mobilePanelOpen:
-     * Actual communication panel.
-     *
-     * On mobile the communication panel is an
-     * absolute bottom-sheet overlay. It does NOT
-     * participate in the PDF layout, so the PDF
-     * keeps maximum available space.
-     */
-    const [mobileControlsOpen, setMobileControlsOpen] =
-        useState(false);
-
-    const [mobilePanelOpen, setMobilePanelOpen] =
+    // Mobile drawer starts closed.
+    const [mobileOpen, setMobileOpen] =
         useState(false);
 
     // ===========================
@@ -90,7 +74,10 @@ const RoomCommunication = ({
                         return null;
                     }
 
-                    return [userId, member];
+                    return [
+                        userId,
+                        member,
+                    ];
                 })
                 .filter(Boolean)
         ).values()
@@ -111,7 +98,10 @@ const RoomCommunication = ({
                         return null;
                     }
 
-                    return [userId, onlineUser];
+                    return [
+                        userId,
+                        onlineUser,
+                    ];
                 })
                 .filter(Boolean)
         ).values()
@@ -138,67 +128,39 @@ const RoomCommunication = ({
         isHost ||
         drawingPermission?.mode === "everyone" ||
         (
-            drawingPermission?.mode === "selected" &&
+            drawingPermission?.mode ===
+                "selected" &&
             drawingPermission?.allowedUsers?.includes(
                 currentUserId
             )
         );
 
     // ===========================
-    // Mobile Handlers
+    // Mobile Panel Handler
     // ===========================
 
-    const openMobileControls = () => {
-        setMobileControlsOpen(true);
-        setMobilePanelOpen(false);
-    };
-
-    const closeMobileControls = () => {
-        setMobileControlsOpen(false);
-        setMobilePanelOpen(false);
-    };
-
-    const openMobilePanel = (panel) => {
+    const handlePanelChange = (panel) => {
         setActivePanel(panel);
-        setMobilePanelOpen(true);
-        setMobileControlsOpen(false);
-    };
-
-    const hideMobilePanel = () => {
-        setMobilePanelOpen(false);
-        setMobileControlsOpen(false);
-    };
-
-    const toggleMobileControls = () => {
-        if (mobilePanelOpen) {
-            hideMobilePanel();
-            return;
-        }
-
-        if (mobileControlsOpen) {
-            closeMobileControls();
-        } else {
-            openMobileControls();
-        }
+        setMobileOpen(true);
     };
 
     // ===========================
-    // Shared Tab Button Classes
+    // Panel Button
     // ===========================
 
-    const getDesktopTabClass = (panel) => `
+    const panelButtonClass = (panel) => `
         flex
         min-w-0
         items-center
         justify-center
         gap-1.5
-        overflow-hidden
-        rounded-t-lg
+        rounded-xl
         px-1
         py-2.5
-        text-[10px]
+        text-[9px]
         font-semibold
-        transition-colors
+        transition-all
+        duration-200
 
         sm:px-1.5
         sm:py-3
@@ -206,646 +168,905 @@ const RoomCommunication = ({
 
         ${
             activePanel === panel
-                ? "bg-slate-800 text-green-400 shadow-sm"
-                : "text-slate-500 hover:bg-slate-800/80 hover:text-slate-200"
+                ? "bg-emerald-500/10 text-emerald-400 shadow-sm"
+                : "text-slate-400 hover:bg-slate-800/80 hover:text-slate-200"
         }
     `;
 
     // ===========================
-    // Communication Panel Content
+    // Drawing Content
     // ===========================
 
-    const renderPanelContent = () => {
-        return (
-            <>
-                {/* =================================
-                    PARTICIPANTS
-                ================================= */}
-
-                {activePanel === "participants" && (
-                    <div className="flex h-full min-h-0 min-w-0 flex-col">
-                        {/* Participant Summary */}
-
-                        <div
-                            className="
-                                flex
-                                shrink-0
-                                items-center
-                                justify-between
-                                border-b
-                                border-slate-800/70
-                                px-3
-                                py-2.5
-
-                                sm:px-4
-                                sm:py-3
-                            "
-                        >
-                            <div className="flex min-w-0 items-center gap-2">
-                                <div
-                                    className="
-                                        flex
-                                        h-7
-                                        w-7
-                                        shrink-0
-                                        items-center
-                                        justify-center
-                                        rounded-lg
-                                        bg-green-500/10
-                                        text-green-400
-                                    "
-                                >
-                                    <FaUsers className="text-[10px]" />
-                                </div>
-
-                                <div className="min-w-0">
-                                    <p className="truncate text-[10px] font-bold text-white sm:text-[11px]">
-                                        Live Participants
-                                    </p>
-
-                                    <p className="mt-0.5 truncate text-[8px] text-slate-600">
-                                        {participantsCount}{" "}
-                                        {participantsCount === 1
-                                            ? "participant"
-                                            : "participants"}
-                                    </p>
-                                </div>
-                            </div>
-
-                            <div
-                                className="
-                                    flex
-                                    shrink-0
-                                    items-center
-                                    gap-1.5
-                                    rounded-full
-                                    border
-                                    border-emerald-400/10
-                                    bg-emerald-500/[0.06]
-                                    px-2
-                                    py-1
-                                "
-                            >
-                                <span className="relative flex h-1.5 w-1.5">
-                                    <span
-                                        className="
-                                            absolute
-                                            inset-0
-                                            rounded-full
-                                            bg-emerald-400
-                                            opacity-40
-                                        "
-                                    />
-
-                                    <span
-                                        className="
-                                            relative
-                                            h-1.5
-                                            w-1.5
-                                            rounded-full
-                                            bg-emerald-400
-                                        "
-                                    />
-                                </span>
-
-                                <span className="text-[8px] font-bold text-emerald-400">
-                                    {onlineCount} online
-                                </span>
-                            </div>
-                        </div>
-
-                        {/* Actual Participants */}
-
-                        <div
-                            className="
-                                min-h-0
-                                min-w-0
-                                flex-1
-                                overflow-y-auto
-                                overflow-x-hidden
-                                overscroll-contain
-                            "
-                        >
-                            <Participants
-                                room={room}
-                                roomId={roomId}
-                                participants={uniqueMembers}
-                                onlineUsers={uniqueOnlineUsers}
-                                onRemoveMember={
-                                    onRemoveMember
-                                }
-                            />
-                        </div>
-                    </div>
-                )}
-
-                {/* =================================
-                    CHAT
-                ================================= */}
-
-                {activePanel === "chat" && (
-                    <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-                        <ChatPanel
-                            roomId={roomId}
-                            isHost={isHost}
-                            isMember={isMember}
-                        />
-                    </div>
-                )}
-
-                {/* =================================
-                    VOICE
-                ================================= */}
-
-                {activePanel === "voice" && (
-                    <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-                        <VoicePanel
-                            roomId={roomId}
-                            currentUser={currentUser}
-                        />
-                    </div>
-                )}
-
-                {/* =================================
-                    DRAWING
-                ================================= */}
-
-                {activePanel === "drawing" && (
-                    <div
-                        className="
-                            h-full
-                            min-h-0
-                            min-w-0
-                            overflow-y-auto
-                            overflow-x-hidden
-                            p-2.5
-
-                            sm:p-3
-                            lg:p-4
-                        "
-                    >
-                        {/* Drawing Header */}
-
-                        <div
-                            className="
-                                mb-3
-                                rounded-xl
-                                border
-                                border-slate-800/80
-                                bg-slate-950/50
-                                p-3
-                                shadow-sm
-
-                                sm:mb-4
-                                sm:p-4
-                            "
-                        >
-                            <h3 className="text-sm font-semibold tracking-tight text-white sm:text-base">
-                                Drawing Access
-                            </h3>
-
-                            <p className="mt-1 text-[9px] leading-4 text-slate-500 sm:text-xs sm:leading-5">
-                                Choose who can annotate
-                                the PDF.
-                            </p>
-                        </div>
-
-                        {/* Host Controls */}
-
-                        {isHost && (
-                            <div
-                                className="
-                                    space-y-1.5
-                                    rounded-xl
-                                    border
-                                    border-slate-800/80
-                                    bg-slate-950/40
-                                    p-1.5
-
-                                    sm:space-y-2
-                                    sm:p-2
-                                "
-                            >
-                                {/* Host Only */}
-
-                                <button
-                                    type="button"
-                                    onClick={() =>
-                                        onDrawingPermissionChange(
-                                            {
-                                                mode: "none",
-                                                allowedUsers: [],
-                                            }
-                                        )
-                                    }
-                                    className="
-                                        flex
-                                        w-full
-                                        items-center
-                                        gap-2.5
-                                        rounded-lg
-                                        border
-                                        border-transparent
-                                        px-2.5
-                                        py-2
-                                        text-left
-                                        text-[11px]
-                                        text-slate-300
-                                        transition-colors
-                                        hover:border-slate-700/70
-                                        hover:bg-slate-800/80
-                                        hover:text-white
-
-                                        sm:gap-3
-                                        sm:px-3
-                                        sm:py-2.5
-                                        sm:text-sm
-                                    "
-                                >
-                                    <span
-                                        className={`
-                                            flex
-                                            h-4
-                                            w-4
-                                            shrink-0
-                                            items-center
-                                            justify-center
-                                            rounded-full
-                                            border-2
-                                            ${
-                                                drawingPermission?.mode ===
-                                                "none"
-                                                    ? "border-green-500"
-                                                    : "border-slate-600"
-                                            }
-                                        `}
-                                    >
-                                        {drawingPermission?.mode ===
-                                            "none" && (
-                                            <span className="h-2 w-2 rounded-full bg-green-500" />
-                                        )}
-                                    </span>
-
-                                    <span className="truncate">
-                                        Host Only
-                                    </span>
-                                </button>
-
-                                {/* Everyone */}
-
-                                <button
-                                    type="button"
-                                    onClick={() =>
-                                        onDrawingPermissionChange(
-                                            {
-                                                mode: "everyone",
-                                                allowedUsers: [],
-                                            }
-                                        )
-                                    }
-                                    className="
-                                        flex
-                                        w-full
-                                        items-center
-                                        gap-2.5
-                                        rounded-lg
-                                        border
-                                        border-transparent
-                                        px-2.5
-                                        py-2
-                                        text-left
-                                        text-[11px]
-                                        text-slate-300
-                                        transition-colors
-                                        hover:border-slate-700/70
-                                        hover:bg-slate-800/80
-                                        hover:text-white
-
-                                        sm:gap-3
-                                        sm:px-3
-                                        sm:py-2.5
-                                        sm:text-sm
-                                    "
-                                >
-                                    <span
-                                        className={`
-                                            flex
-                                            h-4
-                                            w-4
-                                            shrink-0
-                                            items-center
-                                            justify-center
-                                            rounded-full
-                                            border-2
-                                            ${
-                                                drawingPermission?.mode ===
-                                                "everyone"
-                                                    ? "border-green-500"
-                                                    : "border-slate-600"
-                                            }
-                                        `}
-                                    >
-                                        {drawingPermission?.mode ===
-                                            "everyone" && (
-                                            <span className="h-2 w-2 rounded-full bg-green-500" />
-                                        )}
-                                    </span>
-
-                                    <span className="truncate">
-                                        Everyone
-                                    </span>
-                                </button>
-
-                                {/* Selected Users */}
-
-                                <button
-                                    type="button"
-                                    onClick={() =>
-                                        onDrawingPermissionChange(
-                                            {
-                                                mode: "selected",
-                                                allowedUsers:
-                                                    drawingPermission?.allowedUsers ||
-                                                    [],
-                                            }
-                                        )
-                                    }
-                                    className="
-                                        flex
-                                        w-full
-                                        items-center
-                                        gap-2.5
-                                        rounded-lg
-                                        border
-                                        border-transparent
-                                        px-2.5
-                                        py-2
-                                        text-left
-                                        text-[11px]
-                                        text-slate-300
-                                        transition-colors
-                                        hover:border-slate-700/70
-                                        hover:bg-slate-800/80
-                                        hover:text-white
-
-                                        sm:gap-3
-                                        sm:px-3
-                                        sm:py-2.5
-                                        sm:text-sm
-                                    "
-                                >
-                                    <span
-                                        className={`
-                                            flex
-                                            h-4
-                                            w-4
-                                            shrink-0
-                                            items-center
-                                            justify-center
-                                            rounded-full
-                                            border-2
-                                            ${
-                                                drawingPermission?.mode ===
-                                                "selected"
-                                                    ? "border-green-500"
-                                                    : "border-slate-600"
-                                            }
-                                        `}
-                                    >
-                                        {drawingPermission?.mode ===
-                                            "selected" && (
-                                            <span className="h-2 w-2 rounded-full bg-green-500" />
-                                        )}
-                                    </span>
-
-                                    <span className="truncate">
-                                        Selected Users
-                                    </span>
-                                </button>
-
-                                {/* User List */}
-
-                                {drawingPermission?.mode ===
-                                    "selected" && (
-                                    <div className="mt-2 border-t border-slate-800/80 pt-3 sm:mt-3 sm:pt-4">
-                                        <div className="mb-2 flex items-center justify-between gap-2">
-                                            <p className="truncate text-[10px] font-semibold text-slate-400 sm:text-xs">
-                                                Select users
-                                            </p>
-
-                                            <span className="shrink-0 text-[8px] text-slate-600">
-                                                {
-                                                    drawingPermission
-                                                        ?.allowedUsers
-                                                        ?.length
-                                                }{" "}
-                                                selected
-                                            </span>
-                                        </div>
-
-                                        <div
-                                            className="
-                                                max-h-[min(16rem,42vh)]
-                                                space-y-1
-                                                overflow-y-auto
-                                                overflow-x-hidden
-                                                pr-1
-                                            "
-                                        >
-                                            {uniqueMembers.map(
-                                                (member) => {
-                                                    const userId =
-                                                        getUserId(
-                                                            member
-                                                        );
-
-                                                    if (!userId) {
-                                                        return null;
-                                                    }
-
-                                                    const selected =
-                                                        drawingPermission?.allowedUsers?.includes(
-                                                            userId
-                                                        );
-
-                                                    const name =
-                                                        member?.name ||
-                                                        member?.username ||
-                                                        member?.email ||
-                                                        "User";
-
-                                                    return (
-                                                        <button
-                                                            key={userId}
-                                                            type="button"
-                                                            onClick={() => {
-                                                                const current =
-                                                                    drawingPermission?.allowedUsers ||
-                                                                    [];
-
-                                                                const next =
-                                                                    selected
-                                                                        ? current.filter(
-                                                                              (
-                                                                                  id
-                                                                              ) =>
-                                                                                  id !==
-                                                                                  userId
-                                                                          )
-                                                                        : [
-                                                                              ...current,
-                                                                              userId,
-                                                                          ];
-
-                                                                onDrawingPermissionChange(
-                                                                    {
-                                                                        mode: "selected",
-                                                                        allowedUsers:
-                                                                            next,
-                                                                    }
-                                                                );
-                                                            }}
-                                                            className="
-                                                                flex
-                                                                w-full
-                                                                min-w-0
-                                                                items-center
-                                                                gap-2.5
-                                                                rounded-lg
-                                                                border
-                                                                border-transparent
-                                                                px-2.5
-                                                                py-2
-                                                                text-left
-                                                                text-[11px]
-                                                                text-slate-300
-                                                                transition-colors
-                                                                hover:border-slate-700/70
-                                                                hover:bg-slate-800/80
-                                                                hover:text-white
-
-                                                                sm:gap-3
-                                                                sm:px-3
-                                                                sm:py-2.5
-                                                                sm:text-sm
-                                                            "
-                                                        >
-                                                            <span
-                                                                className={`
-                                                                    flex
-                                                                    h-4
-                                                                    w-4
-                                                                    shrink-0
-                                                                    items-center
-                                                                    justify-center
-                                                                    rounded
-                                                                    border
-                                                                    ${
-                                                                        selected
-                                                                            ? "border-green-500 bg-green-500"
-                                                                            : "border-slate-600"
-                                                                    }
-                                                                `}
-                                                            >
-                                                                {selected && (
-                                                                    <span className="text-[9px] font-bold text-white">
-                                                                        ✓
-                                                                    </span>
-                                                                )}
-                                                            </span>
-
-                                                            <span className="min-w-0 truncate">
-                                                                {name}
-                                                            </span>
-                                                        </button>
-                                                    );
-                                                }
-                                            )}
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        )}
-
-                        {/* Member Status */}
-
-                        {!isHost && (
-                            <div
-                                className="
-                                    rounded-xl
-                                    border
-                                    border-slate-800/80
-                                    bg-gradient-to-b
-                                    from-slate-900
-                                    to-slate-950
-                                    p-3
-                                    shadow-lg
-                                    shadow-black/10
-
-                                    sm:rounded-2xl
-                                    sm:p-4
-                                    lg:p-5
-                                "
-                            >
-                                <div
-                                    className={`
-                                        mb-3
-                                        flex
-                                        h-10
-                                        w-10
-                                        items-center
-                                        justify-center
-                                        rounded-xl
-
-                                        sm:mb-4
-                                        sm:h-11
-                                        sm:w-11
-
-                                        ${
-                                            canDraw
-                                                ? "bg-green-500/10 text-green-400"
-                                                : "bg-slate-800 text-slate-500"
-                                        }
-                                    `}
-                                >
-                                    <FaPen size={14} />
-                                </div>
-
-                                <p className="text-sm font-semibold text-white">
-                                    {canDraw
-                                        ? "Drawing allowed"
-                                        : "Drawing restricted"}
-                                </p>
-
-                                <p className="mt-1 text-[10px] leading-4 text-slate-500 sm:text-xs sm:leading-5">
-                                    {canDraw
-                                        ? "The host has allowed you to annotate the PDF."
-                                        : "The host has not allowed you to annotate the PDF."}
-                                </p>
-                            </div>
-                        )}
-                    </div>
-                )}
-            </>
-        );
-    };
-
-    return (
+    const drawingContent = (
         <div
             className="
-                relative
-                flex
                 h-full
                 min-h-0
                 min-w-0
-                flex-col
-                overflow-hidden
-                bg-slate-950
+                overflow-y-auto
+                overflow-x-hidden
+                p-2.5
+
+                sm:p-3
+                lg:p-4
             "
         >
+            {/* Drawing Header */}
+
+            <div
+                className="
+                    mb-3
+                    rounded-xl
+                    border
+                    border-slate-800/80
+                    bg-slate-950/50
+                    p-3
+                    shadow-sm
+
+                    sm:mb-4
+                    sm:p-4
+                "
+            >
+                <h3 className="text-sm font-semibold tracking-tight text-white sm:text-base">
+                    Drawing Access
+                </h3>
+
+                <p className="mt-1 text-[9px] leading-4 text-slate-500 sm:text-xs sm:leading-5">
+                    Choose who can annotate
+                    the PDF.
+                </p>
+            </div>
+
+            {/* Host Controls */}
+
+            {isHost && (
+                <div
+                    className="
+                        space-y-1.5
+                        rounded-xl
+                        border
+                        border-slate-800/80
+                        bg-slate-950/40
+                        p-1.5
+
+                        sm:space-y-2
+                        sm:p-2
+                    "
+                >
+                    {/* Host Only */}
+
+                    <button
+                        type="button"
+                        onClick={() =>
+                            onDrawingPermissionChange({
+                                mode: "none",
+                                allowedUsers: [],
+                            })
+                        }
+                        className="
+                            flex
+                            w-full
+                            items-center
+                            gap-2.5
+                            rounded-lg
+                            border
+                            border-transparent
+                            px-2.5
+                            py-2
+                            text-left
+                            text-[11px]
+                            text-slate-300
+                            transition-colors
+                            hover:border-slate-700/70
+                            hover:bg-slate-800/80
+                            hover:text-white
+
+                            sm:gap-3
+                            sm:px-3
+                            sm:py-2.5
+                            sm:text-sm
+                        "
+                    >
+                        <span
+                            className={`
+                                flex
+                                h-4
+                                w-4
+                                shrink-0
+                                items-center
+                                justify-center
+                                rounded-full
+                                border-2
+
+                                ${
+                                    drawingPermission?.mode ===
+                                    "none"
+                                        ? "border-green-500"
+                                        : "border-slate-600"
+                                }
+                            `}
+                        >
+                            {drawingPermission?.mode ===
+                                "none" && (
+                                <span className="h-2 w-2 rounded-full bg-green-500" />
+                            )}
+                        </span>
+
+                        <span className="truncate">
+                            Host Only
+                        </span>
+                    </button>
+
+                    {/* Everyone */}
+
+                    <button
+                        type="button"
+                        onClick={() =>
+                            onDrawingPermissionChange({
+                                mode: "everyone",
+                                allowedUsers: [],
+                            })
+                        }
+                        className="
+                            flex
+                            w-full
+                            items-center
+                            gap-2.5
+                            rounded-lg
+                            border
+                            border-transparent
+                            px-2.5
+                            py-2
+                            text-left
+                            text-[11px]
+                            text-slate-300
+                            transition-colors
+                            hover:border-slate-700/70
+                            hover:bg-slate-800/80
+                            hover:text-white
+
+                            sm:gap-3
+                            sm:px-3
+                            sm:py-2.5
+                            sm:text-sm
+                        "
+                    >
+                        <span
+                            className={`
+                                flex
+                                h-4
+                                w-4
+                                shrink-0
+                                items-center
+                                justify-center
+                                rounded-full
+                                border-2
+
+                                ${
+                                    drawingPermission?.mode ===
+                                    "everyone"
+                                        ? "border-green-500"
+                                        : "border-slate-600"
+                                }
+                            `}
+                        >
+                            {drawingPermission?.mode ===
+                                "everyone" && (
+                                <span className="h-2 w-2 rounded-full bg-green-500" />
+                            )}
+                        </span>
+
+                        <span className="truncate">
+                            Everyone
+                        </span>
+                    </button>
+
+                    {/* Selected Users */}
+
+                    <button
+                        type="button"
+                        onClick={() =>
+                            onDrawingPermissionChange({
+                                mode: "selected",
+                                allowedUsers:
+                                    drawingPermission?.allowedUsers ||
+                                    [],
+                            })
+                        }
+                        className="
+                            flex
+                            w-full
+                            items-center
+                            gap-2.5
+                            rounded-lg
+                            border
+                            border-transparent
+                            px-2.5
+                            py-2
+                            text-left
+                            text-[11px]
+                            text-slate-300
+                            transition-colors
+                            hover:border-slate-700/70
+                            hover:bg-slate-800/80
+                            hover:text-white
+
+                            sm:gap-3
+                            sm:px-3
+                            sm:py-2.5
+                            sm:text-sm
+                        "
+                    >
+                        <span
+                            className={`
+                                flex
+                                h-4
+                                w-4
+                                shrink-0
+                                items-center
+                                justify-center
+                                rounded-full
+                                border-2
+
+                                ${
+                                    drawingPermission?.mode ===
+                                    "selected"
+                                        ? "border-green-500"
+                                        : "border-slate-600"
+                                }
+                            `}
+                        >
+                            {drawingPermission?.mode ===
+                                "selected" && (
+                                <span className="h-2 w-2 rounded-full bg-green-500" />
+                            )}
+                        </span>
+
+                        <span className="truncate">
+                            Selected Users
+                        </span>
+                    </button>
+
+                    {/* User List */}
+
+                    {drawingPermission?.mode ===
+                        "selected" && (
+                        <div className="mt-2 border-t border-slate-800/80 pt-3 sm:mt-3 sm:pt-4">
+                            <div className="mb-2 flex items-center justify-between gap-2">
+                                <p className="truncate text-[10px] font-semibold text-slate-400 sm:text-xs">
+                                    Select users
+                                </p>
+
+                                <span className="shrink-0 text-[8px] text-slate-600">
+                                    {
+                                        drawingPermission
+                                            ?.allowedUsers
+                                            ?.length
+                                    }{" "}
+                                    selected
+                                </span>
+                            </div>
+
+                            <div
+                                className="
+                                    max-h-[min(16rem,42vh)]
+                                    space-y-1
+                                    overflow-y-auto
+                                    overflow-x-hidden
+                                    pr-1
+                                "
+                            >
+                                {uniqueMembers.map(
+                                    (member) => {
+                                        const userId =
+                                            getUserId(
+                                                member
+                                            );
+
+                                        if (!userId) {
+                                            return null;
+                                        }
+
+                                        const selected =
+                                            drawingPermission?.allowedUsers?.includes(
+                                                userId
+                                            );
+
+                                        const name =
+                                            member?.name ||
+                                            member?.username ||
+                                            member?.email ||
+                                            "User";
+
+                                        return (
+                                            <button
+                                                key={userId}
+                                                type="button"
+                                                onClick={() => {
+                                                    const current =
+                                                        drawingPermission?.allowedUsers ||
+                                                        [];
+
+                                                    const next =
+                                                        selected
+                                                            ? current.filter(
+                                                                  (
+                                                                      id
+                                                                  ) =>
+                                                                      id !==
+                                                                      userId
+                                                              )
+                                                            : [
+                                                                  ...current,
+                                                                  userId,
+                                                              ];
+
+                                                    onDrawingPermissionChange(
+                                                        {
+                                                            mode: "selected",
+                                                            allowedUsers:
+                                                                next,
+                                                        }
+                                                    );
+                                                }}
+                                                className="
+                                                    flex
+                                                    w-full
+                                                    min-w-0
+                                                    items-center
+                                                    gap-2.5
+                                                    rounded-lg
+                                                    border
+                                                    border-transparent
+                                                    px-2.5
+                                                    py-2
+                                                    text-left
+                                                    text-[11px]
+                                                    text-slate-300
+                                                    transition-colors
+                                                    hover:border-slate-700/70
+                                                    hover:bg-slate-800/80
+                                                    hover:text-white
+
+                                                    sm:gap-3
+                                                    sm:px-3
+                                                    sm:py-2.5
+                                                    sm:text-sm
+                                                "
+                                            >
+                                                <span
+                                                    className={`
+                                                        flex
+                                                        h-4
+                                                        w-4
+                                                        shrink-0
+                                                        items-center
+                                                        justify-center
+                                                        rounded
+                                                        border
+
+                                                        ${
+                                                            selected
+                                                                ? "border-green-500 bg-green-500"
+                                                                : "border-slate-600"
+                                                        }
+                                                    `}
+                                                >
+                                                    {selected && (
+                                                        <span className="text-[9px] font-bold text-white">
+                                                            ✓
+                                                        </span>
+                                                    )}
+                                                </span>
+
+                                                <span className="min-w-0 truncate">
+                                                    {name}
+                                                </span>
+                                            </button>
+                                        );
+                                    }
+                                )}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* Member Status */}
+
+            {!isHost && (
+                <div
+                    className="
+                        rounded-xl
+                        border
+                        border-slate-800/80
+                        bg-gradient-to-b
+                        from-slate-900
+                        to-slate-950
+                        p-3
+                        shadow-lg
+                        shadow-black/10
+
+                        sm:rounded-2xl
+                        sm:p-4
+                        lg:p-5
+                    "
+                >
+                    <div
+                        className={`
+                            mb-3
+                            flex
+                            h-10
+                            w-10
+                            items-center
+                            justify-center
+                            rounded-xl
+
+                            sm:mb-4
+                            sm:h-11
+                            sm:w-11
+
+                            ${
+                                canDraw
+                                    ? "bg-green-500/10 text-green-400"
+                                    : "bg-slate-800 text-slate-500"
+                            }
+                        `}
+                    >
+                        <FaPen size={14} />
+                    </div>
+
+                    <p className="text-sm font-semibold text-white">
+                        {canDraw
+                            ? "Drawing allowed"
+                            : "Drawing restricted"}
+                    </p>
+
+                    <p className="mt-1 text-[10px] leading-4 text-slate-500 sm:text-xs sm:leading-5">
+                        {canDraw
+                            ? "The host has allowed you to annotate the PDF."
+                            : "The host has not allowed you to annotate the PDF."}
+                    </p>
+                </div>
+            )}
+        </div>
+    );
+
+    // ===========================
+    // Main
+    // ===========================
+
+    return (
+        <>
+            {/* =====================================================
+                MOBILE COMMUNICATION DRAWER
+                -----------------------------------------------------
+                IMPORTANT:
+                This is FIXED on mobile, so it does NOT consume
+                any space from the PDF/layout.
+            ====================================================== */}
+
+            <div
+                className="
+                    fixed
+                    bottom-0
+                    left-0
+                    right-0
+                    z-50
+                    px-3
+                    pb-3
+
+                    lg:hidden
+                "
+            >
+                <div
+                    className={`
+                        mx-auto
+                        w-full
+                        max-w-xl
+                        overflow-hidden
+                        rounded-2xl
+                        border
+                        border-slate-700/80
+                        bg-slate-900/95
+                        shadow-2xl
+                        shadow-black/40
+                        backdrop-blur-xl
+                        transition-all
+                        duration-200
+                        ${
+                            mobileOpen
+                                ? "max-h-[48vh]"
+                                : "max-h-[56px]"
+                        }
+                    `}
+                >
+                    {/* =================================================
+                        MOBILE HEADER / HANDLE
+                    ================================================== */}
+
+                    <div
+                        className="
+                            flex
+                            h-12
+                            shrink-0
+                            items-center
+                            justify-center
+                            border-b
+                            border-slate-800/80
+                        "
+                    >
+                        <button
+                            type="button"
+                            onClick={() =>
+                                setMobileOpen(
+                                    (previous) =>
+                                        !previous
+                                )
+                            }
+                            className="
+                                flex
+                                h-full
+                                w-full
+                                items-center
+                                justify-center
+                                gap-2
+                                text-[11px]
+                                font-semibold
+                                text-slate-400
+                                transition-colors
+                                hover:text-white
+                            "
+                            aria-label={
+                                mobileOpen
+                                    ? "Hide communication controls"
+                                    : "Show communication controls"
+                            }
+                        >
+                            {mobileOpen ? (
+                                <>
+                                    <FaChevronDown className="text-[9px]" />
+                                    <span>
+                                        Hide
+                                    </span>
+                                </>
+                            ) : (
+                                <>
+                                    <FaChevronUp className="text-[9px]" />
+                                    <span>
+                                        Communication
+                                    </span>
+                                </>
+                            )}
+                        </button>
+                    </div>
+
+                    {/* =================================================
+                        MOBILE CONTENT
+                    ================================================== */}
+
+                    {mobileOpen && (
+                        <>
+                            {/* Communication Tabs */}
+
+                            <div
+                                className="
+                                    grid
+                                    shrink-0
+                                    grid-cols-4
+                                    gap-1
+                                    border-b
+                                    border-slate-800/80
+                                    bg-slate-950/40
+                                    p-1.5
+                                "
+                            >
+                                {/* Participants */}
+
+                                <button
+                                    type="button"
+                                    onClick={() =>
+                                        handlePanelChange(
+                                            "participants"
+                                        )
+                                    }
+                                    className={panelButtonClass(
+                                        "participants"
+                                    )}
+                                >
+                                    <FaUsers className="shrink-0 text-[10px]" />
+
+                                    <span className="truncate">
+                                        People
+                                    </span>
+
+                                    <span
+                                        className={`
+                                            shrink-0
+                                            rounded-full
+                                            px-1.5
+                                            py-0.5
+                                            text-[8px]
+                                            leading-none
+
+                                            ${
+                                                activePanel ===
+                                                "participants"
+                                                    ? "bg-emerald-500/10 text-emerald-400"
+                                                    : "bg-slate-800 text-slate-500"
+                                            }
+                                        `}
+                                    >
+                                        {participantsCount}
+                                    </span>
+                                </button>
+
+                                {/* Chat */}
+
+                                <button
+                                    type="button"
+                                    onClick={() =>
+                                        handlePanelChange(
+                                            "chat"
+                                        )
+                                    }
+                                    className={panelButtonClass(
+                                        "chat"
+                                    )}
+                                >
+                                    <FaComments className="shrink-0 text-[10px]" />
+
+                                    <span className="truncate">
+                                        Chat
+                                    </span>
+                                </button>
+
+                                {/* Voice */}
+
+                                <button
+                                    type="button"
+                                    onClick={() =>
+                                        handlePanelChange(
+                                            "voice"
+                                        )
+                                    }
+                                    className={panelButtonClass(
+                                        "voice"
+                                    )}
+                                >
+                                    <FaMicrophone className="shrink-0 text-[10px]" />
+
+                                    <span className="truncate">
+                                        Voice
+                                    </span>
+                                </button>
+
+                                {/* Drawing */}
+
+                                <button
+                                    type="button"
+                                    onClick={() =>
+                                        handlePanelChange(
+                                            "drawing"
+                                        )
+                                    }
+                                    className={panelButtonClass(
+                                        "drawing"
+                                    )}
+                                >
+                                    <FaPen className="shrink-0 text-[10px]" />
+
+                                    <span className="truncate">
+                                        Drawing
+                                    </span>
+                                </button>
+                            </div>
+
+                            {/* =================================================
+                                MOBILE ACTIVE PANEL
+                            ================================================== */}
+
+                            <div
+                                className="
+                                    min-h-0
+                                    overflow-hidden
+                                "
+                            >
+                                {activePanel ===
+                                    "participants" && (
+                                    <div
+                                        className="
+                                            flex
+                                            max-h-[38vh]
+                                            min-h-0
+                                            flex-col
+                                        "
+                                    >
+                                        {/* Participant Summary */}
+
+                                        <div
+                                            className="
+                                                flex
+                                                shrink-0
+                                                items-center
+                                                justify-between
+                                                border-b
+                                                border-slate-800/70
+                                                px-3
+                                                py-2
+                                            "
+                                        >
+                                            <div className="flex min-w-0 items-center gap-2">
+                                                <div
+                                                    className="
+                                                        flex
+                                                        h-7
+                                                        w-7
+                                                        shrink-0
+                                                        items-center
+                                                        justify-center
+                                                        rounded-lg
+                                                        bg-green-500/10
+                                                        text-green-400
+                                                    "
+                                                >
+                                                    <FaUsers className="text-[10px]" />
+                                                </div>
+
+                                                <div className="min-w-0">
+                                                    <p className="truncate text-[10px] font-bold text-white">
+                                                        Live Participants
+                                                    </p>
+
+                                                    <p className="mt-0.5 truncate text-[8px] text-slate-600">
+                                                        {
+                                                            participantsCount
+                                                        }{" "}
+                                                        {participantsCount ===
+                                                        1
+                                                            ? "participant"
+                                                            : "participants"}
+                                                    </p>
+                                                </div>
+                                            </div>
+
+                                            <div
+                                                className="
+                                                    flex
+                                                    shrink-0
+                                                    items-center
+                                                    gap-1.5
+                                                    rounded-full
+                                                    border
+                                                    border-emerald-400/10
+                                                    bg-emerald-500/[0.06]
+                                                    px-2
+                                                    py-1
+                                                "
+                                            >
+                                                <span
+                                                    className="
+                                                        h-1.5
+                                                        w-1.5
+                                                        rounded-full
+                                                        bg-emerald-400
+                                                    "
+                                                />
+
+                                                <span className="text-[8px] font-bold text-emerald-400">
+                                                    {
+                                                        onlineCount
+                                                    }{" "}
+                                                    online
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        {/* Participants */}
+
+                                        <div
+                                            className="
+                                                min-h-0
+                                                flex-1
+                                                overflow-y-auto
+                                                overflow-x-hidden
+                                                overscroll-contain
+                                            "
+                                        >
+                                            <Participants
+                                                room={room}
+                                                roomId={
+                                                    roomId
+                                                }
+                                                participants={
+                                                    uniqueMembers
+                                                }
+                                                onlineUsers={
+                                                    uniqueOnlineUsers
+                                                }
+                                                onRemoveMember={
+                                                    onRemoveMember
+                                                }
+                                            />
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* CHAT */}
+
+                                {activePanel ===
+                                    "chat" && (
+                                    <div
+                                        className="
+                                            h-[38vh]
+                                            min-h-0
+                                            overflow-hidden
+                                        "
+                                    >
+                                        <ChatPanel
+                                            roomId={
+                                                roomId
+                                            }
+                                            isHost={
+                                                isHost
+                                            }
+                                            isMember={
+                                                isMember
+                                            }
+                                        />
+                                    </div>
+                                )}
+
+                                {/* VOICE */}
+
+                                {activePanel ===
+                                    "voice" && (
+                                    <div
+                                        className="
+                                            max-h-[38vh]
+                                            min-h-0
+                                            overflow-y-auto
+                                            overflow-x-hidden
+                                        "
+                                    >
+                                        <VoicePanel
+                                            roomId={
+                                                roomId
+                                            }
+                                            currentUser={
+                                                currentUser
+                                            }
+                                        />
+                                    </div>
+                                )}
+
+                                {/* DRAWING */}
+
+                                {activePanel ===
+                                    "drawing" && (
+                                    <div
+                                        className="
+                                            max-h-[38vh]
+                                            min-h-0
+                                            overflow-y-auto
+                                            overflow-x-hidden
+                                        "
+                                    >
+                                        {drawingContent}
+                                    </div>
+                                )}
+                            </div>
+                        </>
+                    )}
+                </div>
+            </div>
+
             {/* =====================================================
                 DESKTOP COMMUNICATION SIDEBAR
-                ===================================================== */}
+                -----------------------------------------------------
+                UNCHANGED BEHAVIOR.
+                Everything below lg remains the existing sidebar.
+            ====================================================== */}
 
             <div
                 className="
@@ -853,14 +1074,14 @@ const RoomCommunication = ({
                     h-full
                     min-h-0
                     min-w-0
-                    flex-1
                     flex-col
                     overflow-hidden
+                    bg-slate-950
 
                     lg:flex
                 "
             >
-                {/* Desktop Tabs */}
+                {/* Communication Tabs */}
 
                 <div
                     className="
@@ -882,12 +1103,36 @@ const RoomCommunication = ({
                     <button
                         type="button"
                         onClick={() =>
-                            setActivePanel("participants")
+                            setActivePanel(
+                                "participants"
+                            )
                         }
-                        className={getDesktopTabClass(
-                            "participants"
-                        )}
-                        title={`Participants (${participantsCount})`}
+                        className={`
+                            flex
+                            min-w-0
+                            items-center
+                            justify-center
+                            gap-1
+                            overflow-hidden
+                            rounded-t-lg
+                            px-1
+                            py-2.5
+                            text-[10px]
+                            font-semibold
+                            transition-colors
+
+                            sm:gap-1.5
+                            sm:px-1.5
+                            sm:py-3
+                            sm:text-[11px]
+
+                            ${
+                                activePanel ===
+                                "participants"
+                                    ? "bg-slate-800 text-green-400 shadow-sm"
+                                    : "text-slate-500 hover:bg-slate-800/80 hover:text-slate-200"
+                            }
+                        `}
                     >
                         <FaUsers className="shrink-0 text-[10px] sm:text-[11px]" />
 
@@ -924,10 +1169,31 @@ const RoomCommunication = ({
                         onClick={() =>
                             setActivePanel("chat")
                         }
-                        className={getDesktopTabClass(
-                            "chat"
-                        )}
-                        title="Chat"
+                        className={`
+                            flex
+                            min-w-0
+                            items-center
+                            justify-center
+                            gap-1.5
+                            overflow-hidden
+                            rounded-t-lg
+                            px-1
+                            py-2.5
+                            text-[10px]
+                            font-semibold
+                            transition-colors
+
+                            sm:px-1.5
+                            sm:py-3
+                            sm:text-[11px]
+
+                            ${
+                                activePanel ===
+                                "chat"
+                                    ? "bg-slate-800 text-green-400 shadow-sm"
+                                    : "text-slate-500 hover:bg-slate-800/80 hover:text-slate-200"
+                            }
+                        `}
                     >
                         <FaComments className="shrink-0 text-[10px] sm:text-[11px]" />
 
@@ -943,10 +1209,31 @@ const RoomCommunication = ({
                         onClick={() =>
                             setActivePanel("voice")
                         }
-                        className={getDesktopTabClass(
-                            "voice"
-                        )}
-                        title="Voice"
+                        className={`
+                            flex
+                            min-w-0
+                            items-center
+                            justify-center
+                            gap-1.5
+                            overflow-hidden
+                            rounded-t-lg
+                            px-1
+                            py-2.5
+                            text-[10px]
+                            font-semibold
+                            transition-colors
+
+                            sm:px-1.5
+                            sm:py-3
+                            sm:text-[11px]
+
+                            ${
+                                activePanel ===
+                                "voice"
+                                    ? "bg-slate-800 text-green-400 shadow-sm"
+                                    : "text-slate-500 hover:bg-slate-800/80 hover:text-slate-200"
+                            }
+                        `}
                     >
                         <FaMicrophone className="shrink-0 text-[10px] sm:text-[11px]" />
 
@@ -962,10 +1249,31 @@ const RoomCommunication = ({
                         onClick={() =>
                             setActivePanel("drawing")
                         }
-                        className={getDesktopTabClass(
-                            "drawing"
-                        )}
-                        title="Drawing"
+                        className={`
+                            flex
+                            min-w-0
+                            items-center
+                            justify-center
+                            gap-1.5
+                            overflow-hidden
+                            rounded-t-lg
+                            px-1
+                            py-2.5
+                            text-[10px]
+                            font-semibold
+                            transition-colors
+
+                            sm:px-1.5
+                            sm:py-3
+                            sm:text-[11px]
+
+                            ${
+                                activePanel ===
+                                "drawing"
+                                    ? "bg-slate-800 text-green-400 shadow-sm"
+                                    : "text-slate-500 hover:bg-slate-800/80 hover:text-slate-200"
+                            }
+                        `}
                     >
                         <FaPen className="shrink-0 text-[9px] sm:text-[10px]" />
 
@@ -988,409 +1296,146 @@ const RoomCommunication = ({
                         bg-slate-900/70
                     "
                 >
-                    {renderPanelContent()}
-                </div>
-            </div>
+                    {/* Participants */}
 
-            {/* =====================================================
-                MOBILE UI
-                ===================================================== */}
+                    {activePanel ===
+                        "participants" && (
+                        <div className="flex h-full min-h-0 min-w-0 flex-col">
+                            <div
+                                className="
+                                    flex
+                                    shrink-0
+                                    items-center
+                                    justify-between
+                                    border-b
+                                    border-slate-800/70
+                                    px-3
+                                    py-2.5
 
-            <div
-                className="
-                    absolute
-                    inset-x-0
-                    bottom-0
-                    z-50
+                                    sm:px-4
+                                    sm:py-3
+                                "
+                            >
+                                <div className="flex min-w-0 items-center gap-2">
+                                    <div
+                                        className="
+                                            flex
+                                            h-7
+                                            w-7
+                                            shrink-0
+                                            items-center
+                                            justify-center
+                                            rounded-lg
+                                            bg-green-500/10
+                                            text-green-400
+                                        "
+                                    >
+                                        <FaUsers className="text-[10px]" />
+                                    </div>
 
-                    lg:hidden
-                "
-            >
-                {/* =================================================
-                    MOBILE OPEN PANEL
-                    ================================================= */}
+                                    <div className="min-w-0">
+                                        <p className="truncate text-[10px] font-bold text-white sm:text-[11px]">
+                                            Live Participants
+                                        </p>
 
-                {mobilePanelOpen && (
-                    <div
-                        className="
-                            absolute
-                            inset-x-0
-                            bottom-0
-                            flex
-                            max-h-[72vh]
-                            min-h-[220px]
-                            flex-col
-                            overflow-hidden
-                            rounded-t-2xl
-                            border
-                            border-slate-700/80
-                            bg-slate-900
-                            shadow-[0_-20px_60px_rgba(0,0,0,.55)]
-                        "
-                    >
-                        {/* Panel Header */}
+                                        <p className="mt-0.5 truncate text-[8px] text-slate-600">
+                                            {
+                                                participantsCount
+                                            }{" "}
+                                            {participantsCount ===
+                                            1
+                                                ? "participant"
+                                                : "participants"}
+                                        </p>
+                                    </div>
+                                </div>
 
-                        <div
-                            className="
-                                flex
-                                h-11
-                                shrink-0
-                                items-center
-                                justify-between
-                                border-b
-                                border-slate-800
-                                bg-slate-950/95
-                                px-3
-                                backdrop-blur-xl
-                            "
-                        >
-                            <div className="flex min-w-0 items-center gap-2">
                                 <div
                                     className="
                                         flex
-                                        h-7
-                                        w-7
                                         shrink-0
                                         items-center
-                                        justify-center
-                                        rounded-lg
-                                        bg-green-500/10
-                                        text-green-400
+                                        gap-1.5
+                                        rounded-full
+                                        border
+                                        border-emerald-400/10
+                                        bg-emerald-500/[0.06]
+                                        px-2
+                                        py-1
                                     "
                                 >
-                                    {activePanel ===
-                                        "participants" && (
-                                        <FaUsers className="text-[10px]" />
-                                    )}
+                                    <span className="relative flex h-1.5 w-1.5">
+                                        <span className="absolute inset-0 rounded-full bg-emerald-400 opacity-40" />
 
-                                    {activePanel === "chat" && (
-                                        <FaComments className="text-[10px]" />
-                                    )}
+                                        <span className="relative h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                                    </span>
 
-                                    {activePanel === "voice" && (
-                                        <FaMicrophone className="text-[10px]" />
-                                    )}
-
-                                    {activePanel ===
-                                        "drawing" && (
-                                        <FaPen className="text-[10px]" />
-                                    )}
+                                    <span className="text-[8px] font-bold text-emerald-400">
+                                        {onlineCount}{" "}
+                                        online
+                                    </span>
                                 </div>
-
-                                <span className="truncate text-[11px] font-bold text-white">
-                                    {activePanel ===
-                                        "participants" &&
-                                        "Participants"}
-
-                                    {activePanel === "chat" &&
-                                        "Chat"}
-
-                                    {activePanel === "voice" &&
-                                        "Voice"}
-
-                                    {activePanel ===
-                                        "drawing" &&
-                                        "Drawing"}
-                                </span>
                             </div>
 
-                            <button
-                                type="button"
-                                onClick={hideMobilePanel}
+                            <div
                                 className="
-                                    flex
-                                    h-7
-                                    w-7
-                                    shrink-0
-                                    items-center
-                                    justify-center
-                                    rounded-lg
-                                    border
-                                    border-white/[0.07]
-                                    bg-white/[0.04]
-                                    text-slate-400
-                                    transition
-                                    hover:bg-white/[0.08]
-                                    hover:text-white
+                                    min-h-0
+                                    min-w-0
+                                    flex-1
+                                    overflow-y-auto
+                                    overflow-x-hidden
+                                    overscroll-contain
                                 "
-                                aria-label="Hide communication panel"
-                                title="Hide"
                             >
-                                <FaTimes className="text-[9px]" />
-                            </button>
-                        </div>
-
-                        {/* Actual Panel */}
-
-                        <div
-                            className="
-                                min-h-0
-                                flex-1
-                                overflow-hidden
-                                bg-slate-900/95
-                            "
-                        >
-                            {renderPanelContent()}
-                        </div>
-
-                        {/* Mobile Panel Bottom Handle */}
-
-                        <button
-                            type="button"
-                            onClick={hideMobilePanel}
-                            className="
-                                flex
-                                h-8
-                                shrink-0
-                                items-center
-                                justify-center
-                                border-t
-                                border-slate-800
-                                bg-slate-950
-                                text-slate-500
-                                transition
-                                hover:text-white
-                            "
-                            aria-label="Hide communication panel"
-                        >
-                            <FaChevronDown className="text-[10px]" />
-                        </button>
-                    </div>
-                )}
-
-                {/* =================================================
-                    MOBILE COMMUNICATION CONTROLS
-                    These are ABOVE the bottom handle.
-                    They disappear when a panel is selected.
-                    ================================================= */}
-
-                {mobileControlsOpen &&
-                    !mobilePanelOpen && (
-                        <div
-                            className="
-                                absolute
-                                inset-x-2
-                                bottom-12
-                                rounded-2xl
-                                border
-                                border-slate-700/80
-                                bg-slate-900/95
-                                p-1.5
-                                shadow-[0_-12px_40px_rgba(0,0,0,.4)]
-                                backdrop-blur-xl
-                            "
-                        >
-                            <div className="grid grid-cols-4 gap-1">
-                                {/* Participants */}
-
-                                <button
-                                    type="button"
-                                    onClick={() =>
-                                        openMobilePanel(
-                                            "participants"
-                                        )
+                                <Participants
+                                    room={room}
+                                    roomId={roomId}
+                                    participants={
+                                        uniqueMembers
                                     }
-                                    className={`
-                                        flex
-                                        min-w-0
-                                        flex-col
-                                        items-center
-                                        justify-center
-                                        gap-1
-                                        rounded-xl
-                                        px-1
-                                        py-2.5
-                                        transition
-
-                                        ${
-                                            activePanel ===
-                                            "participants"
-                                                ? "bg-green-500/10 text-green-400"
-                                                : "text-slate-400 hover:bg-slate-800 hover:text-white"
-                                        }
-                                    `}
-                                >
-                                    <FaUsers className="text-[12px]" />
-
-                                    <span className="truncate text-[8px] font-semibold">
-                                        People
-                                    </span>
-
-                                    <span className="rounded-full bg-slate-800 px-1.5 py-0.5 text-[7px] font-bold text-slate-500">
-                                        {participantsCount}
-                                    </span>
-                                </button>
-
-                                {/* Chat */}
-
-                                <button
-                                    type="button"
-                                    onClick={() =>
-                                        openMobilePanel(
-                                            "chat"
-                                        )
+                                    onlineUsers={
+                                        uniqueOnlineUsers
                                     }
-                                    className={`
-                                        flex
-                                        min-w-0
-                                        flex-col
-                                        items-center
-                                        justify-center
-                                        gap-1
-                                        rounded-xl
-                                        px-1
-                                        py-2.5
-                                        transition
-
-                                        ${
-                                            activePanel ===
-                                            "chat"
-                                                ? "bg-green-500/10 text-green-400"
-                                                : "text-slate-400 hover:bg-slate-800 hover:text-white"
-                                        }
-                                    `}
-                                >
-                                    <FaComments className="text-[12px]" />
-
-                                    <span className="truncate text-[8px] font-semibold">
-                                        Chat
-                                    </span>
-                                </button>
-
-                                {/* Voice */}
-
-                                <button
-                                    type="button"
-                                    onClick={() =>
-                                        openMobilePanel(
-                                            "voice"
-                                        )
+                                    onRemoveMember={
+                                        onRemoveMember
                                     }
-                                    className={`
-                                        flex
-                                        min-w-0
-                                        flex-col
-                                        items-center
-                                        justify-center
-                                        gap-1
-                                        rounded-xl
-                                        px-1
-                                        py-2.5
-                                        transition
-
-                                        ${
-                                            activePanel ===
-                                            "voice"
-                                                ? "bg-green-500/10 text-green-400"
-                                                : "text-slate-400 hover:bg-slate-800 hover:text-white"
-                                        }
-                                    `}
-                                >
-                                    <FaMicrophone className="text-[12px]" />
-
-                                    <span className="truncate text-[8px] font-semibold">
-                                        Voice
-                                    </span>
-                                </button>
-
-                                {/* Drawing */}
-
-                                <button
-                                    type="button"
-                                    onClick={() =>
-                                        openMobilePanel(
-                                            "drawing"
-                                        )
-                                    }
-                                    className={`
-                                        flex
-                                        min-w-0
-                                        flex-col
-                                        items-center
-                                        justify-center
-                                        gap-1
-                                        rounded-xl
-                                        px-1
-                                        py-2.5
-                                        transition
-
-                                        ${
-                                            activePanel ===
-                                            "drawing"
-                                                ? "bg-green-500/10 text-green-400"
-                                                : "text-slate-400 hover:bg-slate-800 hover:text-white"
-                                        }
-                                    `}
-                                >
-                                    <FaPen className="text-[12px]" />
-
-                                    <span className="truncate text-[8px] font-semibold">
-                                        Drawing
-                                    </span>
-                                </button>
+                                />
                             </div>
                         </div>
                     )}
 
-                {/* =================================================
-                    MOBILE BOTTOM HANDLE
-                    Always attached to bottom.
-                    ================================================= */}
+                    {/* Chat */}
 
-                {!mobilePanelOpen && (
-                    <button
-                        type="button"
-                        onClick={toggleMobileControls}
-                        className="
-                            mx-auto
-                            flex
-                            h-9
-                            w-[150px]
-                            items-center
-                            justify-center
-                            gap-2
-                            rounded-t-xl
-                            border
-                            border-b-0
-                            border-slate-700/80
-                            bg-slate-900/95
-                            text-[9px]
-                            font-bold
-                            text-slate-400
-                            shadow-[0_-8px_30px_rgba(0,0,0,.35)]
-                            backdrop-blur-xl
-                            transition
-                            hover:bg-slate-800
-                            hover:text-white
-                        "
-                        aria-expanded={mobileControlsOpen}
-                        aria-label={
-                            mobileControlsOpen
-                                ? "Hide communication controls"
-                                : "Show communication controls"
-                        }
-                    >
-                        {mobileControlsOpen ? (
-                            <>
-                                <FaChevronDown className="text-[8px]" />
+                    {activePanel === "chat" && (
+                        <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+                            <ChatPanel
+                                roomId={roomId}
+                                isHost={isHost}
+                                isMember={isMember}
+                            />
+                        </div>
+                    )}
 
-                                <span>
-                                    Hide
-                                </span>
-                            </>
-                        ) : (
-                            <>
-                                <FaChevronUp className="text-[8px]" />
+                    {/* Voice */}
 
-                                <span>
-                                    Communication
-                                </span>
-                            </>
-                        )}
-                    </button>
-                )}
+                    {activePanel === "voice" && (
+                        <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+                            <VoicePanel
+                                roomId={roomId}
+                                currentUser={
+                                    currentUser
+                                }
+                            />
+                        </div>
+                    )}
+
+                    {/* Drawing */}
+
+                    {activePanel === "drawing" &&
+                        drawingContent}
+                </div>
             </div>
-        </div>
+        </>
     );
 };
 
