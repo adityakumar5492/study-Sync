@@ -761,7 +761,7 @@ const RegisterNavbar = () => {
                     >
                         <span className="relative z-10 flex items-center gap-1.5 sm:gap-2">
                             <span className="hidden xs:inline sm:inline">
-                                Back to landing
+                                Back
                             </span>
 
                             <span className="sm:hidden">Back</span>
