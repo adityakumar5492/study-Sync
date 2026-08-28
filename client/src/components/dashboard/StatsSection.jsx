@@ -3,7 +3,6 @@ import {
     FaClock,
     FaFire,
     FaCalendarAlt,
-    FaTimes,
 } from "react-icons/fa";
 import { motion, useReducedMotion } from "framer-motion";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -14,6 +13,7 @@ import StudyStreakCalendar from "./StudyStreakCalendar";
 
 const StatsSection = () => {
     const shouldReduceMotion = useReducedMotion();
+
     const calendarRef = useRef(null);
 
     const { rooms } = useAppSelector((state) => state.room);
@@ -25,11 +25,17 @@ const StatsSection = () => {
 
     const [showCalendar, setShowCalendar] = useState(false);
 
+    // =========================================
+    // STUDY STATS
+    // =========================================
+
     useEffect(() => {
         const handleStats = (data) => {
             setStudyStats({
-                totalSeconds: data?.totalSeconds || 0,
-                sessions: data?.sessions || [],
+                totalSeconds: Number(data?.totalSeconds) || 0,
+                sessions: Array.isArray(data?.sessions)
+                    ? data.sessions
+                    : [],
             });
         };
 
@@ -42,7 +48,11 @@ const StatsSection = () => {
         };
 
         socket.on("study:stats", handleStats);
-        socket.on("profile:study-stats-updated", handleStatsUpdated);
+
+        socket.on(
+            "profile:study-stats-updated",
+            handleStatsUpdated
+        );
 
         if (socket.connected) {
             requestStats();
@@ -52,12 +62,21 @@ const StatsSection = () => {
 
         return () => {
             socket.off("study:stats", handleStats);
-            socket.off("profile:study-stats-updated", handleStatsUpdated);
+            socket.off(
+                "profile:study-stats-updated",
+                handleStatsUpdated
+            );
         };
     }, []);
 
+    // =========================================
+    // CLOSE CALENDAR WHEN CLICKING OUTSIDE
+    // =========================================
+
     useEffect(() => {
-        const handleClickOutside = (event) => {
+        if (!showCalendar) return;
+
+        const handlePointerDown = (event) => {
             if (
                 calendarRef.current &&
                 !calendarRef.current.contains(event.target)
@@ -66,50 +85,108 @@ const StatsSection = () => {
             }
         };
 
-        if (showCalendar) {
-            document.addEventListener("mousedown", handleClickOutside);
-        }
+        document.addEventListener(
+            "mousedown",
+            handlePointerDown
+        );
 
         return () => {
             document.removeEventListener(
                 "mousedown",
-                handleClickOutside
+                handlePointerDown
             );
         };
     }, [showCalendar]);
+
+    // =========================================
+    // ESCAPE KEY
+    // =========================================
+
+    useEffect(() => {
+        if (!showCalendar) return;
+
+        const handleKeyDown = (event) => {
+            if (event.key === "Escape") {
+                setShowCalendar(false);
+            }
+        };
+
+        document.addEventListener(
+            "keydown",
+            handleKeyDown
+        );
+
+        return () => {
+            document.removeEventListener(
+                "keydown",
+                handleKeyDown
+            );
+        };
+    }, [showCalendar]);
+
+    // =========================================
+    // TOTAL STUDY HOURS
+    // =========================================
 
     const totalHours = Math.floor(
         studyStats.totalSeconds / 3600
     );
 
-    const calculateCurrentStreak = () => {
+    // =========================================
+    // CURRENT STREAK
+    // =========================================
+
+    const currentStreak = useMemo(() => {
         const sessions = studyStats.sessions || [];
 
         if (!sessions.length) return 0;
 
-        const studyDays = new Set(
-            sessions.map((session) => {
-                const date = new Date(session.startedAt);
+        const studyDays = new Set();
 
-                return `${date.getFullYear()}-${String(
-                    date.getMonth() + 1
-                ).padStart(2, "0")}-${String(
-                    date.getDate()
-                ).padStart(2, "0")}`;
-            })
-        );
+        sessions.forEach((session) => {
+            if (!session?.startedAt) return;
 
-        let streak = 0;
+            const date = new Date(session.startedAt);
+
+            if (Number.isNaN(date.getTime())) return;
+
+            const key = [
+                date.getFullYear(),
+                String(date.getMonth() + 1).padStart(
+                    2,
+                    "0"
+                ),
+                String(date.getDate()).padStart(
+                    2,
+                    "0"
+                ),
+            ].join("-");
+
+            studyDays.add(key);
+        });
+
+        if (!studyDays.size) return 0;
+
         const currentDate = new Date();
 
-        while (true) {
-            const key = `${currentDate.getFullYear()}-${String(
-                currentDate.getMonth() + 1
-            ).padStart(2, "0")}-${String(
-                currentDate.getDate()
-            ).padStart(2, "0")}`;
+        currentDate.setHours(0, 0, 0, 0);
 
-            if (!studyDays.has(key)) break;
+        let streak = 0;
+
+        while (true) {
+            const key = [
+                currentDate.getFullYear(),
+                String(
+                    currentDate.getMonth() + 1
+                ).padStart(2, "0"),
+                String(
+                    currentDate.getDate()
+                ).padStart(2, "0"),
+            ].join("-");
+
+            if (!studyDays.has(key)) {
+                break;
+            }
 
             streak++;
 
@@ -119,19 +196,41 @@ const StatsSection = () => {
         }
 
         return streak;
-    };
+    }, [studyStats.sessions]);
 
-    const currentStreak = calculateCurrentStreak();
+    // =========================================
+    // ACTIVE DAYS
+    // =========================================
 
     const activityDays = useMemo(() => {
-        return new Set(
-            (studyStats.sessions || []).map((session) => {
-                const date = new Date(session.startedAt);
+        const days = new Set();
 
-                return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
-            })
-        ).size;
+        (studyStats.sessions || []).forEach(
+            (session) => {
+                if (!session?.startedAt) return;
+
+                const date = new Date(
+                    session.startedAt
+                );
+
+                if (Number.isNaN(date.getTime())) return;
+
+                const key = [
+                    date.getFullYear(),
+                    date.getMonth(),
+                    date.getDate(),
+                ].join("-");
+
+                days.add(key);
+            }
+        );
+
+        return days.size;
     }, [studyStats.sessions]);
+
+    // =========================================
+    // STAT DATA
+    // =========================================
 
     const stats = [
         {
@@ -164,42 +263,59 @@ const StatsSection = () => {
         },
     ];
 
+    // =========================================
+    // ACCENT STYLES
+    // =========================================
+
     const accentStyles = {
         indigo: {
             icon: "text-indigo-300",
             bg: "bg-indigo-500/[0.09]",
-            border: "group-hover:border-indigo-500/20",
+            border:
+                "group-hover:border-indigo-500/20",
             glow: "bg-indigo-500",
             dot: "bg-indigo-400",
         },
+
         cyan: {
             icon: "text-cyan-300",
             bg: "bg-cyan-500/[0.09]",
-            border: "group-hover:border-cyan-500/20",
+            border:
+                "group-hover:border-cyan-500/20",
             glow: "bg-cyan-500",
             dot: "bg-cyan-400",
         },
+
         orange: {
             icon: "text-orange-300",
             bg: "bg-orange-500/[0.09]",
-            border: "group-hover:border-orange-500/20",
+            border:
+                "group-hover:border-orange-500/20",
             glow: "bg-orange-500",
             dot: "bg-orange-400",
         },
+
         violet: {
             icon: "text-violet-300",
             bg: "bg-violet-500/[0.09]",
-            border: "group-hover:border-violet-500/20",
+            border:
+                "group-hover:border-violet-500/20",
             glow: "bg-violet-500",
             dot: "bg-violet-400",
         },
     };
 
+    // =========================================
+    // ANIMATION
+    // =========================================
+
     const containerVariants = {
         hidden: {},
+
         visible: {
             transition: {
-                staggerChildren: shouldReduceMotion ? 0 : 0.06,
+                staggerChildren:
+                    shouldReduceMotion ? 0 : 0.06,
             },
         },
     };
@@ -209,9 +325,11 @@ const StatsSection = () => {
             opacity: 0,
             y: shouldReduceMotion ? 0 : 14,
         },
+
         visible: {
             opacity: 1,
             y: 0,
+
             transition: {
                 duration: 0.4,
                 ease: [0.16, 1, 0.3, 1],
@@ -219,20 +337,36 @@ const StatsSection = () => {
         },
     };
 
+    // =========================================
+    // TOGGLE CALENDAR
+    // =========================================
+
+    const toggleCalendar = () => {
+        setShowCalendar((previous) => !previous);
+    };
+
     return (
-        <section className="relative">
-            {/* SECTION HEADER */}
+        <section className="relative z-10">
+            {/* =========================================
+                SECTION HEADER
+            ========================================= */}
 
             <motion.div
                 initial={
                     shouldReduceMotion
                         ? false
-                        : { opacity: 0, y: 8 }
+                        : {
+                              opacity: 0,
+                              y: 8,
+                          }
                 }
                 animate={
                     shouldReduceMotion
                         ? undefined
-                        : { opacity: 1, y: 0 }
+                        : {
+                              opacity: 1,
+                              y: 0,
+                          }
                 }
                 transition={{
                     duration: 0.4,
@@ -244,6 +378,7 @@ const StatsSection = () => {
                     <div className="mb-2 flex items-center gap-2">
                         <span className="relative flex h-1.5 w-1.5">
                             <span className="absolute inset-0 animate-ping rounded-full bg-indigo-400/40" />
+
                             <span className="relative h-1.5 w-1.5 rounded-full bg-indigo-400" />
                         </span>
 
@@ -262,7 +397,9 @@ const StatsSection = () => {
                 </div>
             </motion.div>
 
-            {/* STAT GRID */}
+            {/* =========================================
+                STAT GRID
+            ========================================= */}
 
             <motion.div
                 variants={containerVariants}
@@ -272,7 +409,8 @@ const StatsSection = () => {
             >
                 {stats.map((stat, index) => {
                     const Icon = stat.icon;
-                    const colors = accentStyles[stat.accent];
+                    const colors =
+                        accentStyles[stat.accent];
 
                     const isActivity =
                         stat.id === "activity";
@@ -280,22 +418,33 @@ const StatsSection = () => {
                     return (
                         <div
                             key={stat.id}
-                            ref={isActivity ? calendarRef : null}
-                            className="relative min-w-0"
+                            ref={
+                                isActivity
+                                    ? calendarRef
+                                    : null
+                            }
+                            className={`relative min-w-0 ${
+                                isActivity
+                                    ? "z-20"
+                                    : "z-0"
+                            }`}
                         >
+                            {/* =================================
+                                STAT CARD
+                            ================================= */}
+
                             <motion.div
                                 variants={itemVariants}
                                 whileHover={
                                     shouldReduceMotion
                                         ? undefined
-                                        : { y: -4 }
+                                        : {
+                                              y: -4,
+                                          }
                                 }
                                 onClick={
                                     isActivity
-                                        ? () =>
-                                              setShowCalendar(
-                                                  (prev) => !prev
-                                              )
+                                        ? toggleCalendar
                                         : undefined
                                 }
                                 role={
@@ -305,6 +454,16 @@ const StatsSection = () => {
                                 }
                                 tabIndex={
                                     isActivity ? 0 : undefined
+                                }
+                                aria-expanded={
+                                    isActivity
+                                        ? showCalendar
+                                        : undefined
+                                }
+                                aria-label={
+                                    isActivity
+                                        ? "Open study activity calendar"
+                                        : undefined
                                 }
                                 onKeyDown={
                                     isActivity
@@ -316,17 +475,21 @@ const StatsSection = () => {
                                                       " "
                                               ) {
                                                   event.preventDefault();
-                                                  setShowCalendar(
-                                                      (prev) =>
-                                                          !prev
-                                                  );
+                                                  toggleCalendar();
                                               }
                                           }
                                         : undefined
                                 }
-                                className={`group relative min-w-0 overflow-hidden rounded-[20px] border border-slate-800/80 bg-[#0a0f17] p-4 shadow-[0_12px_40px_rgba(0,0,0,0.14)] transition-[border-color,background-color,box-shadow] duration-500 hover:bg-[#0c121c] hover:shadow-[0_18px_48px_rgba(0,0,0,0.22)] sm:p-5 ${colors.border} ${
+                                className={`group relative min-w-0 overflow-hidden rounded-[20px] border border-slate-800/80 bg-[#0a0f17] p-4 shadow-[0_12px_40px_rgba(0,0,0,0.14)] transition-[border-color,background-color,box-shadow] duration-500 hover:bg-[#0c121c] hover:shadow-[0_18px_48px_rgba(0,0,0,0.22)] sm:p-5 ${
+                                    colors.border
+                                } ${
                                     isActivity
                                         ? "cursor-pointer"
+                                        : ""
+                                } ${
+                                    showCalendar &&
+                                    isActivity
+                                        ? "border-violet-500/30 bg-[#0c121c]"
                                         : ""
                                 }`}
                             >
@@ -339,10 +502,15 @@ const StatsSection = () => {
                                 {/* Top accent */}
 
                                 <div
-                                    className={`pointer-events-none absolute left-6 right-6 top-0 h-px opacity-0 transition-opacity duration-500 group-hover:opacity-70 ${colors.dot}`}
+                                    className={`pointer-events-none absolute left-6 right-6 top-0 h-px transition-opacity duration-500 ${
+                                        showCalendar &&
+                                        isActivity
+                                            ? "opacity-100"
+                                            : "opacity-0 group-hover:opacity-70"
+                                    } ${colors.dot}`}
                                 />
 
-                                {/* Header */}
+                                {/* Card header */}
 
                                 <div className="relative flex items-center justify-between">
                                     <motion.div
@@ -409,12 +577,14 @@ const StatsSection = () => {
 
                                 <div className="relative mt-4 flex items-center gap-2">
                                     <span
-                                        className={`h-1.5 w-1.5 shrink-0 rounded-full opacity-70 transition-all duration-300 group-hover:opacity-100 group-hover:shadow-[0_0_8px_currentColor] ${colors.dot}`}
+                                        className={`h-1.5 w-1.5 shrink-0 rounded-full opacity-70 transition-all duration-300 group-hover:opacity-100 ${colors.dot}`}
                                     />
 
                                     <span className="truncate text-[9px] font-medium text-slate-600 transition-colors duration-300 group-hover:text-slate-500">
                                         {isActivity
-                                            ? "Click to view activity"
+                                            ? showCalendar
+                                                ? "Click to close activity"
+                                                : "Click to view activity"
                                             : "Study activity"}
                                     </span>
                                 </div>
@@ -424,67 +594,22 @@ const StatsSection = () => {
                                 <div className="pointer-events-none absolute inset-0 rounded-[20px] ring-1 ring-inset ring-white/[0.025] transition-all duration-500 group-hover:ring-white/[0.06]" />
                             </motion.div>
 
-                            {/* SMALL CALENDAR POPUP */}
+                            {/* =================================
+                                CALENDAR
+                            ================================= */}
 
                             {isActivity && (
-                                <motion.div
-                                    initial={false}
-                                    animate={
-                                        showCalendar
-                                            ? {
-                                                  opacity: 1,
-                                                  y: 0,
-                                                  scale: 1,
-                                              }
-                                            : {
-                                                  opacity: 0,
-                                                  y: -8,
-                                                  scale: 0.97,
-                                              }
+                                <StudyStreakCalendar
+                                    isOpen={showCalendar}
+                                    onClose={() =>
+                                        setShowCalendar(
+                                            false
+                                        )
                                     }
-                                    transition={{
-                                        duration: shouldReduceMotion
-                                            ? 0
-                                            : 0.2,
-                                    }}
-                                    className={`absolute left-0 right-0 top-full z-50 mt-3 origin-top ${
-                                        showCalendar
-                                            ? "pointer-events-auto"
-                                            : "pointer-events-none"
-                                    }`}
-                                >
-                                    <div className="relative rounded-[18px] border border-slate-800/90 bg-[#080d15] p-3 shadow-[0_20px_60px_rgba(0,0,0,0.45)] sm:p-4">
-                                        <div className="mb-3 flex items-center justify-between">
-                                            <div>
-                                                <p className="text-xs font-semibold text-white">
-                                                    Study Activity
-                                                </p>
-                                                <p className="mt-0.5 text-[9px] text-slate-500">
-                                                    Last 12 weeks
-                                                </p>
-                                            </div>
-
-                                            <button
-                                                type="button"
-                                                onClick={() =>
-                                                    setShowCalendar(
-                                                        false
-                                                    )
-                                                }
-                                                className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-800/70 hover:text-white"
-                                                aria-label="Close calendar"
-                                            >
-                                                <FaTimes className="text-[10px]" />
-                                            </button>
-                                        </div>
-
-                                        <StudyStreakCalendar
-                                            sessions={
-                                                studyStats.sessions
-                                            }
-                                        />
-                                    </div>
-                                </motion.div>
+                                    sessions={
+                                        studyStats.sessions
+                                    }
+                                />
                             )}
                         </div>
                     );
