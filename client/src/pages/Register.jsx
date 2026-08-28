@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { FcGoogle } from "react-icons/fc";
+
 import toast from "react-hot-toast";
 import {
     FiUser,
@@ -342,8 +342,7 @@ const Register = () => {
                                         transition={{ duration: 0.15 }}
                                         className="flex min-h-[48px] w-full items-center justify-center gap-2.5 rounded-xl border border-white/[0.07] bg-white/[0.025] px-4 py-3 text-xs font-semibold text-zinc-300 transition-colors duration-200 hover:border-white/[0.12] hover:bg-white/[0.045] sm:rounded-2xl sm:text-sm"
                                     >
-                                        <FcGoogle size={18} />
-                                        Continue with Google
+                                
                                     </motion.button>
 
                                     {/* Login */}
