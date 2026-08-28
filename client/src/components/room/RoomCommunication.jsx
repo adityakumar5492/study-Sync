@@ -7,9 +7,8 @@ import {
     FaPen,
     FaChevronUp,
     FaChevronDown,
+    FaTimes,
 } from "react-icons/fa";
-
-import { AnimatePresence, motion } from "framer-motion";
 
 import Participants from "./Participants";
 import ChatPanel from "./ChatPanel";
@@ -31,8 +30,24 @@ const RoomCommunication = ({
     const [activePanel, setActivePanel] =
         useState("participants");
 
-    // Mobile bottom communication drawer
-    const [mobileDrawerOpen, setMobileDrawerOpen] =
+    /*
+     * Mobile communication UI state.
+     *
+     * mobileControlsOpen:
+     * Controls bar containing the 4 buttons.
+     *
+     * mobilePanelOpen:
+     * Actual communication panel.
+     *
+     * On mobile the communication panel is an
+     * absolute bottom-sheet overlay. It does NOT
+     * participate in the PDF layout, so the PDF
+     * keeps maximum available space.
+     */
+    const [mobileControlsOpen, setMobileControlsOpen] =
+        useState(false);
+
+    const [mobilePanelOpen, setMobilePanelOpen] =
         useState(false);
 
     // ===========================
@@ -68,7 +83,8 @@ const RoomCommunication = ({
         new Map(
             (room?.members || [])
                 .map((member) => {
-                    const userId = getUserId(member);
+                    const userId =
+                        getUserId(member);
 
                     if (!userId) {
                         return null;
@@ -129,234 +145,82 @@ const RoomCommunication = ({
         );
 
     // ===========================
-    // Panel Change
+    // Mobile Handlers
     // ===========================
 
-    const handlePanelChange = (panel) => {
-        setActivePanel(panel);
+    const openMobileControls = () => {
+        setMobileControlsOpen(true);
+        setMobilePanelOpen(false);
     };
 
-    return (
-        <div
-            className="
-                relative
-                flex
-                h-full
-                min-h-0
-                min-w-0
-                flex-col
-                overflow-hidden
-                bg-slate-950
-            "
-        >
-            {/* =====================================================
-                DESKTOP COMMUNICATION TABS
+    const closeMobileControls = () => {
+        setMobileControlsOpen(false);
+        setMobilePanelOpen(false);
+    };
 
-                Desktop stays exactly like a normal sidebar.
-            ===================================================== */}
+    const openMobilePanel = (panel) => {
+        setActivePanel(panel);
+        setMobilePanelOpen(true);
+        setMobileControlsOpen(false);
+    };
 
-            <div
-                className="
-                    hidden
-                    shrink-0
-                    grid-cols-4
-                    gap-px
-                    border-b
-                    border-slate-800/80
-                    bg-slate-900/95
-                    px-0.5
-                    pt-0.5
-                    shadow-lg
-                    shadow-black/10
+    const hideMobilePanel = () => {
+        setMobilePanelOpen(false);
+        setMobileControlsOpen(false);
+    };
 
-                    lg:grid
-                "
-            >
-                {/* PARTICIPANTS */}
+    const toggleMobileControls = () => {
+        if (mobilePanelOpen) {
+            hideMobilePanel();
+            return;
+        }
 
-                <button
-                    type="button"
-                    onClick={() =>
-                        handlePanelChange(
-                            "participants"
-                        )
-                    }
-                    className={`
-                        flex
-                        min-w-0
-                        items-center
-                        justify-center
-                        gap-1.5
-                        overflow-hidden
-                        rounded-t-lg
-                        px-1.5
-                        py-3
-                        text-[11px]
-                        font-semibold
-                        transition-colors
+        if (mobileControlsOpen) {
+            closeMobileControls();
+        } else {
+            openMobileControls();
+        }
+    };
 
-                        ${
-                            activePanel ===
-                            "participants"
-                                ? "bg-slate-800 text-green-400 shadow-sm"
-                                : "text-slate-500 hover:bg-slate-800/80 hover:text-slate-200"
-                        }
-                    `}
-                >
-                    <FaUsers className="shrink-0 text-[11px]" />
+    // ===========================
+    // Shared Tab Button Classes
+    // ===========================
 
-                    <span className="min-w-0 truncate">
-                        Participants
-                    </span>
+    const getDesktopTabClass = (panel) => `
+        flex
+        min-w-0
+        items-center
+        justify-center
+        gap-1.5
+        overflow-hidden
+        rounded-t-lg
+        px-1
+        py-2.5
+        text-[10px]
+        font-semibold
+        transition-colors
 
-                    <span
-                        className={`
-                            shrink-0
-                            rounded-full
-                            px-1.5
-                            py-0.5
-                            text-[8px]
-                            font-bold
-                            leading-none
+        sm:px-1.5
+        sm:py-3
+        sm:text-[11px]
 
-                            ${
-                                activePanel ===
-                                "participants"
-                                    ? "bg-green-500/10 text-green-400"
-                                    : "bg-slate-800 text-slate-500"
-                            }
-                        `}
-                    >
-                        {participantsCount}
-                    </span>
-                </button>
+        ${
+            activePanel === panel
+                ? "bg-slate-800 text-green-400 shadow-sm"
+                : "text-slate-500 hover:bg-slate-800/80 hover:text-slate-200"
+        }
+    `;
 
-                {/* CHAT */}
+    // ===========================
+    // Communication Panel Content
+    // ===========================
 
-                <button
-                    type="button"
-                    onClick={() =>
-                        handlePanelChange("chat")
-                    }
-                    className={`
-                        flex
-                        min-w-0
-                        items-center
-                        justify-center
-                        gap-1.5
-                        overflow-hidden
-                        rounded-t-lg
-                        px-1.5
-                        py-3
-                        text-[11px]
-                        font-semibold
-                        transition-colors
-
-                        ${
-                            activePanel === "chat"
-                                ? "bg-slate-800 text-green-400 shadow-sm"
-                                : "text-slate-500 hover:bg-slate-800/80 hover:text-slate-200"
-                        }
-                    `}
-                >
-                    <FaComments className="shrink-0 text-[11px]" />
-
-                    <span className="truncate">
-                        Chat
-                    </span>
-                </button>
-
-                {/* VOICE */}
-
-                <button
-                    type="button"
-                    onClick={() =>
-                        handlePanelChange("voice")
-                    }
-                    className={`
-                        flex
-                        min-w-0
-                        items-center
-                        justify-center
-                        gap-1.5
-                        overflow-hidden
-                        rounded-t-lg
-                        px-1.5
-                        py-3
-                        text-[11px]
-                        font-semibold
-                        transition-colors
-
-                        ${
-                            activePanel === "voice"
-                                ? "bg-slate-800 text-green-400 shadow-sm"
-                                : "text-slate-500 hover:bg-slate-800/80 hover:text-slate-200"
-                        }
-                    `}
-                >
-                    <FaMicrophone className="shrink-0 text-[11px]" />
-
-                    <span className="truncate">
-                        Voice
-                    </span>
-                </button>
-
-                {/* DRAWING */}
-
-                <button
-                    type="button"
-                    onClick={() =>
-                        handlePanelChange("drawing")
-                    }
-                    className={`
-                        flex
-                        min-w-0
-                        items-center
-                        justify-center
-                        gap-1.5
-                        overflow-hidden
-                        rounded-t-lg
-                        px-1.5
-                        py-3
-                        text-[11px]
-                        font-semibold
-                        transition-colors
-
-                        ${
-                            activePanel === "drawing"
-                                ? "bg-slate-800 text-green-400 shadow-sm"
-                                : "text-slate-500 hover:bg-slate-800/80 hover:text-slate-200"
-                        }
-                    `}
-                >
-                    <FaPen className="shrink-0 text-[10px]" />
-
-                    <span className="truncate">
-                        Drawing
-                    </span>
-                </button>
-            </div>
-
-            {/* =====================================================
-                ACTIVE PANEL
-            ===================================================== */}
-
-            <div
-                className="
-                    flex
-                    min-h-0
-                    min-w-0
-                    flex-1
-                    flex-col
-                    overflow-hidden
-                    bg-slate-900/70
-
-                    max-lg:pb-[3.25rem]
-                "
-            >
-                {/* =================================================
+    const renderPanelContent = () => {
+        return (
+            <>
+                {/* =================================
                     PARTICIPANTS
-                ================================================= */}
+                ================================= */}
 
                 {activePanel === "participants" && (
                     <div className="flex h-full min-h-0 min-w-0 flex-col">
@@ -450,7 +314,7 @@ const RoomCommunication = ({
                             </div>
                         </div>
 
-                        {/* Participants */}
+                        {/* Actual Participants */}
 
                         <div
                             className="
@@ -465,12 +329,8 @@ const RoomCommunication = ({
                             <Participants
                                 room={room}
                                 roomId={roomId}
-                                participants={
-                                    uniqueMembers
-                                }
-                                onlineUsers={
-                                    uniqueOnlineUsers
-                                }
+                                participants={uniqueMembers}
+                                onlineUsers={uniqueOnlineUsers}
                                 onRemoveMember={
                                     onRemoveMember
                                 }
@@ -479,9 +339,9 @@ const RoomCommunication = ({
                     </div>
                 )}
 
-                {/* =================================================
+                {/* =================================
                     CHAT
-                ================================================= */}
+                ================================= */}
 
                 {activePanel === "chat" && (
                     <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
@@ -493,24 +353,22 @@ const RoomCommunication = ({
                     </div>
                 )}
 
-                {/* =================================================
+                {/* =================================
                     VOICE
-                ================================================= */}
+                ================================= */}
 
                 {activePanel === "voice" && (
                     <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
                         <VoicePanel
                             roomId={roomId}
-                            currentUser={
-                                currentUser
-                            }
+                            currentUser={currentUser}
                         />
                     </div>
                 )}
 
-                {/* =================================================
+                {/* =================================
                     DRAWING
-                ================================================= */}
+                ================================= */}
 
                 {activePanel === "drawing" && (
                     <div
@@ -576,8 +434,7 @@ const RoomCommunication = ({
                                         onDrawingPermissionChange(
                                             {
                                                 mode: "none",
-                                                allowedUsers:
-                                                    [],
+                                                allowedUsers: [],
                                             }
                                         )
                                     }
@@ -615,7 +472,6 @@ const RoomCommunication = ({
                                             justify-center
                                             rounded-full
                                             border-2
-
                                             ${
                                                 drawingPermission?.mode ===
                                                 "none"
@@ -643,8 +499,7 @@ const RoomCommunication = ({
                                         onDrawingPermissionChange(
                                             {
                                                 mode: "everyone",
-                                                allowedUsers:
-                                                    [],
+                                                allowedUsers: [],
                                             }
                                         )
                                     }
@@ -682,7 +537,6 @@ const RoomCommunication = ({
                                             justify-center
                                             rounded-full
                                             border-2
-
                                             ${
                                                 drawingPermission?.mode ===
                                                 "everyone"
@@ -750,7 +604,6 @@ const RoomCommunication = ({
                                             justify-center
                                             rounded-full
                                             border-2
-
                                             ${
                                                 drawingPermission?.mode ===
                                                 "selected"
@@ -800,17 +653,13 @@ const RoomCommunication = ({
                                             "
                                         >
                                             {uniqueMembers.map(
-                                                (
-                                                    member
-                                                ) => {
+                                                (member) => {
                                                     const userId =
                                                         getUserId(
                                                             member
                                                         );
 
-                                                    if (
-                                                        !userId
-                                                    ) {
+                                                    if (!userId) {
                                                         return null;
                                                     }
 
@@ -827,9 +676,7 @@ const RoomCommunication = ({
 
                                                     return (
                                                         <button
-                                                            key={
-                                                                userId
-                                                            }
+                                                            key={userId}
                                                             type="button"
                                                             onClick={() => {
                                                                 const current =
@@ -893,7 +740,6 @@ const RoomCommunication = ({
                                                                     justify-center
                                                                     rounded
                                                                     border
-
                                                                     ${
                                                                         selected
                                                                             ? "border-green-500 bg-green-500"
@@ -909,9 +755,7 @@ const RoomCommunication = ({
                                                             </span>
 
                                                             <span className="min-w-0 truncate">
-                                                                {
-                                                                    name
-                                                                }
+                                                                {name}
                                                             </span>
                                                         </button>
                                                     );
@@ -982,24 +826,178 @@ const RoomCommunication = ({
                         )}
                     </div>
                 )}
-            </div>
+            </>
+        );
+    };
 
+    return (
+        <div
+            className="
+                relative
+                flex
+                h-full
+                min-h-0
+                min-w-0
+                flex-col
+                overflow-hidden
+                bg-slate-950
+            "
+        >
             {/* =====================================================
-                MOBILE BOTTOM COMMUNICATION DRAWER
-
-                This is intentionally outside the main panel so
-                the PDF gets almost the entire screen.
-
-                Closed:
-                - only a tiny bottom handle remains.
-
-                Open:
-                - four communication buttons slide upward.
-            ===================================================== */}
+                DESKTOP COMMUNICATION SIDEBAR
+                ===================================================== */}
 
             <div
                 className="
-                    pointer-events-none
+                    hidden
+                    h-full
+                    min-h-0
+                    min-w-0
+                    flex-1
+                    flex-col
+                    overflow-hidden
+
+                    lg:flex
+                "
+            >
+                {/* Desktop Tabs */}
+
+                <div
+                    className="
+                        grid
+                        shrink-0
+                        grid-cols-4
+                        gap-px
+                        border-b
+                        border-slate-800/80
+                        bg-slate-900/95
+                        px-0.5
+                        pt-0.5
+                        shadow-lg
+                        shadow-black/10
+                    "
+                >
+                    {/* Participants */}
+
+                    <button
+                        type="button"
+                        onClick={() =>
+                            setActivePanel("participants")
+                        }
+                        className={getDesktopTabClass(
+                            "participants"
+                        )}
+                        title={`Participants (${participantsCount})`}
+                    >
+                        <FaUsers className="shrink-0 text-[10px] sm:text-[11px]" />
+
+                        <span className="min-w-0 truncate">
+                            Participants
+                        </span>
+
+                        <span
+                            className={`
+                                shrink-0
+                                rounded-full
+                                px-1.5
+                                py-0.5
+                                text-[8px]
+                                font-bold
+                                leading-none
+
+                                ${
+                                    activePanel ===
+                                    "participants"
+                                        ? "bg-green-500/10 text-green-400"
+                                        : "bg-slate-800 text-slate-500"
+                                }
+                            `}
+                        >
+                            {participantsCount}
+                        </span>
+                    </button>
+
+                    {/* Chat */}
+
+                    <button
+                        type="button"
+                        onClick={() =>
+                            setActivePanel("chat")
+                        }
+                        className={getDesktopTabClass(
+                            "chat"
+                        )}
+                        title="Chat"
+                    >
+                        <FaComments className="shrink-0 text-[10px] sm:text-[11px]" />
+
+                        <span className="truncate">
+                            Chat
+                        </span>
+                    </button>
+
+                    {/* Voice */}
+
+                    <button
+                        type="button"
+                        onClick={() =>
+                            setActivePanel("voice")
+                        }
+                        className={getDesktopTabClass(
+                            "voice"
+                        )}
+                        title="Voice"
+                    >
+                        <FaMicrophone className="shrink-0 text-[10px] sm:text-[11px]" />
+
+                        <span className="truncate">
+                            Voice
+                        </span>
+                    </button>
+
+                    {/* Drawing */}
+
+                    <button
+                        type="button"
+                        onClick={() =>
+                            setActivePanel("drawing")
+                        }
+                        className={getDesktopTabClass(
+                            "drawing"
+                        )}
+                        title="Drawing"
+                    >
+                        <FaPen className="shrink-0 text-[9px] sm:text-[10px]" />
+
+                        <span className="truncate">
+                            Drawing
+                        </span>
+                    </button>
+                </div>
+
+                {/* Desktop Active Panel */}
+
+                <div
+                    className="
+                        flex
+                        min-h-0
+                        min-w-0
+                        flex-1
+                        flex-col
+                        overflow-hidden
+                        bg-slate-900/70
+                    "
+                >
+                    {renderPanelContent()}
+                </div>
+            </div>
+
+            {/* =====================================================
+                MOBILE UI
+                ===================================================== */}
+
+            <div
+                className="
                     absolute
                     inset-x-0
                     bottom-0
@@ -1008,281 +1006,389 @@ const RoomCommunication = ({
                     lg:hidden
                 "
             >
-                <div className="pointer-events-auto flex flex-col items-center">
-                    {/* =================================================
-                        MOBILE TAB BAR
+                {/* =================================================
+                    MOBILE OPEN PANEL
                     ================================================= */}
 
-                    <AnimatePresence>
-                        {mobileDrawerOpen && (
-                            <motion.div
-                                initial={{
-                                    opacity: 0,
-                                    y: 18,
-                                }}
-                                animate={{
-                                    opacity: 1,
-                                    y: 0,
-                                }}
-                                exit={{
-                                    opacity: 0,
-                                    y: 18,
-                                }}
-                                transition={{
-                                    duration: 0.2,
-                                    ease: "easeOut",
-                                }}
-                                className="
-                                    mb-1
-                                    w-full
-                                    px-2
-                                "
-                            >
+                {mobilePanelOpen && (
+                    <div
+                        className="
+                            absolute
+                            inset-x-0
+                            bottom-0
+                            flex
+                            max-h-[72vh]
+                            min-h-[220px]
+                            flex-col
+                            overflow-hidden
+                            rounded-t-2xl
+                            border
+                            border-slate-700/80
+                            bg-slate-900
+                            shadow-[0_-20px_60px_rgba(0,0,0,.55)]
+                        "
+                    >
+                        {/* Panel Header */}
+
+                        <div
+                            className="
+                                flex
+                                h-11
+                                shrink-0
+                                items-center
+                                justify-between
+                                border-b
+                                border-slate-800
+                                bg-slate-950/95
+                                px-3
+                                backdrop-blur-xl
+                            "
+                        >
+                            <div className="flex min-w-0 items-center gap-2">
                                 <div
                                     className="
-                                        grid
-                                        grid-cols-4
-                                        gap-1
-                                        rounded-2xl
-                                        border
-                                        border-slate-700/70
-                                        bg-slate-950/95
-                                        p-1
-                                        shadow-[0_-12px_35px_rgba(0,0,0,0.45)]
-                                        backdrop-blur-xl
+                                        flex
+                                        h-7
+                                        w-7
+                                        shrink-0
+                                        items-center
+                                        justify-center
+                                        rounded-lg
+                                        bg-green-500/10
+                                        text-green-400
                                     "
                                 >
-                                    {/* Participants */}
+                                    {activePanel ===
+                                        "participants" && (
+                                        <FaUsers className="text-[10px]" />
+                                    )}
 
-                                    <button
-                                        type="button"
-                                        onClick={() =>
-                                            handlePanelChange(
-                                                "participants"
-                                            )
-                                        }
-                                        className={`
-                                            flex
-                                            min-w-0
-                                            flex-col
-                                            items-center
-                                            justify-center
-                                            gap-1
-                                            rounded-xl
-                                            px-1
-                                            py-2
-                                            text-[8px]
-                                            font-semibold
-                                            transition-all
+                                    {activePanel === "chat" && (
+                                        <FaComments className="text-[10px]" />
+                                    )}
 
-                                            ${
-                                                activePanel ===
-                                                "participants"
-                                                    ? "bg-slate-800 text-green-400"
-                                                    : "text-slate-500 active:bg-slate-800 active:text-white"
-                                            }
-                                        `}
-                                    >
-                                        <FaUsers className="text-[11px]" />
+                                    {activePanel === "voice" && (
+                                        <FaMicrophone className="text-[10px]" />
+                                    )}
 
-                                        <span className="truncate">
-                                            People
-                                        </span>
-
-                                        <span
-                                            className={`
-                                                rounded-full
-                                                px-1
-                                                py-0.5
-                                                text-[7px]
-
-                                                ${
-                                                    activePanel ===
-                                                    "participants"
-                                                        ? "bg-green-500/10 text-green-400"
-                                                        : "bg-slate-800 text-slate-600"
-                                                }
-                                            `}
-                                        >
-                                            {participantsCount}
-                                        </span>
-                                    </button>
-
-                                    {/* Chat */}
-
-                                    <button
-                                        type="button"
-                                        onClick={() =>
-                                            handlePanelChange(
-                                                "chat"
-                                            )
-                                        }
-                                        className={`
-                                            flex
-                                            min-w-0
-                                            flex-col
-                                            items-center
-                                            justify-center
-                                            gap-1
-                                            rounded-xl
-                                            px-1
-                                            py-2
-                                            text-[8px]
-                                            font-semibold
-                                            transition-all
-
-                                            ${
-                                                activePanel ===
-                                                "chat"
-                                                    ? "bg-slate-800 text-green-400"
-                                                    : "text-slate-500 active:bg-slate-800 active:text-white"
-                                            }
-                                        `}
-                                    >
-                                        <FaComments className="text-[11px]" />
-
-                                        <span className="truncate">
-                                            Chat
-                                        </span>
-                                    </button>
-
-                                    {/* Voice */}
-
-                                    <button
-                                        type="button"
-                                        onClick={() =>
-                                            handlePanelChange(
-                                                "voice"
-                                            )
-                                        }
-                                        className={`
-                                            flex
-                                            min-w-0
-                                            flex-col
-                                            items-center
-                                            justify-center
-                                            gap-1
-                                            rounded-xl
-                                            px-1
-                                            py-2
-                                            text-[8px]
-                                            font-semibold
-                                            transition-all
-
-                                            ${
-                                                activePanel ===
-                                                "voice"
-                                                    ? "bg-slate-800 text-green-400"
-                                                    : "text-slate-500 active:bg-slate-800 active:text-white"
-                                            }
-                                        `}
-                                    >
-                                        <FaMicrophone className="text-[11px]" />
-
-                                        <span className="truncate">
-                                            Voice
-                                        </span>
-                                    </button>
-
-                                    {/* Drawing */}
-
-                                    <button
-                                        type="button"
-                                        onClick={() =>
-                                            handlePanelChange(
-                                                "drawing"
-                                            )
-                                        }
-                                        className={`
-                                            flex
-                                            min-w-0
-                                            flex-col
-                                            items-center
-                                            justify-center
-                                            gap-1
-                                            rounded-xl
-                                            px-1
-                                            py-2
-                                            text-[8px]
-                                            font-semibold
-                                            transition-all
-
-                                            ${
-                                                activePanel ===
-                                                "drawing"
-                                                    ? "bg-slate-800 text-green-400"
-                                                    : "text-slate-500 active:bg-slate-800 active:text-white"
-                                            }
-                                        `}
-                                    >
+                                    {activePanel ===
+                                        "drawing" && (
                                         <FaPen className="text-[10px]" />
-
-                                        <span className="truncate">
-                                            Draw
-                                        </span>
-                                    </button>
+                                    )}
                                 </div>
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
 
-                    {/* =================================================
-                        BOTTOM HANDLE
+                                <span className="truncate text-[11px] font-bold text-white">
+                                    {activePanel ===
+                                        "participants" &&
+                                        "Participants"}
 
-                        Always attached to the bottom.
+                                    {activePanel === "chat" &&
+                                        "Chat"}
+
+                                    {activePanel === "voice" &&
+                                        "Voice"}
+
+                                    {activePanel ===
+                                        "drawing" &&
+                                        "Drawing"}
+                                </span>
+                            </div>
+
+                            <button
+                                type="button"
+                                onClick={hideMobilePanel}
+                                className="
+                                    flex
+                                    h-7
+                                    w-7
+                                    shrink-0
+                                    items-center
+                                    justify-center
+                                    rounded-lg
+                                    border
+                                    border-white/[0.07]
+                                    bg-white/[0.04]
+                                    text-slate-400
+                                    transition
+                                    hover:bg-white/[0.08]
+                                    hover:text-white
+                                "
+                                aria-label="Hide communication panel"
+                                title="Hide"
+                            >
+                                <FaTimes className="text-[9px]" />
+                            </button>
+                        </div>
+
+                        {/* Actual Panel */}
+
+                        <div
+                            className="
+                                min-h-0
+                                flex-1
+                                overflow-hidden
+                                bg-slate-900/95
+                            "
+                        >
+                            {renderPanelContent()}
+                        </div>
+
+                        {/* Mobile Panel Bottom Handle */}
+
+                        <button
+                            type="button"
+                            onClick={hideMobilePanel}
+                            className="
+                                flex
+                                h-8
+                                shrink-0
+                                items-center
+                                justify-center
+                                border-t
+                                border-slate-800
+                                bg-slate-950
+                                text-slate-500
+                                transition
+                                hover:text-white
+                            "
+                            aria-label="Hide communication panel"
+                        >
+                            <FaChevronDown className="text-[10px]" />
+                        </button>
+                    </div>
+                )}
+
+                {/* =================================================
+                    MOBILE COMMUNICATION CONTROLS
+                    These are ABOVE the bottom handle.
+                    They disappear when a panel is selected.
                     ================================================= */}
 
-                    <motion.button
+                {mobileControlsOpen &&
+                    !mobilePanelOpen && (
+                        <div
+                            className="
+                                absolute
+                                inset-x-2
+                                bottom-12
+                                rounded-2xl
+                                border
+                                border-slate-700/80
+                                bg-slate-900/95
+                                p-1.5
+                                shadow-[0_-12px_40px_rgba(0,0,0,.4)]
+                                backdrop-blur-xl
+                            "
+                        >
+                            <div className="grid grid-cols-4 gap-1">
+                                {/* Participants */}
+
+                                <button
+                                    type="button"
+                                    onClick={() =>
+                                        openMobilePanel(
+                                            "participants"
+                                        )
+                                    }
+                                    className={`
+                                        flex
+                                        min-w-0
+                                        flex-col
+                                        items-center
+                                        justify-center
+                                        gap-1
+                                        rounded-xl
+                                        px-1
+                                        py-2.5
+                                        transition
+
+                                        ${
+                                            activePanel ===
+                                            "participants"
+                                                ? "bg-green-500/10 text-green-400"
+                                                : "text-slate-400 hover:bg-slate-800 hover:text-white"
+                                        }
+                                    `}
+                                >
+                                    <FaUsers className="text-[12px]" />
+
+                                    <span className="truncate text-[8px] font-semibold">
+                                        People
+                                    </span>
+
+                                    <span className="rounded-full bg-slate-800 px-1.5 py-0.5 text-[7px] font-bold text-slate-500">
+                                        {participantsCount}
+                                    </span>
+                                </button>
+
+                                {/* Chat */}
+
+                                <button
+                                    type="button"
+                                    onClick={() =>
+                                        openMobilePanel(
+                                            "chat"
+                                        )
+                                    }
+                                    className={`
+                                        flex
+                                        min-w-0
+                                        flex-col
+                                        items-center
+                                        justify-center
+                                        gap-1
+                                        rounded-xl
+                                        px-1
+                                        py-2.5
+                                        transition
+
+                                        ${
+                                            activePanel ===
+                                            "chat"
+                                                ? "bg-green-500/10 text-green-400"
+                                                : "text-slate-400 hover:bg-slate-800 hover:text-white"
+                                        }
+                                    `}
+                                >
+                                    <FaComments className="text-[12px]" />
+
+                                    <span className="truncate text-[8px] font-semibold">
+                                        Chat
+                                    </span>
+                                </button>
+
+                                {/* Voice */}
+
+                                <button
+                                    type="button"
+                                    onClick={() =>
+                                        openMobilePanel(
+                                            "voice"
+                                        )
+                                    }
+                                    className={`
+                                        flex
+                                        min-w-0
+                                        flex-col
+                                        items-center
+                                        justify-center
+                                        gap-1
+                                        rounded-xl
+                                        px-1
+                                        py-2.5
+                                        transition
+
+                                        ${
+                                            activePanel ===
+                                            "voice"
+                                                ? "bg-green-500/10 text-green-400"
+                                                : "text-slate-400 hover:bg-slate-800 hover:text-white"
+                                        }
+                                    `}
+                                >
+                                    <FaMicrophone className="text-[12px]" />
+
+                                    <span className="truncate text-[8px] font-semibold">
+                                        Voice
+                                    </span>
+                                </button>
+
+                                {/* Drawing */}
+
+                                <button
+                                    type="button"
+                                    onClick={() =>
+                                        openMobilePanel(
+                                            "drawing"
+                                        )
+                                    }
+                                    className={`
+                                        flex
+                                        min-w-0
+                                        flex-col
+                                        items-center
+                                        justify-center
+                                        gap-1
+                                        rounded-xl
+                                        px-1
+                                        py-2.5
+                                        transition
+
+                                        ${
+                                            activePanel ===
+                                            "drawing"
+                                                ? "bg-green-500/10 text-green-400"
+                                                : "text-slate-400 hover:bg-slate-800 hover:text-white"
+                                        }
+                                    `}
+                                >
+                                    <FaPen className="text-[12px]" />
+
+                                    <span className="truncate text-[8px] font-semibold">
+                                        Drawing
+                                    </span>
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                {/* =================================================
+                    MOBILE BOTTOM HANDLE
+                    Always attached to bottom.
+                    ================================================= */}
+
+                {!mobilePanelOpen && (
+                    <button
                         type="button"
-                        whileTap={{
-                            scale: 0.96,
-                        }}
-                        onClick={() =>
-                            setMobileDrawerOpen(
-                                (open) => !open
-                            )
-                        }
-                        aria-expanded={
-                            mobileDrawerOpen
-                        }
-                        aria-label={
-                            mobileDrawerOpen
-                                ? "Close communication controls"
-                                : "Open communication controls"
-                        }
+                        onClick={toggleMobileControls}
                         className="
+                            mx-auto
                             flex
-                            h-8
-                            w-20
+                            h-9
+                            w-[150px]
                             items-center
                             justify-center
-                            gap-1.5
-                            rounded-t-2xl
+                            gap-2
+                            rounded-t-xl
                             border
                             border-b-0
                             border-slate-700/80
-                            bg-slate-950/95
+                            bg-slate-900/95
+                            text-[9px]
+                            font-bold
                             text-slate-400
-                            shadow-[0_-8px_25px_rgba(0,0,0,0.35)]
+                            shadow-[0_-8px_30px_rgba(0,0,0,.35)]
                             backdrop-blur-xl
+                            transition
+                            hover:bg-slate-800
+                            hover:text-white
                         "
+                        aria-expanded={mobileControlsOpen}
+                        aria-label={
+                            mobileControlsOpen
+                                ? "Hide communication controls"
+                                : "Show communication controls"
+                        }
                     >
-                        <span
-                            className="
-                                h-1
-                                w-8
-                                rounded-full
-                                bg-slate-600
-                            "
-                        />
+                        {mobileControlsOpen ? (
+                            <>
+                                <FaChevronDown className="text-[8px]" />
 
-                        {mobileDrawerOpen ? (
-                            <FaChevronDown className="text-[8px]" />
+                                <span>
+                                    Hide
+                                </span>
+                            </>
                         ) : (
-                            <FaChevronUp className="text-[8px]" />
+                            <>
+                                <FaChevronUp className="text-[8px]" />
+
+                                <span>
+                                    Communication
+                                </span>
+                            </>
                         )}
-                    </motion.button>
-                </div>
+                    </button>
+                )}
             </div>
         </div>
     );
