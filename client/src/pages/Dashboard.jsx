@@ -12,6 +12,7 @@ import Topbar from "../components/dashboard/Topbar";
 import QuickActions from "../components/dashboard/QuickActions";
 import StatsSection from "../components/dashboard/StatsSection";
 import RecentRooms from "../components/dashboard/RecentRooms";
+import StudyStreakCalendar from "../components/dashboard/StudyStreakCalendar";
 
 const Dashboard = () => {
     const navigate = useNavigate();
@@ -30,7 +31,7 @@ const Dashboard = () => {
             },
         });
     };
-    
+
     const handleJoinRoom = () => {
         navigate("/rooms", {
             state: {
@@ -179,18 +180,20 @@ const Dashboard = () => {
                     ===================================== */}
 
                     <motion.section
-                        variants={sectionVariants}
-                        initial="hidden"
-                        animate="visible"
-                        transition={{
-                            delay: shouldReduceMotion
-                                ? 0
-                                : 0.06,
-                        }}
-                        className="mb-7 sm:mb-8"
-                    >
-                        <StatsSection />
-                    </motion.section>
+    variants={sectionVariants}
+    initial="hidden"
+    animate="visible"
+    transition={{
+        delay: shouldReduceMotion ? 0 : 0.06,
+    }}
+    className="mb-7 sm:mb-8"
+>
+    <StatsSection />
+
+    <div className="mt-6 sm:mt-8">
+        <StudyStreakCalendar />
+    </div>
+</motion.section>
 
                     {/* =====================================
                         RECENT ROOMS
