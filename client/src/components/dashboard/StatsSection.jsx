@@ -1,20 +1,113 @@
 import {
     FaUsers,
     FaClock,
-    FaFilePdf,
     FaFire,
+    FaCalendarAlt,
 } from "react-icons/fa";
 import { motion, useReducedMotion } from "framer-motion";
+import { useEffect, useState } from "react";
 
 import { useAppSelector } from "../../redux/hooks";
-import StatCard from "./StatCard";
+import socket from "../../socket";
 
 const StatsSection = () => {
     const shouldReduceMotion = useReducedMotion();
 
-    const { rooms } = useAppSelector(
-        (state) => state.room
+    const { rooms } = useAppSelector((state) => state.room);
+
+    const [studyStats, setStudyStats] = useState({
+        totalSeconds: 0,
+        sessions: [],
+    });
+
+    useEffect(() => {
+        const handleStats = (data) => {
+            setStudyStats({
+                totalSeconds: data?.totalSeconds || 0,
+                sessions: data?.sessions || [],
+            });
+        };
+
+        const requestStats = () => {
+            socket.emit("study:stats-request");
+        };
+
+        const handleStatsUpdated = () => {
+            requestStats();
+        };
+
+        socket.on("study:stats", handleStats);
+        socket.on(
+            "profile:study-stats-updated",
+            handleStatsUpdated
+        );
+
+        if (socket.connected) {
+            requestStats();
+        } else {
+            socket.connect();
+        }
+
+        return () => {
+            socket.off("study:stats", handleStats);
+            socket.off(
+                "profile:study-stats-updated",
+                handleStatsUpdated
+            );
+        };
+    }, []);
+
+    const totalHours = Math.floor(
+        studyStats.totalSeconds / 3600
     );
+
+    const calculateCurrentStreak = () => {
+        const sessions = studyStats.sessions || [];
+
+        if (!sessions.length) return 0;
+
+        const studyDays = new Set(
+            sessions.map((session) => {
+                const date = new Date(session.startedAt);
+
+                return `${date.getFullYear()}-${String(
+                    date.getMonth() + 1
+                ).padStart(2, "0")}-${String(
+                    date.getDate()
+                ).padStart(2, "0")}`;
+            })
+        );
+
+        let streak = 0;
+        const currentDate = new Date();
+
+        while (true) {
+            const key = `${currentDate.getFullYear()}-${String(
+                currentDate.getMonth() + 1
+            ).padStart(2, "0")}-${String(
+                currentDate.getDate()
+            ).padStart(2, "0")}`;
+
+            if (!studyDays.has(key)) break;
+
+            streak++;
+            currentDate.setDate(
+                currentDate.getDate() - 1
+            );
+        }
+
+        return streak;
+    };
+
+    const currentStreak = calculateCurrentStreak();
+
+    const activityDays = new Set(
+        (studyStats.sessions || []).map((session) => {
+            const date = new Date(session.startedAt);
+
+            return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+        })
+    ).size;
 
     const stats = [
         {
@@ -27,23 +120,23 @@ const StatsSection = () => {
         {
             id: "hours",
             title: "Study Hours",
-            value: "—",
+            value: totalHours,
             icon: FaClock,
             accent: "cyan",
         },
         {
-            id: "pdfs",
-            title: "PDFs Shared",
-            value: "—",
-            icon: FaFilePdf,
-            accent: "red",
-        },
-        {
             id: "streak",
             title: "Current Streak",
-            value: "—",
+            value: currentStreak,
             icon: FaFire,
             accent: "orange",
+        },
+        {
+            id: "activity",
+            title: "Study Activity",
+            value: activityDays,
+            icon: FaCalendarAlt,
+            accent: "violet",
         },
     ];
 
@@ -62,13 +155,6 @@ const StatsSection = () => {
             glow: "bg-cyan-500",
             dot: "bg-cyan-400",
         },
-        red: {
-            icon: "text-red-300",
-            bg: "bg-red-500/[0.09]",
-            border: "group-hover:border-red-500/20",
-            glow: "bg-red-500",
-            dot: "bg-red-400",
-        },
         orange: {
             icon: "text-orange-300",
             bg: "bg-orange-500/[0.09]",
@@ -76,15 +162,20 @@ const StatsSection = () => {
             glow: "bg-orange-500",
             dot: "bg-orange-400",
         },
+        violet: {
+            icon: "text-violet-300",
+            bg: "bg-violet-500/[0.09]",
+            border: "group-hover:border-violet-500/20",
+            glow: "bg-violet-500",
+            dot: "bg-violet-400",
+        },
     };
 
     const containerVariants = {
         hidden: {},
         visible: {
             transition: {
-                staggerChildren: shouldReduceMotion
-                    ? 0
-                    : 0.06,
+                staggerChildren: shouldReduceMotion ? 0 : 0.06,
             },
         },
     };
@@ -106,26 +197,16 @@ const StatsSection = () => {
 
     return (
         <section className="relative">
-            {/* =========================================
-                SECTION HEADER
-            ========================================= */}
-
             <motion.div
                 initial={
                     shouldReduceMotion
                         ? false
-                        : {
-                              opacity: 0,
-                              y: 8,
-                          }
+                        : { opacity: 0, y: 8 }
                 }
                 animate={
                     shouldReduceMotion
                         ? undefined
-                        : {
-                              opacity: 1,
-                              y: 0,
-                          }
+                        : { opacity: 1, y: 0 }
                 }
                 transition={{
                     duration: 0.4,
@@ -155,20 +236,15 @@ const StatsSection = () => {
                 </div>
             </motion.div>
 
-            {/* =========================================
-                STAT GRID
-            ========================================= */}
-
             <motion.div
                 variants={containerVariants}
                 initial="hidden"
                 animate="visible"
-                className="grid grid-cols-2 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-4"
+                className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4"
             >
                 {stats.map((stat, index) => {
                     const Icon = stat.icon;
-                    const colors =
-                        accentStyles[stat.accent];
+                    const colors = accentStyles[stat.accent];
 
                     return (
                         <motion.div
@@ -177,67 +253,14 @@ const StatsSection = () => {
                             whileHover={
                                 shouldReduceMotion
                                     ? undefined
-                                    : {
-                                          y: -4,
-                                      }
+                                    : { y: -4 }
                             }
-                            className={`
-                                group
-                                relative
-                                min-w-0
-                                overflow-hidden
-                                rounded-[20px]
-                                border
-                                border-slate-800/80
-                                bg-[#0a0f17]
-                                p-4
-                                shadow-[0_12px_40px_rgba(0,0,0,0.14)]
-                                transition-[border-color,background-color,box-shadow]
-                                duration-500
-                                hover:bg-[#0c121c]
-                                hover:shadow-[0_18px_48px_rgba(0,0,0,0.22)]
-                                sm:p-5
-                                ${colors.border}
-                            `}
+                            className={`group relative min-w-0 overflow-hidden rounded-[20px] border border-slate-800/80 bg-[#0a0f17] p-4 shadow-[0_12px_40px_rgba(0,0,0,0.14)] transition-[border-color,background-color,box-shadow] duration-500 hover:bg-[#0c121c] hover:shadow-[0_18px_48px_rgba(0,0,0,0.22)] sm:p-5 ${colors.border}`}
                         >
-                            {/* Ambient glow */}
-                            <div
-                                className={`
-                                    pointer-events-none
-                                    absolute
-                                    -right-14
-                                    -top-14
-                                    h-32
-                                    w-32
-                                    rounded-full
-                                    opacity-[0.035]
-                                    blur-[45px]
-                                    transition-all
-                                    duration-700
-                                    group-hover:scale-125
-                                    group-hover:opacity-[0.12]
-                                    ${colors.glow}
-                                `}
-                            />
+                            <div className={`pointer-events-none absolute -right-14 -top-14 h-32 w-32 rounded-full opacity-[0.035] blur-[45px] transition-all duration-700 group-hover:scale-125 group-hover:opacity-[0.12] ${colors.glow}`} />
 
-                            {/* Top accent */}
-                            <div
-                                className={`
-                                    pointer-events-none
-                                    absolute
-                                    left-6
-                                    right-6
-                                    top-0
-                                    h-px
-                                    opacity-0
-                                    transition-opacity
-                                    duration-500
-                                    group-hover:opacity-70
-                                    ${colors.dot}
-                                `}
-                            />
+                            <div className={`pointer-events-none absolute left-6 right-6 top-0 h-px opacity-0 transition-opacity duration-500 group-hover:opacity-70 ${colors.dot}`} />
 
-                            {/* Header */}
                             <div className="relative flex items-center justify-between">
                                 <motion.div
                                     whileHover={
@@ -253,144 +276,49 @@ const StatsSection = () => {
                                         stiffness: 400,
                                         damping: 20,
                                     }}
-                                    className={`
-                                        flex
-                                        h-10
-                                        w-10
-                                        shrink-0
-                                        items-center
-                                        justify-center
-                                        rounded-[13px]
-                                        border
-                                        border-white/[0.035]
-                                        ${colors.bg}
-                                        ${colors.icon}
-                                        shadow-[0_8px_22px_rgba(0,0,0,0.16)]
-                                        sm:h-11
-                                        sm:w-11
-                                    `}
+                                    className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-[13px] border border-white/[0.035] shadow-[0_8px_22px_rgba(0,0,0,0.16)] sm:h-11 sm:w-11 ${colors.bg} ${colors.icon}`}
                                 >
                                     <Icon className="text-[15px] sm:text-base" />
                                 </motion.div>
 
-                                <span className="
-                                    flex
-                                    h-5
-                                    min-w-5
-                                    items-center
-                                    justify-center
-                                    rounded-full
-                                    border
-                                    border-slate-800/80
-                                    bg-slate-900/70
-                                    px-1.5
-                                    text-[8px]
-                                    font-semibold
-                                    tracking-wider
-                                    text-slate-600
-                                    transition-colors
-                                    duration-300
-                                    group-hover:text-slate-400
-                                ">
+                                <span className="flex h-5 min-w-5 items-center justify-center rounded-full border border-slate-800/80 bg-slate-900/70 px-1.5 text-[8px] font-semibold tracking-wider text-slate-600 transition-colors duration-300 group-hover:text-slate-400">
                                     0{index + 1}
                                 </span>
                             </div>
 
-                            {/* Value */}
                             <div className="relative mt-5">
                                 <motion.div
-                                    key={String(
-                                        stat.value
-                                    )}
+                                    key={String(stat.value)}
                                     initial={
                                         shouldReduceMotion
                                             ? false
-                                            : {
-                                                  opacity: 0,
-                                                  y: 5,
-                                              }
+                                            : { opacity: 0, y: 5 }
                                     }
                                     animate={
                                         shouldReduceMotion
                                             ? undefined
-                                            : {
-                                                  opacity: 1,
-                                                  y: 0,
-                                              }
+                                            : { opacity: 1, y: 0 }
                                     }
-                                    transition={{
-                                        duration: 0.3,
-                                    }}
-                                    className="
-                                        truncate
-                                        text-[25px]
-                                        font-bold
-                                        leading-none
-                                        tracking-[-0.045em]
-                                        text-white
-                                        sm:text-[29px]
-                                    "
+                                    transition={{ duration: 0.3 }}
+                                    className="truncate text-[25px] font-bold leading-none tracking-[-0.045em] text-white sm:text-[29px]"
                                 >
                                     {stat.value}
                                 </motion.div>
 
-                                <p className="
-                                    mt-2
-                                    truncate
-                                    text-[10px]
-                                    font-semibold
-                                    uppercase
-                                    tracking-[0.08em]
-                                    text-slate-500
-                                    sm:text-[11px]
-                                ">
+                                <p className="mt-2 truncate text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500 sm:text-[11px]">
                                     {stat.title}
                                 </p>
                             </div>
 
-                            {/* Bottom status */}
                             <div className="relative mt-4 flex items-center gap-2">
-                                <span
-                                    className={`
-                                        h-1.5
-                                        w-1.5
-                                        shrink-0
-                                        rounded-full
-                                        opacity-70
-                                        transition-all
-                                        duration-300
-                                        group-hover:opacity-100
-                                        group-hover:shadow-[0_0_8px_currentColor]
-                                        ${colors.dot}
-                                    `}
-                                />
+                                <span className={`h-1.5 w-1.5 shrink-0 rounded-full opacity-70 transition-all duration-300 group-hover:opacity-100 group-hover:shadow-[0_0_8px_currentColor] ${colors.dot}`} />
 
-                                <span className="
-                                    truncate
-                                    text-[9px]
-                                    font-medium
-                                    text-slate-600
-                                    transition-colors
-                                    duration-300
-                                    group-hover:text-slate-500
-                                ">
+                                <span className="truncate text-[9px] font-medium text-slate-600 transition-colors duration-300 group-hover:text-slate-500">
                                     Study activity
                                 </span>
                             </div>
 
-                            {/* Inner border */}
-                            <div className="
-                                pointer-events-none
-                                absolute
-                                inset-0
-                                rounded-[20px]
-                                ring-1
-                                ring-inset
-                                ring-white/[0.025]
-                                transition-all
-                                duration-500
-                                group-hover:ring-white/[0.06]
-                            " />
+                            <div className="pointer-events-none absolute inset-0 rounded-[20px] ring-1 ring-inset ring-white/[0.025] transition-all duration-500 group-hover:ring-white/[0.06]" />
                         </motion.div>
                     );
                 })}
