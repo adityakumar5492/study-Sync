@@ -5,6 +5,7 @@ import {
     FaChevronRight,
     FaClock,
     FaFire,
+    FaTimes,
 } from "react-icons/fa";
 import { motion, useReducedMotion } from "framer-motion";
 
@@ -19,16 +20,17 @@ const StudyStreakCalendar = ({
         new Date()
     );
 
-    const [selectedDate, setSelectedDate] = useState(
-        new Date()
-    );
+    const [selectedDate, setSelectedDate] =
+        useState(null);
 
     // =========================================
     // DATE HELPERS
     // =========================================
 
-    const getDateKey = (date) => {
-        if (!date) return "";
+    const makeDateKey = (date) => {
+        if (!date || Number.isNaN(date.getTime())) {
+            return null;
+        }
 
         return [
             date.getFullYear(),
@@ -37,112 +39,57 @@ const StudyStreakCalendar = ({
         ].join("-");
     };
 
-    const todayKey = getDateKey(new Date());
+    const formatMinutes = (seconds) => {
+        const totalMinutes = Math.floor(
+            Number(seconds || 0) / 60
+        );
 
-    // =========================================
-    // NORMALIZE SESSIONS
-    // =========================================
+        if (totalMinutes < 60) {
+            return `${totalMinutes}m`;
+        }
 
-    const normalizedSessions = useMemo(() => {
-        return (Array.isArray(sessions) ? sessions : [])
-            .map((session) => {
-                if (!session?.startedAt) return null;
+        const hours = Math.floor(totalMinutes / 60);
+        const minutes = totalMinutes % 60;
 
-                const date = new Date(session.startedAt);
+        if (!minutes) {
+            return `${hours}h`;
+        }
 
-                if (Number.isNaN(date.getTime())) {
-                    return null;
-                }
-
-                const duration = Number(
-                    session.durationSeconds
-                );
-
-                return {
-                    date,
-                    key: getDateKey(date),
-                    seconds:
-                        Number.isFinite(duration) &&
-                        duration > 0
-                            ? duration
-                            : 0,
-                };
-            })
-            .filter(Boolean);
-    }, [sessions]);
+        return `${hours}h ${minutes}m`;
+    };
 
     // =========================================
     // ACTIVITY MAP
-    //
-    // One date can contain multiple sessions.
-    // We add all session durations for that date.
     // =========================================
 
     const activityMap = useMemo(() => {
         const map = new Map();
 
-        normalizedSessions.forEach((session) => {
+        sessions.forEach((session) => {
+            if (!session?.startedAt) return;
+
+            const date = new Date(session.startedAt);
+
+            if (Number.isNaN(date.getTime())) return;
+
+            const key = makeDateKey(date);
+
+            if (!key) return;
+
+            const duration =
+                Number(session.durationSeconds) || 0;
+
             map.set(
-                session.key,
-                (map.get(session.key) || 0) +
-                    session.seconds
+                key,
+                (map.get(key) || 0) + duration
             );
         });
 
         return map;
-    }, [normalizedSessions]);
+    }, [sessions]);
 
     // =========================================
-    // CURRENT MONTH DATA
-    // =========================================
-
-    const monthStats = useMemo(() => {
-        const year = currentMonth.getFullYear();
-        const month = currentMonth.getMonth();
-
-        let activeDays = 0;
-        let totalSeconds = 0;
-
-        normalizedSessions.forEach((session) => {
-            if (
-                session.date.getFullYear() === year &&
-                session.date.getMonth() === month
-            ) {
-                if (session.seconds > 0) {
-                    activeDays += activityMap.has(
-                        session.key
-                    )
-                        ? 0
-                        : 0;
-                }
-            }
-        });
-
-        // Count unique active days.
-        const uniqueDays = new Set();
-
-        normalizedSessions.forEach((session) => {
-            if (
-                session.date.getFullYear() === year &&
-                session.date.getMonth() === month &&
-                session.seconds > 0
-            ) {
-                uniqueDays.add(session.key);
-
-                totalSeconds += session.seconds;
-            }
-        });
-
-        activeDays = uniqueDays.size;
-
-        return {
-            activeDays,
-            totalSeconds,
-        };
-    }, [currentMonth, normalizedSessions, activityMap]);
-
-    // =========================================
-    // CALENDAR DAYS
+    // CURRENT MONTH DAYS
     // =========================================
 
     const calendarDays = useMemo(() => {
@@ -161,27 +108,25 @@ const StudyStreakCalendar = ({
             0
         );
 
-        const daysInMonth = lastDay.getDate();
+        const daysInMonth =
+            lastDay.getDate();
 
-        // Monday = first day.
-        let startingDay = firstDay.getDay();
+        // Monday = 0
+        let startDay = firstDay.getDay();
 
-        startingDay =
-            startingDay === 0
+        startDay =
+            startDay === 0
                 ? 6
-                : startingDay - 1;
+                : startDay - 1;
 
         const days = [];
 
-        // Empty cells before first day.
-        for (
-            let index = 0;
-            index < startingDay;
-            index++
-        ) {
+        // Empty cells before first day
+        for (let i = 0; i < startDay; i++) {
             days.push(null);
         }
 
+        // Actual days
         for (
             let day = 1;
             day <= daysInMonth;
@@ -193,7 +138,7 @@ const StudyStreakCalendar = ({
                 day
             );
 
-            const key = getDateKey(date);
+            const key = makeDateKey(date);
 
             days.push({
                 date,
@@ -207,28 +152,54 @@ const StudyStreakCalendar = ({
     }, [currentMonth, activityMap]);
 
     // =========================================
+    // MONTH TOTALS
+    // =========================================
+
+    const monthStats = useMemo(() => {
+        let activeDays = 0;
+        let totalSeconds = 0;
+
+        calendarDays.forEach((day) => {
+            if (!day) return;
+
+            if (day.seconds > 0) {
+                activeDays++;
+                totalSeconds += day.seconds;
+            }
+        });
+
+        return {
+            activeDays,
+            totalSeconds,
+        };
+    }, [calendarDays]);
+
+    // =========================================
+    // TODAY
+    // =========================================
+
+    const todayKey = useMemo(() => {
+        return makeDateKey(new Date());
+    }, []);
+
+    // =========================================
     // SELECTED DAY
     // =========================================
 
-    const selectedDateKey = getDateKey(
-        selectedDate
-    );
+    const selectedDay = useMemo(() => {
+        if (!selectedDate) return null;
 
-    const selectedDaySeconds =
-        activityMap.get(selectedDateKey) || 0;
-
-    const selectedDayLabel =
-        selectedDate.toLocaleDateString(
-            undefined,
-            {
-                weekday: "short",
-                month: "short",
-                day: "numeric",
-            }
+        return (
+            calendarDays.find(
+                (day) =>
+                    day &&
+                    day.key === selectedDate
+            ) || null
         );
+    }, [calendarDays, selectedDate]);
 
     // =========================================
-    // MONTH LABEL
+    // MONTH NAME
     // =========================================
 
     const monthName =
@@ -249,6 +220,7 @@ const StudyStreakCalendar = ({
             const next = new Date(previous);
 
             next.setDate(1);
+
             next.setMonth(
                 previous.getMonth() + direction
             );
@@ -256,95 +228,42 @@ const StudyStreakCalendar = ({
             return next;
         });
 
-        setSelectedDate((previous) => {
-            const next = new Date(previous);
-
-            next.setDate(1);
-            next.setMonth(
-                previous.getMonth() + direction
-            );
-
-            return next;
-        });
+        setSelectedDate(null);
     };
-
-    // =========================================
-    // GO TO TODAY
-    // =========================================
 
     const goToToday = () => {
         const today = new Date();
 
         setCurrentMonth(today);
-        setSelectedDate(today);
+        setSelectedDate(todayKey);
     };
 
     // =========================================
-    // SELECT DATE
-    // =========================================
-
-    const handleDateClick = (day) => {
-        if (!day) return;
-
-        setSelectedDate(day.date);
-    };
-
-    // =========================================
-    // FORMAT TIME
-    // =========================================
-
-    const formatDuration = (seconds) => {
-        if (!seconds || seconds <= 0) {
-            return "0m";
-        }
-
-        const totalMinutes = Math.floor(
-            seconds / 60
-        );
-
-        const hours = Math.floor(
-            totalMinutes / 60
-        );
-
-        const minutes = totalMinutes % 60;
-
-        if (hours > 0 && minutes > 0) {
-            return `${hours}h ${minutes}m`;
-        }
-
-        if (hours > 0) {
-            return `${hours}h`;
-        }
-
-        return `${minutes}m`;
-    };
-
-    // =========================================
-    // ACTIVITY INTENSITY
+    // INTENSITY
     // =========================================
 
     const getIntensity = (seconds) => {
-        if (!seconds || seconds <= 0) {
-            return "bg-slate-900/80 border-slate-800/80";
+        if (!seconds) {
+            return "bg-slate-800/60 text-slate-500";
         }
 
         if (seconds < 1800) {
-            return "bg-indigo-950 border-indigo-900/70";
+            return "bg-indigo-950 text-indigo-300";
         }
 
         if (seconds < 3600) {
-            return "bg-indigo-800/80 border-indigo-700/70";
+            return "bg-indigo-800/80 text-indigo-200";
         }
 
         if (seconds < 7200) {
-            return "bg-indigo-600/80 border-indigo-500/70";
+            return "bg-indigo-600 text-white";
         }
 
-        return "bg-indigo-500 border-indigo-400/70";
+        return "bg-indigo-400 text-white";
     };
 
     // =========================================
-    // ESCAPE KEY
+    // CLOSE WITH ESCAPE
     // =========================================
 
     useEffect(() => {
@@ -370,21 +289,18 @@ const StudyStreakCalendar = ({
     }, [isOpen, onClose]);
 
     // =========================================
-    // CLOSE ON OUTSIDE CLICK
-    //
-    // This component itself is positioned by the
-    // parent, so we intentionally don't use a
-    // document-wide click listener here.
-    // StatsSection handles the outside click.
+    // RESET SELECTED DATE
     // =========================================
+
+    useEffect(() => {
+        if (!isOpen) {
+            setSelectedDate(null);
+        }
+    }, [isOpen]);
 
     if (!isOpen) {
         return null;
     }
-
-    // =========================================
-    // RENDER
-    // =========================================
 
     return (
         <motion.div
@@ -393,7 +309,7 @@ const StudyStreakCalendar = ({
                     ? false
                     : {
                           opacity: 0,
-                          x: 10,
+                          y: 8,
                           scale: 0.97,
                       }
             }
@@ -402,7 +318,7 @@ const StudyStreakCalendar = ({
                     ? undefined
                     : {
                           opacity: 1,
-                          x: 0,
+                          y: 0,
                           scale: 1,
                       }
             }
@@ -411,7 +327,7 @@ const StudyStreakCalendar = ({
                     ? undefined
                     : {
                           opacity: 0,
-                          x: 10,
+                          y: 8,
                           scale: 0.97,
                       }
             }
@@ -421,42 +337,63 @@ const StudyStreakCalendar = ({
                     : 0.2,
                 ease: [0.16, 1, 0.3, 1],
             }}
-            role="dialog"
-            aria-label="Study activity calendar"
             className="
                 absolute
-                right-full
-                top-0
                 z-[100]
-                mr-4
-                w-[min(360px,calc(100vw-32px))]
+
+                /* DESKTOP */
+                top-full
+                right-0
+                mt-3
+                w-[340px]
+
+                /* MOBILE */
+                max-w-[calc(100vw-24px)]
+
                 overflow-hidden
-                rounded-[22px]
+                rounded-[20px]
                 border
                 border-slate-800/90
                 bg-[#080d15]
-                shadow-[0_24px_80px_rgba(0,0,0,0.55)]
+                shadow-[0_24px_70px_rgba(0,0,0,0.55)]
+
+                /* Prevent horizontal overflow */
+                box-sizing-border-box
+
+                /* Don't become taller than viewport */
+                max-h-[calc(100vh-24px)]
             "
+            onClick={(event) =>
+                event.stopPropagation()
+            }
         >
-            {/* =====================================
-                TOP ACCENT
-            ===================================== */}
-
-            <div className="pointer-events-none absolute left-10 right-10 top-0 h-px bg-violet-400/70" />
-
             {/* =====================================
                 HEADER
             ===================================== */}
 
-            <div className="border-b border-slate-800/70 px-4 pb-4 pt-5 sm:px-5">
+            <div className="border-b border-slate-800/70 px-4 py-4">
                 <div className="flex items-start justify-between gap-3">
                     <div className="flex min-w-0 items-center gap-3">
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[13px] border border-indigo-400/10 bg-indigo-500/[0.09] text-indigo-300">
+                        <div
+                            className="
+                                flex
+                                h-10
+                                w-10
+                                shrink-0
+                                items-center
+                                justify-center
+                                rounded-[13px]
+                                border
+                                border-indigo-400/10
+                                bg-indigo-500/[0.09]
+                                text-indigo-300
+                            "
+                        >
                             <FaCalendarAlt className="text-sm" />
                         </div>
 
                         <div className="min-w-0">
-                            <h3 className="truncate text-sm font-bold tracking-[-0.02em] text-white">
+                            <h3 className="truncate text-sm font-bold text-white">
                                 Study Activity
                             </h3>
 
@@ -477,15 +414,14 @@ const StudyStreakCalendar = ({
                             items-center
                             justify-center
                             rounded-lg
-                            text-slate-600
-                            transition-all
-                            duration-200
+                            text-slate-500
+                            transition
                             hover:bg-slate-800/70
-                            hover:text-slate-300
+                            hover:text-white
                         "
-                        aria-label="Close calendar"
+                        aria-label="Close study activity"
                     >
-                        ×
+                        <FaTimes className="text-[10px]" />
                     </button>
                 </div>
 
@@ -493,27 +429,45 @@ const StudyStreakCalendar = ({
                     MONTH SUMMARY
                 ================================= */}
 
-                <div className="mt-4 grid grid-cols-2 gap-2.5">
-                    <div className="rounded-[14px] border border-slate-800/80 bg-[#0b111c] px-3 py-2.5">
-                        <div className="flex items-center gap-1.5">
-                            <FaFire className="text-[8px] text-violet-400" />
+                <div className="mt-4 grid grid-cols-2 gap-2">
+                    <div
+                        className="
+                            rounded-[13px]
+                            border
+                            border-slate-800/80
+                            bg-[#0b1220]
+                            px-3
+                            py-2.5
+                        "
+                    >
+                        <div className="flex items-center gap-2">
+                            <span className="h-1.5 w-1.5 rounded-full bg-violet-400" />
 
                             <span className="text-[8px] font-semibold uppercase tracking-[0.14em] text-slate-600">
                                 Active Days
                             </span>
                         </div>
 
-                        <div className="mt-1 text-lg font-bold leading-none text-white">
+                        <div className="mt-1 text-base font-bold text-white">
                             {monthStats.activeDays}
                         </div>
 
-                        <p className="mt-1 text-[8px] text-slate-600">
+                        <p className="text-[8px] text-slate-600">
                             this month
                         </p>
                     </div>
 
-                    <div className="rounded-[14px] border border-slate-800/80 bg-[#0b111c] px-3 py-2.5">
-                        <div className="flex items-center gap-1.5">
+                    <div
+                        className="
+                            rounded-[13px]
+                            border
+                            border-slate-800/80
+                            bg-[#0b1220]
+                            px-3
+                            py-2.5
+                        "
+                    >
+                        <div className="flex items-center gap-2">
                             <FaClock className="text-[8px] text-cyan-400" />
 
                             <span className="text-[8px] font-semibold uppercase tracking-[0.14em] text-slate-600">
@@ -521,13 +475,13 @@ const StudyStreakCalendar = ({
                             </span>
                         </div>
 
-                        <div className="mt-1 text-lg font-bold leading-none text-white">
-                            {formatDuration(
+                        <div className="mt-1 text-base font-bold text-white">
+                            {formatMinutes(
                                 monthStats.totalSeconds
                             )}
                         </div>
 
-                        <p className="mt-1 text-[8px] text-slate-600">
+                        <p className="text-[8px] text-slate-600">
                             this month
                         </p>
                     </div>
@@ -535,13 +489,13 @@ const StudyStreakCalendar = ({
             </div>
 
             {/* =====================================
-                CALENDAR BODY
+                CALENDAR CONTENT
             ===================================== */}
 
-            <div className="px-4 py-4 sm:px-5">
+            <div className="p-4">
                 {/* MONTH NAVIGATION */}
 
-                <div className="flex items-center justify-between">
+                <div className="mb-4 flex items-center justify-between">
                     <button
                         type="button"
                         onClick={() =>
@@ -555,11 +509,10 @@ const StudyStreakCalendar = ({
                             justify-center
                             rounded-[10px]
                             border
-                            border-slate-800/80
-                            bg-[#0b111b]
+                            border-slate-800
+                            bg-slate-900/40
                             text-slate-500
-                            transition-all
-                            duration-200
+                            transition
                             hover:border-slate-700
                             hover:bg-slate-800/70
                             hover:text-white
@@ -570,7 +523,7 @@ const StudyStreakCalendar = ({
                     </button>
 
                     <div className="text-center">
-                        <h4 className="text-base font-bold tracking-[-0.025em] text-white">
+                        <h4 className="text-base font-bold text-white">
                             {monthName}
                         </h4>
 
@@ -578,13 +531,13 @@ const StudyStreakCalendar = ({
                             type="button"
                             onClick={goToToday}
                             className="
-                                mt-1
+                                mt-0.5
                                 text-[8px]
                                 font-semibold
                                 uppercase
-                                tracking-[0.16em]
+                                tracking-[0.15em]
                                 text-indigo-400
-                                transition-colors
+                                transition
                                 hover:text-indigo-300
                             "
                         >
@@ -605,11 +558,10 @@ const StudyStreakCalendar = ({
                             justify-center
                             rounded-[10px]
                             border
-                            border-slate-800/80
-                            bg-[#0b111b]
+                            border-slate-800
+                            bg-slate-900/40
                             text-slate-500
-                            transition-all
-                            duration-200
+                            transition
                             hover:border-slate-700
                             hover:bg-slate-800/70
                             hover:text-white
@@ -622,7 +574,7 @@ const StudyStreakCalendar = ({
 
                 {/* WEEK DAYS */}
 
-                <div className="mt-4 grid grid-cols-7 gap-1.5">
+                <div className="mb-2 grid grid-cols-7 gap-1">
                     {[
                         "MON",
                         "TUE",
@@ -636,12 +588,12 @@ const StudyStreakCalendar = ({
                             key={day}
                             className="
                                 flex
-                                h-5
+                                h-6
                                 items-center
                                 justify-center
                                 text-[7px]
                                 font-semibold
-                                tracking-[0.08em]
+                                tracking-wide
                                 text-slate-600
                             "
                         >
@@ -652,7 +604,7 @@ const StudyStreakCalendar = ({
 
                 {/* CALENDAR GRID */}
 
-                <div className="mt-1.5 grid grid-cols-7 gap-1.5">
+                <div className="grid grid-cols-7 gap-1">
                     {calendarDays.map(
                         (day, index) => {
                             if (!day) {
@@ -665,15 +617,11 @@ const StudyStreakCalendar = ({
                             }
 
                             const isToday =
-                                day.key ===
-                                todayKey;
+                                day.key === todayKey;
 
                             const isSelected =
                                 day.key ===
-                                selectedDateKey;
-
-                            const hasActivity =
-                                day.seconds > 0;
+                                selectedDate;
 
                             return (
                                 <motion.button
@@ -696,7 +644,7 @@ const StudyStreakCalendar = ({
                                               }
                                     }
                                     transition={{
-                                        duration: 0.14,
+                                        duration: 0.12,
                                         delay:
                                             shouldReduceMotion
                                                 ? 0
@@ -704,70 +652,68 @@ const StudyStreakCalendar = ({
                                                   0.008,
                                     }}
                                     onClick={() =>
-                                        handleDateClick(
-                                            day
+                                        setSelectedDate(
+                                            day.key
                                         )
                                     }
-                                    title={`${day.date.toLocaleDateString(
-                                        undefined,
-                                        {
-                                            weekday:
-                                                "long",
-                                            month:
-                                                "long",
-                                            day: "numeric",
-                                            year: "numeric",
-                                        }
-                                    )} • ${formatDuration(
-                                        day.seconds
-                                    )}`}
                                     className={`
                                         relative
                                         aspect-square
                                         min-w-0
-                                        rounded-[9px]
+                                        rounded-[8px]
                                         border
+                                        border-white/[0.025]
                                         text-[9px]
-                                        font-semibold
+                                        font-medium
                                         transition-all
                                         duration-200
+
                                         hover:scale-[1.04]
-                                        hover:border-slate-600
+                                        hover:border-indigo-400/30
+
                                         ${getIntensity(
                                             day.seconds
                                         )}
-                                        ${
-                                            isSelected
-                                                ? "ring-2 ring-indigo-400/80 ring-offset-1 ring-offset-[#080d15]"
-                                                : ""
-                                        }
+
                                         ${
                                             isToday
-                                                ? "shadow-[0_0_0_1px_rgba(129,140,248,0.45)]"
+                                                ? "ring-1 ring-indigo-400"
+                                                : ""
+                                        }
+
+                                        ${
+                                            isSelected
+                                                ? "ring-2 ring-violet-400 ring-offset-1 ring-offset-[#080d15]"
                                                 : ""
                                         }
                                     `}
-                                >
-                                    <span
-                                        className={
-                                            hasActivity
-                                                ? "text-white"
-                                                : "text-slate-600"
+                                    aria-label={`${day.date.toLocaleDateString(
+                                        undefined,
+                                        {
+                                            month: "long",
+                                            day: "numeric",
+                                            year: "numeric",
                                         }
-                                    >
-                                        {day.date.getDate()}
-                                    </span>
+                                    )}, ${formatMinutes(
+                                        day.seconds
+                                    )}`}
+                                >
+                                    {day.date.getDate()}
 
-                                    {/* Today dot */}
-
-                                    {isToday && (
-                                        <span className="absolute bottom-1 left-1/2 h-0.5 w-0.5 -translate-x-1/2 rounded-full bg-indigo-300" />
-                                    )}
-
-                                    {/* Activity indicator */}
-
-                                    {hasActivity && (
-                                        <span className="absolute right-1 top-1 h-1 w-1 rounded-full bg-white/60" />
+                                    {day.seconds >
+                                        0 && (
+                                        <span
+                                            className="
+                                                absolute
+                                                bottom-1
+                                                left-1/2
+                                                h-0.5
+                                                w-0.5
+                                                -translate-x-1/2
+                                                rounded-full
+                                                bg-white/80
+                                            "
+                                        />
                                     )}
                                 </motion.button>
                             );
@@ -779,51 +725,86 @@ const StudyStreakCalendar = ({
                     SELECTED DAY DETAILS
                 ================================= */}
 
-                <div className="mt-4 rounded-[14px] border border-slate-800/80 bg-[#0b111b] px-3 py-3">
-                    <div className="flex items-center justify-between gap-3">
-                        <div className="min-w-0">
-                            <p className="text-[8px] font-semibold uppercase tracking-[0.14em] text-slate-600">
-                                Selected day
-                            </p>
+                {selectedDay && (
+                    <motion.div
+                        initial={
+                            shouldReduceMotion
+                                ? false
+                                : {
+                                      opacity: 0,
+                                      y: 5,
+                                  }
+                        }
+                        animate={
+                            shouldReduceMotion
+                                ? undefined
+                                : {
+                                      opacity: 1,
+                                      y: 0,
+                                  }
+                        }
+                        className="
+                            mt-3
+                            rounded-[12px]
+                            border
+                            border-slate-800/80
+                            bg-[#0b1220]
+                            px-3
+                            py-2.5
+                        "
+                    >
+                        <div className="flex items-center justify-between gap-3">
+                            <div>
+                                <p className="text-[10px] font-semibold text-white">
+                                    {selectedDay.date.toLocaleDateString(
+                                        undefined,
+                                        {
+                                            weekday:
+                                                "short",
+                                            month:
+                                                "short",
+                                            day: "numeric",
+                                        }
+                                    )}
+                                </p>
 
-                            <p className="mt-1 truncate text-[11px] font-semibold text-slate-300">
-                                {selectedDayLabel}
-                            </p>
+                                <p className="mt-0.5 text-[8px] text-slate-600">
+                                    Daily study time
+                                </p>
+                            </div>
+
+                            <div className="flex items-center gap-1.5">
+                                <FaClock className="text-[9px] text-cyan-400" />
+
+                                <span className="text-xs font-bold text-white">
+                                    {formatMinutes(
+                                        selectedDay.seconds
+                                    )}
+                                </span>
+                            </div>
                         </div>
-
-                        <div className="shrink-0 text-right">
-                            <p className="text-[8px] font-semibold uppercase tracking-[0.14em] text-slate-600">
-                                Study time
-                            </p>
-
-                            <p className="mt-1 text-sm font-bold text-white">
-                                {formatDuration(
-                                    selectedDaySeconds
-                                )}
-                            </p>
-                        </div>
-                    </div>
-                </div>
+                    </motion.div>
+                )}
 
                 {/* =================================
                     LEGEND
                 ================================= */}
 
-                <div className="mt-3 flex items-center justify-between">
+                <div className="mt-4 flex items-center justify-between border-t border-slate-800/70 pt-3">
                     <span className="text-[8px] text-slate-600">
                         Less
                     </span>
 
                     <div className="flex items-center gap-1">
-                        <span className="h-2.5 w-2.5 rounded-[3px] border border-slate-800 bg-slate-900/80" />
+                        <span className="h-2.5 w-2.5 rounded-[3px] bg-slate-800/60" />
 
-                        <span className="h-2.5 w-2.5 rounded-[3px] border border-indigo-900/70 bg-indigo-950" />
+                        <span className="h-2.5 w-2.5 rounded-[3px] bg-indigo-950" />
 
-                        <span className="h-2.5 w-2.5 rounded-[3px] border border-indigo-700/70 bg-indigo-800/80" />
+                        <span className="h-2.5 w-2.5 rounded-[3px] bg-indigo-800/80" />
 
-                        <span className="h-2.5 w-2.5 rounded-[3px] border border-indigo-500/70 bg-indigo-600/80" />
+                        <span className="h-2.5 w-2.5 rounded-[3px] bg-indigo-600" />
 
-                        <span className="h-2.5 w-2.5 rounded-[3px] border border-indigo-400/70 bg-indigo-500" />
+                        <span className="h-2.5 w-2.5 rounded-[3px] bg-indigo-400" />
                     </div>
 
                     <span className="text-[8px] text-slate-600">

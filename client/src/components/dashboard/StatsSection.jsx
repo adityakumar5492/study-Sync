@@ -774,24 +774,34 @@ const StatsSection = () => {
                                     CALENDAR POPUP
                                 ================================= */}
 
-                                {isActivity && (
-                                    <StudyStreakCalendar
-                                        isOpen={
-                                            showCalendar
-                                        }
-                                        onClose={() =>
-                                            setShowCalendar(
-                                                false
-                                            )
-                                        }
-                                        sessions={
-                                            studyStats.sessions
-                                        }
-                                        position={
-                                            calendarPosition
-                                        }
-                                    />
-                                )}
+{isActivity && (
+    <div
+        className={`
+            ${
+                showCalendar
+                    ? "pointer-events-auto"
+                    : "pointer-events-none"
+            }
+
+            max-sm:fixed
+            max-sm:left-3
+            max-sm:right-3
+            max-sm:top-16
+            max-sm:z-[100]
+
+            sm:absolute
+            sm:right-0
+            sm:top-full
+            sm:mt-3
+        `}
+    >
+        <StudyStreakCalendar
+            isOpen={showCalendar}
+            onClose={() => setShowCalendar(false)}
+            sessions={studyStats.sessions}
+        />
+    </div>
+)}
                             </div>
                         );
                     }
