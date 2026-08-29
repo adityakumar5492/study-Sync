@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
-import { FaPaperPlane, FaCircle } from "react-icons/fa";
+import { FaPaperPlane, FaCircle, FaSmile } from "react-icons/fa";
 import { BsThreeDots, BsLightningChargeFill } from "react-icons/bs";
 import { motion, AnimatePresence } from "framer-motion";
+import EmojiPicker from "emoji-picker-react";
 import toast from "react-hot-toast";
 
 import { useAppSelector } from "../../redux/hooks";
@@ -18,9 +19,12 @@ const ChatPanel = ({ roomId, isHost = false, isMember = false }) => {
     const [messages, setMessages] = useState([]);
     const [input, setInput] = useState("");
     const [typingUser, setTypingUser] = useState(null);
+    const [showEmojiPicker, setShowEmojiPicker] =
+        useState(false);
 
     const messagesEndRef = useRef(null);
     const typingTimeoutRef = useRef(null);
+    const emojiPickerRef = useRef(null);
 
     // ===========================
     // Scroll to latest message
@@ -31,6 +35,38 @@ const ChatPanel = ({ roomId, isHost = false, isMember = false }) => {
             behavior: "auto",
         });
     }, [messages]);
+
+    // ===========================
+    // Close emoji picker
+    // when clicking outside
+    // ===========================
+
+    useEffect(() => {
+        const handleOutsideClick = (event) => {
+            if (
+                emojiPickerRef.current &&
+                !emojiPickerRef.current.contains(
+                    event.target
+                )
+            ) {
+                setShowEmojiPicker(false);
+            }
+        };
+
+        if (showEmojiPicker) {
+            document.addEventListener(
+                "mousedown",
+                handleOutsideClick
+            );
+        }
+
+        return () => {
+            document.removeEventListener(
+                "mousedown",
+                handleOutsideClick
+            );
+        };
+    }, [showEmojiPicker]);
 
     // ===========================
     // Load messages + socket
@@ -56,20 +92,20 @@ const ChatPanel = ({ roomId, isHost = false, isMember = false }) => {
         loadMessages();
 
         const handleNewMessage = (message) => {
-    const normalizedMessage = {
-        ...message,
-        senderId:
-            message.senderId?._id ||
-            message.senderId ||
-            message.sender?._id ||
-            user?._id,
-    };
+            const normalizedMessage = {
+                ...message,
+                senderId:
+                    message.senderId?._id ||
+                    message.senderId ||
+                    message.sender?._id ||
+                    user?._id,
+            };
 
-    setMessages((prev) => [
-        ...prev,
-        normalizedMessage,
-    ]);
-};
+            setMessages((prev) => [
+                ...prev,
+                normalizedMessage,
+            ]);
+        };
 
         const handleMessageDeleted = ({
             messageId,
@@ -219,11 +255,25 @@ const ChatPanel = ({ roomId, isHost = false, isMember = false }) => {
     };
 
     // ===========================
+    // Emoji Selection
+    // ===========================
+
+    const handleEmojiClick = (emojiData) => {
+        const emoji = emojiData?.emoji;
+
+        if (!emoji) return;
+
+        setInput((previous) => previous + emoji);
+
+        setShowEmojiPicker(false);
+    };
+
+    // ===========================
     // Send message
     // ===========================
 
     const handleSend = (e) => {
-        e.preventDefault();
+        e?.preventDefault();
 
         const text = input.trim();
 
@@ -260,7 +310,12 @@ const ChatPanel = ({ roomId, isHost = false, isMember = false }) => {
         }
 
         setInput("");
+        setShowEmojiPicker(false);
     };
+
+    // ===========================
+    // Keyboard
+    // ===========================
 
     const handleKeyDown = (e) => {
         if (
@@ -335,7 +390,6 @@ const ChatPanel = ({ roomId, isHost = false, isMember = false }) => {
                 className="relative z-10 flex h-[68px] shrink-0 items-center justify-between border-b border-white/[0.07] bg-[#09090f]/80 px-4 backdrop-blur-2xl"
             >
                 <div className="flex items-center gap-3">
-
                     <motion.div
                         animate={{
                             boxShadow: [
@@ -402,7 +456,6 @@ const ChatPanel = ({ roomId, isHost = false, isMember = false }) => {
                 </div>
 
                 <div className="flex items-center gap-2">
-
                     <motion.div
                         animate={{
                             scale: [1, 1.04, 1],
@@ -418,6 +471,7 @@ const ChatPanel = ({ roomId, isHost = false, isMember = false }) => {
                         }`}
                     >
                         <FaCircle className="text-[5px]" />
+
                         {isConnected
                             ? "LIVE"
                             : "OFFLINE"}
@@ -431,7 +485,6 @@ const ChatPanel = ({ roomId, isHost = false, isMember = false }) => {
 
             <div className="relative z-10 min-h-0 flex-1 space-y-3 overflow-y-auto p-3 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-white/10">
 
-                {/* Empty state */}
                 {messages.length === 0 ? (
                     <motion.div
                         initial={{
@@ -448,7 +501,6 @@ const ChatPanel = ({ roomId, isHost = false, isMember = false }) => {
                         className="flex h-full items-center justify-center px-4 text-center"
                     >
                         <div className="relative">
-
                             <motion.div
                                 animate={{
                                     scale: [1, 1.12, 1],
@@ -634,9 +686,7 @@ const ChatPanel = ({ roomId, isHost = false, isMember = false }) => {
                                     {[0, 1, 2].map(
                                         (dot) => (
                                             <motion.span
-                                                key={
-                                                    dot
-                                                }
+                                                key={dot}
                                                 animate={{
                                                     y: [
                                                         0,
@@ -680,6 +730,85 @@ const ChatPanel = ({ roomId, isHost = false, isMember = false }) => {
                 <div className="relative flex items-center gap-2">
 
                     <div className="pointer-events-none absolute -inset-2 rounded-2xl bg-violet-500/[0.02] blur-xl" />
+
+                    {/* ======================================
+                        EMOJI PICKER
+                    ====================================== */}
+
+                    <div
+                        ref={emojiPickerRef}
+                        className="absolute bottom-[calc(100%+10px)] left-0 z-[100]"
+                    >
+                        <AnimatePresence>
+                            {showEmojiPicker && (
+                                <motion.div
+                                    initial={{
+                                        opacity: 0,
+                                        y: 8,
+                                        scale: 0.96,
+                                    }}
+                                    animate={{
+                                        opacity: 1,
+                                        y: 0,
+                                        scale: 1,
+                                    }}
+                                    exit={{
+                                        opacity: 0,
+                                        y: 8,
+                                        scale: 0.96,
+                                    }}
+                                    transition={{
+                                        duration: 0.15,
+                                    }}
+                                    className="origin-bottom-left"
+                                >
+                                    <EmojiPicker
+                                        onEmojiClick={
+                                            handleEmojiClick
+                                        }
+                                        width="min(350px, calc(100vw - 24px))"
+                                        height={400}
+                                        searchDisabled={false}
+                                        skinTonesDisabled={false}
+                                        previewConfig={{
+                                            showPreview: false,
+                                        }}
+                                        lazyLoadEmojis
+                                    />
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+                    </div>
+
+                    {/* ======================================
+                        EMOJI BUTTON
+                    ====================================== */}
+
+                    <button
+                        type="button"
+                        onClick={() =>
+                            setShowEmojiPicker(
+                                (previous) =>
+                                    !previous
+                            )
+                        }
+                        disabled={!socket.connected}
+                        aria-label="Open emoji picker"
+                        aria-expanded={
+                            showEmojiPicker
+                        }
+                        className={`relative z-10 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border transition-all duration-200 ${
+                            showEmojiPicker
+                                ? "border-violet-400/30 bg-violet-500/10 text-violet-300"
+                                : "border-white/[0.08] bg-white/[0.035] text-zinc-500 hover:border-violet-400/20 hover:bg-white/[0.06] hover:text-violet-300"
+                        } disabled:cursor-not-allowed disabled:opacity-40`}
+                    >
+                        <FaSmile size={15} />
+                    </button>
+
+                    {/* ======================================
+                        INPUT
+                    ====================================== */}
 
                     <div className="group relative flex min-w-0 flex-1 items-center">
                         <motion.div
@@ -725,6 +854,10 @@ const ChatPanel = ({ roomId, isHost = false, isMember = false }) => {
                             </motion.span>
                         )}
                     </div>
+
+                    {/* ======================================
+                        SEND BUTTON
+                    ====================================== */}
 
                     <motion.button
                         type="submit"
@@ -777,7 +910,11 @@ const ChatPanel = ({ roomId, isHost = false, isMember = false }) => {
                     </motion.button>
                 </div>
 
-                <div className="mt-2 flex items-center justify-between px-1">
+                {/* ==========================================
+                    DESKTOP HINT ONLY
+                ========================================== */}
+
+                <div className="mt-2 hidden items-center justify-between px-1 lg:flex">
                     <div className="flex items-center gap-2">
                         <span className="text-[8px] text-zinc-700">
                             Press
@@ -803,6 +940,28 @@ const ChatPanel = ({ roomId, isHost = false, isMember = false }) => {
                         className="flex items-center gap-1.5 text-[8px] text-zinc-700"
                     >
                         <span className="h-1 w-1 rounded-full bg-emerald-400" />
+
+                        real-time sync
+                    </motion.div>
+                </div>
+
+                {/* ==========================================
+                    MOBILE REAL-TIME STATUS
+                ========================================== */}
+
+                <div className="mt-2 flex items-center justify-end px-1 lg:hidden">
+                    <motion.div
+                        animate={{
+                            opacity: [0.4, 0.8, 0.4],
+                        }}
+                        transition={{
+                            duration: 2.5,
+                            repeat: Infinity,
+                        }}
+                        className="flex items-center gap-1.5 text-[8px] text-zinc-700"
+                    >
+                        <span className="h-1 w-1 rounded-full bg-emerald-400" />
+
                         real-time sync
                     </motion.div>
                 </div>
