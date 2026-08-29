@@ -19,7 +19,6 @@ import {
 
 import {
     motion,
-    AnimatePresence,
 } from "framer-motion";
 
 import EmojiPicker from "emoji-picker-react";
@@ -53,21 +52,24 @@ const ChatPanel = ({
         useState({
             top: 0,
             left: 0,
-            width: 350,
+            width: 300,
         });
 
     const [isMobile, setIsMobile] =
         useState(false);
 
     const messagesEndRef = useRef(null);
+    const inputRef = useRef(null);
+
     const typingTimeoutRef = useRef(null);
+    const isTypingRef = useRef(false);
 
     const emojiButtonRef = useRef(null);
     const emojiPickerRef = useRef(null);
 
-    // ===========================
+    // =========================================================
     // RESPONSIVE CHECK
-    // ===========================
+    // =========================================================
 
     useEffect(() => {
         const updateDeviceSize = () => {
@@ -91,12 +93,40 @@ const ChatPanel = ({
         };
     }, []);
 
-    // ===========================
-    // POSITION EMOJI PICKER
-    // ===========================
+    // =========================================================
+    // FOCUS INPUT
+    // =========================================================
+
+    useEffect(() => {
+        const focusInput = () => {
+            if (
+                socket.connected &&
+                inputRef.current
+            ) {
+                inputRef.current.focus();
+            }
+        };
+
+        // Give mobile drawer a moment to finish mounting.
+        const timeoutId = setTimeout(
+            focusInput,
+            100
+        );
+
+        return () => {
+            clearTimeout(timeoutId);
+        };
+    }, [roomId]);
+
+    // =========================================================
+    // POSITION DESKTOP EMOJI PICKER
+    // =========================================================
 
     const updateEmojiPosition = () => {
-        if (!emojiButtonRef.current) {
+        if (
+            isMobile ||
+            !emojiButtonRef.current
+        ) {
             return;
         }
 
@@ -110,19 +140,8 @@ const ChatPanel = ({
             window.visualViewport?.height ||
             window.innerHeight;
 
-        const mobile =
-            viewportWidth < 640;
-
-        const pickerWidth = mobile
-            ? Math.min(
-                  viewportWidth - 20,
-                  340
-              )
-            : 350;
-
-        const pickerHeight = mobile
-            ? 350
-            : 420;
+        const pickerWidth = 300;
+        const pickerHeight = 360;
 
         let left =
             button.left +
@@ -144,8 +163,6 @@ const ChatPanel = ({
             pickerHeight -
             10;
 
-        // If there isn't enough room above,
-        // keep it inside the visible viewport.
         if (top < 10) {
             top = Math.min(
                 button.bottom + 10,
@@ -164,12 +181,15 @@ const ChatPanel = ({
         });
     };
 
-    // ===========================
-    // EMOJI PICKER POSITION EVENTS
-    // ===========================
+    // =========================================================
+    // EMOJI POSITION EVENTS
+    // =========================================================
 
     useEffect(() => {
-        if (!emojiOpen) {
+        if (
+            !emojiOpen ||
+            isMobile
+        ) {
             return;
         }
 
@@ -226,16 +246,21 @@ const ChatPanel = ({
         };
     }, [emojiOpen, isMobile]);
 
-    // ===========================
-    // OUTSIDE CLICK
-    // ===========================
+    // =========================================================
+    // CLOSE EMOJI ON OUTSIDE CLICK
+    // =========================================================
 
     useEffect(() => {
-        if (!emojiOpen) {
+        if (
+            !emojiOpen ||
+            isMobile
+        ) {
             return;
         }
 
-        const handleOutsideClick = (event) => {
+        const handleOutsideClick = (
+            event
+        ) => {
             const target = event.target;
 
             if (
@@ -268,11 +293,11 @@ const ChatPanel = ({
                 handleOutsideClick
             );
         };
-    }, [emojiOpen]);
+    }, [emojiOpen, isMobile]);
 
-    // ===========================
-    // ESCAPE TO CLOSE
-    // ===========================
+    // =========================================================
+    // ESCAPE TO CLOSE EMOJI
+    // =========================================================
 
     useEffect(() => {
         const handleEscape = (event) => {
@@ -297,19 +322,24 @@ const ChatPanel = ({
         };
     }, [emojiOpen]);
 
-    // ===========================
+    // =========================================================
     // SCROLL TO LATEST MESSAGE
-    // ===========================
+    // =========================================================
 
     useEffect(() => {
-        messagesEndRef.current?.scrollIntoView({
+        if (!messagesEndRef.current) {
+            return;
+        }
+
+        messagesEndRef.current.scrollIntoView({
             behavior: "auto",
+            block: "end",
         });
     }, [messages]);
 
-    // ===========================
+    // =========================================================
     // LOAD MESSAGES + SOCKET
-    // ===========================
+    // =========================================================
 
     useEffect(() => {
         if (
@@ -319,6 +349,8 @@ const ChatPanel = ({
             return;
         }
 
+        let isMounted = true;
+
         const loadMessages = async () => {
             try {
                 const { data } =
@@ -326,10 +358,18 @@ const ChatPanel = ({
                         roomId
                     );
 
+                if (!isMounted) {
+                    return;
+                }
+
                 setMessages(
                     data.messages || []
                 );
             } catch (error) {
+                if (!isMounted) {
+                    return;
+                }
+
                 toast.error(
                     error.response?.data
                         ?.message ||
@@ -338,11 +378,17 @@ const ChatPanel = ({
             }
         };
 
-        loadMessages();
+        // =====================================================
+        // NEW MESSAGE
+        // =====================================================
 
         const handleNewMessage = (
             message
         ) => {
+            if (!message) {
+                return;
+            }
+
             const normalizedMessage = {
                 ...message,
 
@@ -350,20 +396,38 @@ const ChatPanel = ({
                     message.senderId?._id ||
                     message.senderId ||
                     message.sender?._id ||
-                    user?._id,
+                    null,
             };
 
-            setMessages((prev) => [
-                ...prev,
-                normalizedMessage,
-            ]);
+            setMessages((previous) => {
+                // Prevent duplicate messages.
+                if (
+                    normalizedMessage._id &&
+                    previous.some(
+                        (item) =>
+                            item._id ===
+                            normalizedMessage._id
+                    )
+                ) {
+                    return previous;
+                }
+
+                return [
+                    ...previous,
+                    normalizedMessage,
+                ];
+            });
         };
+
+        // =====================================================
+        // MESSAGE DELETED
+        // =====================================================
 
         const handleMessageDeleted = ({
             messageId,
         }) => {
-            setMessages((prev) =>
-                prev.filter(
+            setMessages((previous) =>
+                previous.filter(
                     (message) =>
                         message._id !==
                         messageId
@@ -371,16 +435,54 @@ const ChatPanel = ({
             );
         };
 
+        // =====================================================
+        // USER TYPING
+        // =====================================================
+
         const handleUserTyping = ({
-            user,
+            user: typingName,
+            userId,
         }) => {
-            setTypingUser(user);
+            // Never show our own typing event.
+            if (
+                userId &&
+                user?._id &&
+                userId.toString() ===
+                    user._id.toString()
+            ) {
+                return;
+            }
+
+            if (
+                typingName &&
+                typingName !== user?.name
+            ) {
+                setTypingUser(
+                    typingName
+                );
+            }
         };
 
-        const handleUserStopTyping = () => {
+        // =====================================================
+        // USER STOP TYPING
+        // =====================================================
+
+        const handleUserStopTyping = ({
+            userId,
+        } = {}) => {
+            if (
+                userId &&
+                user?._id &&
+                userId.toString() ===
+                    user._id.toString()
+            ) {
+                return;
+            }
+
             setTypingUser(null);
         };
 
+        // Register listeners before loading history.
         socket.on(
             "chat:new-message",
             handleNewMessage
@@ -401,7 +503,11 @@ const ChatPanel = ({
             handleUserStopTyping
         );
 
+        loadMessages();
+
         return () => {
+            isMounted = false;
+
             socket.off(
                 "chat:new-message",
                 handleNewMessage
@@ -428,13 +534,26 @@ const ChatPanel = ({
                 clearTimeout(
                     typingTimeoutRef.current
                 );
-            }
-        };
-    }, [roomId]);
 
-    // ===========================
+                typingTimeoutRef.current =
+                    null;
+            }
+
+            isTypingRef.current =
+                false;
+
+            setTypingUser(null);
+        };
+    }, [
+        roomId,
+        isHost,
+        isMember,
+        user?._id,
+    ]);
+
+    // =========================================================
     // DELETE MESSAGE
-    // ===========================
+    // =========================================================
 
     const handleDeleteMessage = (
         messageId
@@ -465,14 +584,16 @@ const ChatPanel = ({
         );
     };
 
-    // ===========================
+    // =========================================================
     // TYPING
-    // ===========================
+    // =========================================================
 
-    const handleTyping = (e) => {
+    const handleTyping = (event) => {
         const value =
-            e.target.value;
+            event.target.value;
 
+        // Immediate local update.
+        // No delay.
         setInput(value);
 
         if (
@@ -482,26 +603,60 @@ const ChatPanel = ({
             return;
         }
 
+        // Empty input.
         if (!value.trim()) {
-            socket.emit(
-                "chat:stop-typing",
-                {
-                    roomId,
-                    user: user?.name,
-                }
-            );
+            if (
+                isTypingRef.current
+            ) {
+                socket.emit(
+                    "chat:stop-typing",
+                    {
+                        roomId,
+                        user: user?.name,
+                        userId: user?._id,
+                    }
+                );
+
+                isTypingRef.current =
+                    false;
+            }
+
+            if (
+                typingTimeoutRef.current
+            ) {
+                clearTimeout(
+                    typingTimeoutRef.current
+                );
+
+                typingTimeoutRef.current =
+                    null;
+            }
 
             return;
         }
 
-        socket.emit(
-            "chat:typing",
-            {
-                roomId,
-                user: user?.name,
-            }
-        );
+        // -----------------------------------------------------
+        // IMPORTANT:
+        // Emit typing ONLY once when typing starts.
+        // Do NOT emit socket event for every keystroke.
+        // This makes mobile typing much smoother.
+        // -----------------------------------------------------
 
+        if (!isTypingRef.current) {
+            socket.emit(
+                "chat:typing",
+                {
+                    roomId,
+                    user: user?.name,
+                    userId: user?._id,
+                }
+            );
+
+            isTypingRef.current =
+                true;
+        }
+
+        // Reset stop-typing timer.
         if (
             typingTimeoutRef.current
         ) {
@@ -517,17 +672,24 @@ const ChatPanel = ({
                     {
                         roomId,
                         user: user?.name,
+                        userId: user?._id,
                     }
                 );
-            }, 1500);
+
+                isTypingRef.current =
+                    false;
+
+                typingTimeoutRef.current =
+                    null;
+            }, 1200);
     };
 
-    // ===========================
+    // =========================================================
     // SEND MESSAGE
-    // ===========================
+    // =========================================================
 
-    const handleSend = (e) => {
-        e?.preventDefault();
+    const handleSend = (event) => {
+        event?.preventDefault();
 
         const text =
             input.trim();
@@ -555,13 +717,18 @@ const ChatPanel = ({
             }
         );
 
+        // Stop typing immediately.
         socket.emit(
             "chat:stop-typing",
             {
                 roomId,
                 user: user?.name,
+                userId: user?._id,
             }
         );
+
+        isTypingRef.current =
+            false;
 
         if (
             typingTimeoutRef.current
@@ -569,30 +736,47 @@ const ChatPanel = ({
             clearTimeout(
                 typingTimeoutRef.current
             );
+
+            typingTimeoutRef.current =
+                null;
         }
 
+        // Clear immediately.
         setInput("");
+
+        // Close desktop emoji picker.
         setEmojiOpen(false);
+
+        // -----------------------------------------------------
+        // CRITICAL MOBILE FIX
+        //
+        // Keep the input focused so the keyboard does not
+        // disappear after sending.
+        // -----------------------------------------------------
+
+        requestAnimationFrame(() => {
+            inputRef.current?.focus();
+        });
     };
 
-    // ===========================
+    // =========================================================
     // ENTER SEND
-    // ===========================
+    // =========================================================
 
-    const handleKeyDown = (e) => {
+    const handleKeyDown = (event) => {
         if (
-            e.key === "Enter" &&
-            !e.shiftKey
+            event.key === "Enter" &&
+            !event.shiftKey
         ) {
-            e.preventDefault();
+            event.preventDefault();
 
-            handleSend(e);
+            handleSend(event);
         }
     };
 
-    // ===========================
+    // =========================================================
     // EMOJI SELECT
-    // ===========================
+    // =========================================================
 
     const handleEmojiClick = (
         emojiData
@@ -608,27 +792,41 @@ const ChatPanel = ({
             (previous) =>
                 previous + emoji
         );
+
+        // Keep desktop input focused.
+        requestAnimationFrame(() => {
+            inputRef.current?.focus();
+        });
     };
 
-    // ===========================
+    // =========================================================
     // TOGGLE EMOJI
-    // ===========================
+    // =========================================================
 
     const toggleEmojiPicker = () => {
+        if (isMobile) {
+            return;
+        }
+
         setEmojiOpen(
             (previous) => !previous
         );
+
+        requestAnimationFrame(() => {
+            updateEmojiPosition();
+        });
     };
 
     const isConnected =
         socket.connected;
 
-    // ===========================
-    // EMOJI PICKER PORTAL
-    // ===========================
+    // =========================================================
+    // DESKTOP EMOJI PICKER PORTAL
+    // =========================================================
 
     const emojiPickerPortal =
         emojiOpen &&
+        !isMobile &&
         typeof document !==
             "undefined"
             ? createPortal(
@@ -652,11 +850,7 @@ const ChatPanel = ({
                                   handleEmojiClick
                               }
                               width="100%"
-                              height={
-                                  isMobile
-                                      ? 350
-                                      : 420
-                              }
+                              height={360}
                               previewConfig={{
                                   showPreview: false,
                               }}
@@ -681,9 +875,9 @@ const ChatPanel = ({
         <>
             <div className="relative flex h-full min-h-0 flex-col overflow-hidden bg-[#07070c] text-white">
 
-                {/* ==========================================
-                    BACKGROUND ATMOSPHERE
-                ========================================== */}
+                {/* ==================================================
+                    BACKGROUND
+                ================================================== */}
 
                 <div className="pointer-events-none absolute inset-0 overflow-hidden">
                     <motion.div
@@ -749,9 +943,9 @@ const ChatPanel = ({
                     />
                 </div>
 
-                {/* ==========================================
+                {/* ==================================================
                     CHAT HEADER
-                ========================================== */}
+                ================================================== */}
 
                 <motion.div
                     initial={{
@@ -870,11 +1064,12 @@ const ChatPanel = ({
                     </div>
                 </motion.div>
 
-                {/* ==========================================
+                {/* ==================================================
                     MESSAGES
-                ========================================== */}
+                ================================================== */}
 
                 <div className="relative z-10 min-h-0 flex-1 space-y-3 overflow-y-auto p-3 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-white/10">
+
                     {messages.length ===
                     0 ? (
                         <motion.div
@@ -887,7 +1082,7 @@ const ChatPanel = ({
                                 scale: 1,
                             }}
                             transition={{
-                                duration: 0.7,
+                                duration: 0.5,
                             }}
                             className="flex h-full items-center justify-center px-4 text-center"
                         >
@@ -931,50 +1126,19 @@ const ChatPanel = ({
                                     study
                                     session.
                                 </p>
-
-                                <div className="mt-5 flex justify-center gap-1">
-                                    {[
-                                        0,
-                                        1,
-                                        2,
-                                        3,
-                                        4,
-                                    ].map(
-                                        (
-                                            item
-                                        ) => (
-                                            <motion.span
-                                                key={
-                                                    item
-                                                }
-                                                animate={{
-                                                    height: [
-                                                        4,
-                                                        10 +
-                                                            item *
-                                                                2,
-                                                        4,
-                                                    ],
-                                                }}
-                                                transition={{
-                                                    duration:
-                                                        0.8 +
-                                                        item *
-                                                            0.08,
-                                                    repeat: Infinity,
-                                                    delay:
-                                                        item *
-                                                        0.08,
-                                                }}
-                                                className="w-1 rounded-full bg-gradient-to-t from-violet-500 to-cyan-300"
-                                            />
-                                        )
-                                    )}
-                                </div>
                             </div>
                         </motion.div>
                     ) : (
-                        <AnimatePresence initial={false}>
+                        <>
+                            {/* ==================================================
+                                IMPORTANT:
+                                NO AnimatePresence / motion wrapper around every
+                                message.
+
+                                This prevents the entire chat history from
+                                appearing to blink/reload whenever state changes.
+                            ================================================== */}
+
                             {messages.map(
                                 (
                                     msg,
@@ -986,7 +1150,8 @@ const ChatPanel = ({
                                         msg.sender?._id;
 
                                     const isOwn =
-                                        messageSenderId?.toString() ===
+                                        messageSenderId
+                                            ?.toString() ===
                                         user?._id?.toString();
 
                                     const canDelete =
@@ -994,37 +1159,11 @@ const ChatPanel = ({
                                         isOwn;
 
                                     return (
-                                        <motion.div
+                                        <div
                                             key={
                                                 msg._id ||
                                                 `${msg.sender}-${msg.createdAt}-${index}`
                                             }
-                                            initial={{
-                                                opacity: 0,
-                                                y: 18,
-                                                scale: 0.97,
-                                            }}
-                                            animate={{
-                                                opacity: 1,
-                                                y: 0,
-                                                scale: 1,
-                                            }}
-                                            exit={{
-                                                opacity: 0,
-                                                scale: 0.95,
-                                                x: isOwn
-                                                    ? 30
-                                                    : -30,
-                                            }}
-                                            transition={{
-                                                duration: 0.35,
-                                                ease: [
-                                                    0.22,
-                                                    1,
-                                                    0.36,
-                                                    1,
-                                                ],
-                                            }}
                                             className="group"
                                         >
                                             <MessageBubble
@@ -1066,83 +1205,80 @@ const ChatPanel = ({
                                                     )
                                                 }
                                             />
-                                        </motion.div>
+                                        </div>
                                     );
                                 }
                             )}
-                        </AnimatePresence>
+                        </>
                     )}
 
-                    {/* TYPING */}
+                    {/* ==================================================
+                        TYPING INDICATOR
+                    ================================================== */}
 
-                    <AnimatePresence>
-                        {typingUser &&
-                            typingUser !==
-                                user?.name && (
-                                <motion.div
-                                    initial={{
-                                        opacity: 0,
-                                        y: 8,
-                                        x: -8,
-                                    }}
-                                    animate={{
-                                        opacity: 1,
-                                        y: 0,
-                                        x: 0,
-                                    }}
-                                    exit={{
-                                        opacity: 0,
-                                        y: 5,
-                                    }}
-                                    className="flex items-center gap-2 px-2 py-1"
-                                >
-                                    <div className="flex items-center gap-[3px] rounded-full border border-white/[0.06] bg-white/[0.025] px-3 py-2">
-                                        <span className="text-[9px] text-zinc-500">
-                                            {
-                                                typingUser
-                                            }
-                                        </span>
+                    {typingUser &&
+                        typingUser !==
+                            user?.name && (
+                            <motion.div
+                                initial={{
+                                    opacity: 0,
+                                    y: 5,
+                                }}
+                                animate={{
+                                    opacity: 1,
+                                    y: 0,
+                                }}
+                                exit={{
+                                    opacity: 0,
+                                }}
+                                className="flex items-center gap-2 px-2 py-1"
+                            >
+                                <div className="flex items-center gap-[3px] rounded-full border border-white/[0.06] bg-white/[0.025] px-3 py-2">
+                                    <span className="text-[9px] text-zinc-500">
+                                        {
+                                            typingUser
+                                        }
+                                    </span>
 
-                                        {[
-                                            0,
-                                            1,
-                                            2,
-                                        ].map(
-                                            (
-                                                dot
-                                            ) => (
-                                                <motion.span
-                                                    key={
-                                                        dot
-                                                    }
-                                                    animate={{
-                                                        y: [
-                                                            0,
-                                                            -3,
-                                                            0,
-                                                        ],
-                                                        opacity: [
-                                                            0.3,
-                                                            1,
-                                                            0.3,
-                                                        ],
-                                                    }}
-                                                    transition={{
-                                                        duration:
-                                                            0.7,
-                                                        repeat: Infinity,
-                                                        delay:
-                                                            dot *
-                                                            0.12,
-                                                    }}
-                                                    className="h-1 w-1 rounded-full bg-violet-400"
-                                                />
-                                            )
-                                        )}
-                                    </div>
-                                </motion.div>
-                            )}
-                    </AnimatePresence>
+                                    {[
+                                        0,
+                                        1,
+                                        2,
+                                    ].map(
+                                        (
+                                            dot
+                                        ) => (
+                                            <motion.span
+                                                key={
+                                                    dot
+                                                }
+                                                animate={{
+                                                    y: [
+                                                        0,
+                                                        -3,
+                                                        0,
+                                                    ],
+                                                    opacity: [
+                                                        0.3,
+                                                        1,
+                                                        0.3,
+                                                    ],
+                                                }}
+                                                transition={{
+                                                    duration:
+                                                        0.7,
+                                                    repeat: Infinity,
+                                                    delay:
+                                                        dot *
+                                                        0.12,
+                                                }}
+                                                className="h-1 w-1 rounded-full bg-violet-400"
+                                            />
+                                        )
+                                    )}
+                                </div>
+                            </motion.div>
+                        )}
 
                     <div
                         ref={
@@ -1151,9 +1287,9 @@ const ChatPanel = ({
                     />
                 </div>
 
-                {/* ==========================================
+                {/* ==================================================
                     MESSAGE INPUT
-                ========================================== */}
+                ================================================== */}
 
                 <form
                     onSubmit={handleSend}
@@ -1162,7 +1298,11 @@ const ChatPanel = ({
                     <div className="relative flex items-center gap-2">
                         <div className="pointer-events-none absolute -inset-2 rounded-2xl bg-violet-500/[0.02] blur-xl" />
 
-                        {/* EMOJI BUTTON */}
+                        {/* ==================================================
+                            DESKTOP ONLY EMOJI BUTTON
+
+                            hidden on mobile.
+                        ================================================== */}
 
                         <button
                             ref={
@@ -1175,7 +1315,7 @@ const ChatPanel = ({
                             disabled={
                                 !socket.connected
                             }
-                            className={`relative flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border transition-all duration-200 ${
+                            className={`relative hidden h-11 w-11 shrink-0 items-center justify-center rounded-xl border transition-all duration-200 sm:flex ${
                                 emojiOpen
                                     ? "border-violet-400/30 bg-violet-500/15 text-violet-300 shadow-[0_0_25px_rgba(139,92,246,.15)]"
                                     : "border-white/[0.08] bg-white/[0.035] text-zinc-500 hover:border-violet-400/20 hover:bg-white/[0.06] hover:text-violet-300"
@@ -1192,7 +1332,9 @@ const ChatPanel = ({
                             />
                         </button>
 
-                        {/* INPUT */}
+                        {/* ==================================================
+                            INPUT
+                        ================================================== */}
 
                         <div className="group relative flex min-w-0 flex-1 items-center">
                             <motion.div
@@ -1206,6 +1348,7 @@ const ChatPanel = ({
                             />
 
                             <input
+                                ref={inputRef}
                                 type="text"
                                 value={input}
                                 disabled={
@@ -1222,27 +1365,21 @@ const ChatPanel = ({
                                         ? "Type a message..."
                                         : "Connecting..."
                                 }
-                                className="relative w-full min-w-0 rounded-xl border border-white/[0.08] bg-white/[0.035] px-4 py-3 text-xs text-white outline-none placeholder:text-zinc-600 transition-all duration-300 focus:border-violet-400/30 focus:bg-white/[0.05] focus:ring-4 focus:ring-violet-500/5 disabled:cursor-not-allowed disabled:opacity-50"
+                                autoComplete="off"
+                                enterKeyHint="send"
+                                className="relative w-full min-w-0 rounded-xl border border-white/[0.08] bg-white/[0.035] px-4 py-3 text-xs text-white outline-none placeholder:text-zinc-600 transition-all duration-200 focus:border-violet-400/30 focus:bg-white/[0.05] focus:ring-4 focus:ring-violet-500/5 disabled:cursor-not-allowed disabled:opacity-50"
                             />
 
                             {input.trim() && (
-                                <motion.span
-                                    initial={{
-                                        opacity: 0,
-                                        scale: 0,
-                                    }}
-                                    animate={{
-                                        opacity: 1,
-                                        scale: 1,
-                                    }}
-                                    className="pointer-events-none absolute right-3 hidden text-[8px] font-bold uppercase tracking-widest text-violet-400/70 sm:block"
-                                >
+                                <span className="pointer-events-none absolute right-3 hidden text-[8px] font-bold uppercase tracking-widest text-violet-400/70 sm:block">
                                     ready
-                                </motion.span>
+                                </span>
                             )}
                         </div>
 
-                        {/* SEND */}
+                        {/* ==================================================
+                            SEND
+                        ================================================== */}
 
                         <motion.button
                             type="submit"
@@ -1255,8 +1392,8 @@ const ChatPanel = ({
                                 !input.trim()
                                     ? {}
                                     : {
-                                          scale: 1.08,
-                                          rotate: -4,
+                                          scale: 1.05,
+                                          rotate: -3,
                                       }
                             }
                             whileTap={
@@ -1264,7 +1401,7 @@ const ChatPanel = ({
                                 !input.trim()
                                     ? {}
                                     : {
-                                          scale: 0.92,
+                                          scale: 0.94,
                                       }
                             }
                             className="relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-violet-500 to-cyan-400 text-white shadow-[0_10px_35px_rgba(139,92,246,.18)] transition disabled:cursor-not-allowed disabled:bg-white/5 disabled:from-zinc-800 disabled:to-zinc-800 disabled:text-zinc-600 disabled:shadow-none"
@@ -1295,9 +1432,9 @@ const ChatPanel = ({
                         </motion.button>
                     </div>
 
-                    {/* ==========================================
-                        DESKTOP ONLY HELPER
-                    ========================================== */}
+                    {/* ==================================================
+                        DESKTOP HELPER
+                    ================================================== */}
 
                     <div className="mt-2 hidden items-center justify-between px-1 lg:flex">
                         <div className="flex items-center gap-2">
