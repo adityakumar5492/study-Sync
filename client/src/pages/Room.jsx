@@ -47,13 +47,10 @@ const Room = () => {
      * Communication panel stays on the left.
      *
      * Mobile:
-     * Communication panel is controlled separately
-     * using mobilePanelOpen.
+     * Communication panel is handled internally by
+     * RoomCommunication as a fixed bottom dock/sheet.
      */
     const [sidebarOpen, setSidebarOpen] = useState(true);
-
-    const [mobilePanelOpen, setMobilePanelOpen] =
-        useState(false);
 
     const [onlineUsers, setOnlineUsers] = useState([]);
 
@@ -596,7 +593,6 @@ const Room = () => {
 
     return (
         <div className="flex h-[100dvh] min-h-0 w-full flex-col overflow-hidden bg-slate-950 text-white">
-
             {/* =================================
                 ROOM HEADER
             ================================= */}
@@ -613,7 +609,6 @@ const Room = () => {
             ================================= */}
 
             <div className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-slate-950 lg:flex-row">
-
                 {/* =================================
                     DESKTOP LEFT SIDEBAR
                 ================================= */}
@@ -695,19 +690,16 @@ const Room = () => {
                 ================================= */}
 
                 <div className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-
                     {/* =================================
                         MAIN STUDY WORKSPACE
                     ================================= */}
 
                     <main className="flex min-h-0 min-w-0 w-full flex-1 flex-col overflow-hidden bg-slate-950">
-
                         {/* =================================
                             WORKSPACE TABS
                         ================================= */}
 
                         <div className="flex h-9 min-h-9 shrink-0 border-b border-slate-800/80 bg-slate-900/95 px-1 pt-1 shadow-sm sm:h-10 sm:min-h-10 lg:h-11 lg:min-h-11">
-
                             {/* PDF */}
 
                             <button
@@ -767,7 +759,6 @@ const Room = () => {
                         ================================= */}
 
                         <div className="min-h-0 min-w-0 flex-1 overflow-hidden p-1 sm:p-2 lg:p-3">
-
                             {/* =================================
                                 PDF
                             ================================= */}
@@ -801,77 +792,31 @@ const Room = () => {
                     </main>
 
                     {/* =================================
-                        MOBILE COMMUNICATION TOGGLE
-                    ================================= */}
-
-                    {!mobilePanelOpen && (
-                        <button
-                            type="button"
-                            onClick={() =>
-                                setMobilePanelOpen(true)
-                            }
-                            className="absolute bottom-3 right-3 z-30 rounded-xl border border-slate-700/80 bg-slate-800/95 px-3 py-2 text-[10px] font-semibold text-slate-300 shadow-xl shadow-black/30 backdrop-blur transition hover:bg-slate-700 hover:text-white lg:hidden"
-                            aria-label="Open communication"
-                        >
-                            💬 Communication
-                        </button>
-                    )}
-
-                    {/* =================================
                         MOBILE COMMUNICATION
+
+                        RoomCommunication owns the complete
+                        mobile bottom dock/sheet.
                     ================================= */}
 
-                    {mobilePanelOpen && (
-                        <section className="absolute inset-x-0 bottom-0 z-40 flex max-h-[70dvh] w-full flex-col overflow-hidden border-t border-slate-800/80 bg-slate-900 shadow-[0_-12px_40px_rgba(0,0,0,0.45)] lg:hidden">
-
-                            {/* MOBILE PANEL HEADER */}
-
-                            <div className="flex h-10 shrink-0 items-center justify-between border-b border-slate-800/80 bg-slate-950 px-3">
-                                <span className="text-xs font-semibold text-slate-300">
-                                    Communication
-                                </span>
-
-                                <button
-                                    type="button"
-                                    onClick={() =>
-                                        setMobilePanelOpen(
-                                            false
-                                        )
-                                    }
-                                    className="rounded-lg px-3 py-1.5 text-[10px] font-semibold text-slate-400 transition hover:bg-slate-800 hover:text-white"
-                                    aria-label="Hide communication"
-                                >
-                                    Hide
-                                </button>
-                            </div>
-
-                            {/* COMMUNICATION CONTENT */}
-
-                            <div className="min-h-0 flex-1 overflow-hidden">
-                                <RoomCommunication
-                                    room={
-                                        communicationRoom
-                                    }
-                                    roomId={room._id}
-                                    currentUser={user}
-                                    onlineUsers={
-                                        uniqueOnlineUsers
-                                    }
-                                    isHost={isHost}
-                                    isMember={isMember}
-                                    onRemoveMember={
-                                        handleRemoveMember
-                                    }
-                                    drawingPermission={
-                                        drawingPermission
-                                    }
-                                    onDrawingPermissionChange={
-                                        handleDrawingPermissionChange
-                                    }
-                                />
-                            </div>
-                        </section>
-                    )}
+                    <RoomCommunication
+                        room={communicationRoom}
+                        roomId={room._id}
+                        currentUser={user}
+                        onlineUsers={
+                            uniqueOnlineUsers
+                        }
+                        isHost={isHost}
+                        isMember={isMember}
+                        onRemoveMember={
+                            handleRemoveMember
+                        }
+                        drawingPermission={
+                            drawingPermission
+                        }
+                        onDrawingPermissionChange={
+                            handleDrawingPermissionChange
+                        }
+                    />
                 </div>
             </div>
 
@@ -882,7 +827,6 @@ const Room = () => {
             {removeMemberModal.open && (
                 <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 px-3 py-4 backdrop-blur-sm sm:px-4">
                     <div className="w-full max-w-sm overflow-hidden rounded-2xl border border-white/[0.08] bg-[#0b0b11] shadow-[0_25px_100px_rgba(0,0,0,.65)]">
-
                         {/* MODAL HEADER */}
 
                         <div className="flex items-center justify-between border-b border-white/[0.06] px-4 py-3.5 sm:px-5 sm:py-4">

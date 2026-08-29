@@ -5,7 +5,6 @@ import {
     FaComments,
     FaMicrophone,
     FaPen,
-    FaChevronUp,
     FaChevronDown,
 } from "react-icons/fa";
 
@@ -27,12 +26,7 @@ const RoomCommunication = ({
     const [activePanel, setActivePanel] =
         useState("participants");
 
-    // Mobile communication drawer
     const [mobileOpen, setMobileOpen] =
-        useState(false);
-
-    // Mobile communication controls
-    const [mobileControlsOpen, setMobileControlsOpen] =
         useState(false);
 
     // ===========================
@@ -139,34 +133,24 @@ const RoomCommunication = ({
     // ===========================
 
     const handlePanelChange = (panel) => {
+        if (activePanel === panel) {
+            setMobileOpen(
+                (previous) => !previous
+            );
+
+            return;
+        }
+
         setActivePanel(panel);
         setMobileOpen(true);
-
-        // Important:
-        // After selecting a panel, hide all four
-        // communication buttons so the selected
-        // panel gets maximum available space.
-        setMobileControlsOpen(false);
     };
 
     // ===========================
-    // MOBILE TOGGLE
+    // MOBILE CLOSE
     // ===========================
 
-    const toggleMobileCommunication = () => {
-        setMobileOpen(
-            (previous) => !previous
-        );
-    };
-
-    // ===========================
-    // MOBILE CONTROLS
-    // ===========================
-
-    const toggleMobileControls = () => {
-        setMobileControlsOpen(
-            (previous) => !previous
-        );
+    const closeMobilePanel = () => {
+        setMobileOpen(false);
     };
 
     // ===========================
@@ -174,12 +158,12 @@ const RoomCommunication = ({
     // ===========================
 
     const panelButtonClass = (panel) => `
-        flex min-w-0 items-center justify-center gap-1.5
-        rounded-lg px-1 py-2 text-[9px] font-semibold
+        flex min-w-0 flex-1 items-center justify-center gap-1.5
+        rounded-xl px-1 py-2 text-[9px] font-semibold
         transition-all duration-200
         sm:px-1.5 sm:py-2.5 sm:text-[10px]
         ${
-            activePanel === panel
+            activePanel === panel && mobileOpen
                 ? "bg-emerald-500/10 text-emerald-400"
                 : "text-slate-400 hover:bg-slate-800/80 hover:text-slate-200"
         }
@@ -460,10 +444,10 @@ const RoomCommunication = ({
     // ===========================
 
     const mobilePanelContent = (
-        <div className="min-h-0 overflow-hidden">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
             {activePanel === "participants" && (
-                <div className="flex max-h-[30vh] min-h-0 flex-col">
-                    <div className="flex shrink-0 items-center justify-between border-b border-slate-800/70 px-3 py-2">
+                <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+                    <div className="flex shrink-0 items-center justify-between border-b border-slate-800/70 px-3 py-2.5">
                         <div className="flex min-w-0 items-center gap-2">
                             <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-green-500/10 text-green-400">
                                 <FaUsers className="text-[10px]" />
@@ -493,7 +477,7 @@ const RoomCommunication = ({
                         </div>
                     </div>
 
-                    <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain">
+                    <div className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain">
                         <Participants
                             room={room}
                             roomId={roomId}
@@ -512,7 +496,7 @@ const RoomCommunication = ({
             )}
 
             {activePanel === "chat" && (
-                <div className="h-[30vh] min-h-0 overflow-hidden">
+                <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
                     <ChatPanel
                         roomId={roomId}
                         isHost={isHost}
@@ -522,7 +506,7 @@ const RoomCommunication = ({
             )}
 
             {activePanel === "voice" && (
-                <div className="max-h-[30vh] min-h-0 overflow-y-auto overflow-x-hidden">
+                <div className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden">
                     <VoicePanel
                         roomId={roomId}
                         currentUser={currentUser}
@@ -531,7 +515,7 @@ const RoomCommunication = ({
             )}
 
             {activePanel === "drawing" && (
-                <div className="max-h-[30vh] min-h-0 overflow-y-auto overflow-x-hidden">
+                <div className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden">
                     {drawingContent}
                 </div>
             )}
@@ -546,182 +530,154 @@ const RoomCommunication = ({
         <>
             {/* =====================================================
                 MOBILE COMMUNICATION
+
+                The mobile communication UI is fixed to the
+                viewport and therefore never consumes normal
+                workspace height.
             ====================================================== */}
 
-            <div className="fixed bottom-0 left-0 right-0 z-50 px-2 pb-2 sm:px-3 sm:pb-3 lg:hidden">
-                <div
-                    className={`
-                        mx-auto w-full max-w-xl overflow-hidden
-                        rounded-2xl border border-slate-700/80
-                        bg-slate-900/95 shadow-2xl shadow-black/40
-                        backdrop-blur-xl
-                    `}
-                >
-                    {/* MOBILE HEADER */}
+            <div className="fixed inset-x-0 bottom-0 z-[90] px-2 pb-2 sm:px-3 sm:pb-3 lg:hidden">
+                {/* =================================================
+                    MOBILE BOTTOM SHEET
+                ================================================== */}
 
-                    <div className="flex h-11 shrink-0 items-center border-b border-slate-800/80">
-                        <button
-                            type="button"
-                            onClick={
-                                toggleMobileCommunication
-                            }
-                            className="flex h-full min-w-0 flex-1 items-center justify-center gap-2 px-3 text-[10px] font-semibold text-slate-400 transition-colors hover:text-white"
-                            aria-label={
-                                mobileOpen
-                                    ? "Hide communication"
-                                    : "Show communication"
-                            }
-                        >
-                            {mobileOpen ? (
-                                <>
-                                    <FaChevronDown className="text-[8px]" />
+                {mobileOpen && (
+                    <section className="mx-auto mb-2 flex max-h-[70dvh] w-full max-w-xl flex-col overflow-hidden rounded-2xl border border-slate-700/80 bg-slate-900/98 shadow-[0_-18px_60px_rgba(0,0,0,0.5)] backdrop-blur-xl">
+                        {/* SHEET HEADER */}
 
-                                    <span className="truncate">
-                                        Hide
-                                    </span>
-                                </>
-                            ) : (
-                                <>
-                                    <FaChevronUp className="text-[8px]" />
+                        <div className="flex h-11 shrink-0 items-center justify-between border-b border-slate-800/80 bg-slate-950/95 px-3">
+                            <div className="flex min-w-0 items-center gap-2">
+                                <div className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
 
-                                    <span className="truncate">
-                                        Communication
-                                    </span>
-                                </>
-                            )}
-                        </button>
+                                <span className="truncate text-[10px] font-semibold text-slate-300">
+                                    {activePanel ===
+                                        "participants" &&
+                                        "Participants"}
 
-                        {mobileOpen && (
+                                    {activePanel === "chat" &&
+                                        "Chat"}
+
+                                    {activePanel === "voice" &&
+                                        "Voice"}
+
+                                    {activePanel ===
+                                        "drawing" &&
+                                        "Drawing"}
+                                </span>
+                            </div>
+
                             <button
                                 type="button"
                                 onClick={
-                                    toggleMobileControls
+                                    closeMobilePanel
                                 }
-                                className={`
-                                    mr-1.5 flex h-8 shrink-0 items-center
-                                    justify-center rounded-lg px-2.5
-                                    text-[9px] font-semibold transition-colors
-                                    ${
-                                        mobileControlsOpen
-                                            ? "bg-slate-800 text-emerald-400"
-                                            : "text-slate-500 hover:bg-slate-800 hover:text-white"
-                                    }
-                                `}
-                                aria-label="Communication controls"
+                                className="flex h-8 shrink-0 items-center gap-1.5 rounded-lg px-2.5 text-[9px] font-semibold text-slate-400 transition-colors hover:bg-slate-800 hover:text-white"
+                                aria-label="Hide communication"
                             >
-                                {mobileControlsOpen
-                                    ? "Hide controls"
-                                    : "Controls"}
+                                <FaChevronDown className="text-[8px]" />
+
+                                <span>Hide</span>
                             </button>
+                        </div>
+
+                        {/* SHEET CONTENT */}
+
+                        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+                            {mobilePanelContent}
+                        </div>
+                    </section>
+                )}
+
+                {/* =================================================
+                    MOBILE COMMUNICATION DOCK
+
+                    Always stays attached to the bottom.
+                ================================================== */}
+
+                <div className="mx-auto flex w-full max-w-xl items-stretch gap-1 rounded-2xl border border-slate-700/80 bg-slate-900/98 p-1.5 shadow-2xl shadow-black/40 backdrop-blur-xl">
+                    {/* PARTICIPANTS */}
+
+                    <button
+                        type="button"
+                        onClick={() =>
+                            handlePanelChange(
+                                "participants"
+                            )
+                        }
+                        className={panelButtonClass(
+                            "participants"
                         )}
-                    </div>
+                        aria-label="Open participants"
+                    >
+                        <FaUsers className="shrink-0 text-[9px]" />
 
-                    {/* =================================================
-                        MOBILE CONTROLS
-                        Only visible when explicitly requested.
-                    ================================================== */}
+                        <span className="hidden truncate xs:inline sm:inline">
+                            People
+                        </span>
 
-                    {mobileOpen &&
-                        mobileControlsOpen && (
-                            <div className="grid grid-cols-4 gap-1 border-b border-slate-800/80 bg-slate-950/40 p-1.5">
-                                {/* PARTICIPANTS */}
+                        <span className="shrink-0 rounded-full bg-slate-800 px-1.5 py-0.5 text-[8px] leading-none text-slate-500">
+                            {participantsCount}
+                        </span>
+                    </button>
 
-                                <button
-                                    type="button"
-                                    onClick={() =>
-                                        handlePanelChange(
-                                            "participants"
-                                        )
-                                    }
-                                    className={panelButtonClass(
-                                        "participants"
-                                    )}
-                                >
-                                    <FaUsers className="shrink-0 text-[9px]" />
+                    {/* CHAT */}
 
-                                    <span className="truncate">
-                                        People
-                                    </span>
-
-                                    <span className="shrink-0 rounded-full bg-slate-800 px-1.5 py-0.5 text-[8px] leading-none text-slate-500">
-                                        {
-                                            participantsCount
-                                        }
-                                    </span>
-                                </button>
-
-                                {/* CHAT */}
-
-                                <button
-                                    type="button"
-                                    onClick={() =>
-                                        handlePanelChange(
-                                            "chat"
-                                        )
-                                    }
-                                    className={panelButtonClass(
-                                        "chat"
-                                    )}
-                                >
-                                    <FaComments className="shrink-0 text-[9px]" />
-
-                                    <span className="truncate">
-                                        Chat
-                                    </span>
-                                </button>
-
-                                {/* VOICE */}
-
-                                <button
-                                    type="button"
-                                    onClick={() =>
-                                        handlePanelChange(
-                                            "voice"
-                                        )
-                                    }
-                                    className={panelButtonClass(
-                                        "voice"
-                                    )}
-                                >
-                                    <FaMicrophone className="shrink-0 text-[9px]" />
-
-                                    <span className="truncate">
-                                        Voice
-                                    </span>
-                                </button>
-
-                                {/* DRAWING */}
-
-                                <button
-                                    type="button"
-                                    onClick={() =>
-                                        handlePanelChange(
-                                            "drawing"
-                                        )
-                                    }
-                                    className={panelButtonClass(
-                                        "drawing"
-                                    )}
-                                >
-                                    <FaPen className="shrink-0 text-[9px]" />
-
-                                    <span className="truncate">
-                                        Drawing
-                                    </span>
-                                </button>
-                            </div>
+                    <button
+                        type="button"
+                        onClick={() =>
+                            handlePanelChange("chat")
+                        }
+                        className={panelButtonClass(
+                            "chat"
                         )}
+                        aria-label="Open chat"
+                    >
+                        <FaComments className="shrink-0 text-[9px]" />
 
-                    {/* =================================================
-                        MOBILE ACTIVE PANEL
+                        <span className="hidden truncate xs:inline sm:inline">
+                            Chat
+                        </span>
+                    </button>
 
-                        IMPORTANT:
-                        The four buttons are NOT kept open here.
-                        Only the selected panel remains visible.
-                    ================================================== */}
+                    {/* VOICE */}
 
-                    {mobileOpen &&
-                        mobilePanelContent}
+                    <button
+                        type="button"
+                        onClick={() =>
+                            handlePanelChange("voice")
+                        }
+                        className={panelButtonClass(
+                            "voice"
+                        )}
+                        aria-label="Open voice"
+                    >
+                        <FaMicrophone className="shrink-0 text-[9px]" />
+
+                        <span className="hidden truncate xs:inline sm:inline">
+                            Voice
+                        </span>
+                    </button>
+
+                    {/* DRAWING */}
+
+                    <button
+                        type="button"
+                        onClick={() =>
+                            handlePanelChange(
+                                "drawing"
+                            )
+                        }
+                        className={panelButtonClass(
+                            "drawing"
+                        )}
+                        aria-label="Open drawing"
+                    >
+                        <FaPen className="shrink-0 text-[9px]" />
+
+                        <span className="hidden truncate xs:inline sm:inline">
+                            Drawing
+                        </span>
+                    </button>
                 </div>
             </div>
 
