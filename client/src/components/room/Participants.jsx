@@ -8,6 +8,7 @@ import {
     FaCircle,
     FaBolt,
 } from "react-icons/fa";
+
 import { BsLightningChargeFill } from "react-icons/bs";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -469,11 +470,9 @@ const Participants = ({
 
                         <p className="mt-1 truncate text-[9px] text-zinc-400 sm:text-[10px]">
                             {totalOnline > 0
-                                ? `${totalOnline} ${
-                                      totalOnline === 1
-                                          ? "student is"
-                                          : "students are"
-                                  } currently online`
+                                ? totalOnline === 1
+                                    ? "Your group is active"
+                                    : "Your group is active"
                                 : "Waiting for your group"}
                         </p>
                     </div>
@@ -569,174 +568,174 @@ const Participants = ({
                 {isCurrentUserHost &&
                     pendingRequests.length >
                         0 && (
-                        <motion.div
-                            initial={{
-                                opacity: 0,
-                                height: 0,
-                                y: -10,
-                            }}
-                            animate={{
-                                opacity: 1,
-                                height: "auto",
-                                y: 0,
-                            }}
-                            exit={{
-                                opacity: 0,
-                                height: 0,
-                            }}
-                            className="relative z-10 mb-3 shrink-0 overflow-hidden rounded-xl border border-orange-400/15 bg-orange-400/[0.045] p-2.5 shadow-[0_10px_40px_rgba(249,115,22,.05)] sm:mb-4 sm:rounded-2xl sm:p-3"
-                        >
-                            <div className="mb-2 flex items-center justify-between gap-2 sm:mb-3">
-                                <div className="flex min-w-0 items-center gap-2">
-                                    <motion.div
-                                        animate={{
-                                            rotate: [
-                                                -5,
-                                                5,
-                                                -5,
-                                            ],
-                                        }}
-                                        transition={{
-                                            duration: 2,
-                                            repeat: Infinity,
-                                        }}
-                                        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-orange-500/10 text-orange-300 sm:h-8 sm:w-8 sm:rounded-xl"
-                                    >
-                                        <FaBolt className="text-[10px] sm:text-xs" />
-                                    </motion.div>
+                    <motion.div
+                        initial={{
+                            opacity: 0,
+                            height: 0,
+                            y: -10,
+                        }}
+                        animate={{
+                            opacity: 1,
+                            height: "auto",
+                            y: 0,
+                        }}
+                        exit={{
+                            opacity: 0,
+                            height: 0,
+                        }}
+                        className="relative z-10 mb-3 shrink-0 overflow-hidden rounded-xl border border-orange-400/15 bg-orange-400/[0.045] p-2.5 shadow-[0_10px_40px_rgba(249,115,22,.05)] sm:mb-4 sm:rounded-2xl sm:p-3"
+                    >
+                        <div className="mb-2 flex items-center justify-between gap-2 sm:mb-3">
+                            <div className="flex min-w-0 items-center gap-2">
+                                <motion.div
+                                    animate={{
+                                        rotate: [
+                                            -5,
+                                            5,
+                                            -5,
+                                        ],
+                                    }}
+                                    transition={{
+                                        duration: 2,
+                                        repeat: Infinity,
+                                    }}
+                                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-orange-500/10 text-orange-300 sm:h-8 sm:w-8 sm:rounded-xl"
+                                >
+                                    <FaBolt className="text-[10px] sm:text-xs" />
+                                </motion.div>
 
-                                    <div className="min-w-0">
-                                        <p className="truncate text-[9px] font-bold text-orange-300 sm:text-[10px]">
-                                            Rejoin Requests
-                                        </p>
+                                <div className="min-w-0">
+                                    <p className="truncate text-[9px] font-bold text-orange-300 sm:text-[10px]">
+                                        Rejoin Requests
+                                    </p>
 
-                                        <p className="mt-0.5 hidden text-[8px] text-orange-300/40 sm:block">
-                                            Requires your approval
-                                        </p>
-                                    </div>
+                                    <p className="mt-0.5 hidden text-[8px] text-orange-300/40 sm:block">
+                                        Requires your approval
+                                    </p>
                                 </div>
-
-                                <span className="shrink-0 rounded-full bg-orange-400/10 px-1.5 py-0.5 text-[7px] font-bold text-orange-300 sm:px-2 sm:py-1 sm:text-[8px]">
-                                    {pendingRequests.length}{" "}
-                                    pending
-                                </span>
                             </div>
 
-                            <div className="max-h-32 space-y-1.5 overflow-y-auto overscroll-contain pr-1 sm:max-h-40 sm:space-y-2">
-                                {pendingRequests.map(
-                                    (
-                                        request,
-                                        index
-                                    ) => {
-                                        const requestUserId =
-                                            getUserId(
-                                                request.user
-                                            );
+                            <span className="shrink-0 rounded-full bg-orange-400/10 px-1.5 py-0.5 text-[7px] font-bold text-orange-300 sm:px-2 sm:py-1 sm:text-[8px]">
+                                {pendingRequests.length}{" "}
+                                pending
+                            </span>
+                        </div>
 
-                                        return (
-                                            <motion.div
-                                                key={
-                                                    requestUserId ||
-                                                    index
-                                                }
-                                                initial={{
-                                                    opacity: 0,
-                                                    x: -15,
-                                                }}
-                                                animate={{
-                                                    opacity: 1,
-                                                    x: 0,
-                                                }}
-                                                transition={{
-                                                    delay:
-                                                        index *
-                                                        0.08,
-                                                }}
-                                                className="group flex min-w-0 items-center gap-1.5 rounded-lg border border-white/[0.05] bg-black/20 p-1.5 sm:gap-2 sm:rounded-xl sm:p-2"
-                                            >
-                                                <motion.div
-                                                    whileHover={{
-                                                        scale: 1.08,
-                                                    }}
-                                                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-red-500/10 sm:h-9 sm:w-9 sm:rounded-xl"
-                                                >
-                                                    <FaUserCircle className="text-lg text-red-400 sm:text-xl" />
-                                                </motion.div>
-
-                                                <div className="min-w-0 flex-1">
-                                                    <p className="truncate text-[9px] font-semibold text-white sm:text-[10px]">
-                                                        {request
-                                                            .user
-                                                            ?.name ||
-                                                            request
-                                                                .user
-                                                                ?.username ||
-                                                            "User"}
-                                                    </p>
-
-                                                    <p className="mt-0.5 text-[7px] text-red-400/80 sm:text-[8px]">
-                                                        Previously removed
-                                                    </p>
-                                                </div>
-
-                                                <motion.button
-                                                    type="button"
-                                                    whileHover={{
-                                                        scale: 1.1,
-                                                        y: -2,
-                                                    }}
-                                                    whileTap={{
-                                                        scale: 0.9,
-                                                    }}
-                                                    onClick={() =>
-                                                        handleApproveRejoin(
-                                                            requestUserId
-                                                        )
-                                                    }
-                                                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-400 transition hover:bg-emerald-500/20 sm:h-8 sm:w-8 sm:rounded-xl"
-                                                    title="Allow"
-                                                    aria-label={`Approve rejoin request from ${
-                                                        request
-                                                            .user
-                                                            ?.name ||
-                                                        "user"
-                                                    }`}
-                                                >
-                                                    <FaCheck className="text-[9px] sm:text-[10px]" />
-                                                </motion.button>
-
-                                                <motion.button
-                                                    type="button"
-                                                    whileHover={{
-                                                        scale: 1.1,
-                                                        y: -2,
-                                                    }}
-                                                    whileTap={{
-                                                        scale: 0.9,
-                                                    }}
-                                                    onClick={() =>
-                                                        handleRejectRejoin(
-                                                            requestUserId
-                                                        )
-                                                    }
-                                                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-red-500/10 text-red-400 transition hover:bg-red-500/20 sm:h-8 sm:w-8 sm:rounded-xl"
-                                                    title="Reject"
-                                                    aria-label={`Reject rejoin request from ${
-                                                        request
-                                                            .user
-                                                            ?.name ||
-                                                        "user"
-                                                    }`}
-                                                >
-                                                    <FaTimes className="text-[9px] sm:text-[10px]" />
-                                                </motion.button>
-                                            </motion.div>
+                        <div className="max-h-32 space-y-1.5 overflow-y-auto overscroll-contain pr-1 sm:max-h-40 sm:space-y-2">
+                            {pendingRequests.map(
+                                (
+                                    request,
+                                    index
+                                ) => {
+                                    const requestUserId =
+                                        getUserId(
+                                            request.user
                                         );
-                                    }
-                                )}
-                            </div>
-                        </motion.div>
-                    )}
+
+                                    return (
+                                        <motion.div
+                                            key={
+                                                requestUserId ||
+                                                index
+                                            }
+                                            initial={{
+                                                opacity: 0,
+                                                x: -15,
+                                            }}
+                                            animate={{
+                                                opacity: 1,
+                                                x: 0,
+                                            }}
+                                            transition={{
+                                                delay:
+                                                    index *
+                                                    0.08,
+                                            }}
+                                            className="group flex min-w-0 items-center gap-1.5 rounded-lg border border-white/[0.05] bg-black/20 p-1.5 sm:gap-2 sm:rounded-xl sm:p-2"
+                                        >
+                                            <motion.div
+                                                whileHover={{
+                                                    scale: 1.08,
+                                                }}
+                                                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-red-500/10 sm:h-9 sm:w-9 sm:rounded-xl"
+                                            >
+                                                <FaUserCircle className="text-lg text-red-400 sm:text-xl" />
+                                            </motion.div>
+
+                                            <div className="min-w-0 flex-1">
+                                                <p className="truncate text-[9px] font-semibold text-white sm:text-[10px]">
+                                                    {request
+                                                        .user
+                                                        ?.name ||
+                                                        request
+                                                            .user
+                                                            ?.username ||
+                                                        "User"}
+                                                </p>
+
+                                                <p className="mt-0.5 text-[7px] text-red-400/80 sm:text-[8px]">
+                                                    Previously removed
+                                                </p>
+                                            </div>
+
+                                            <motion.button
+                                                type="button"
+                                                whileHover={{
+                                                    scale: 1.1,
+                                                    y: -2,
+                                                }}
+                                                whileTap={{
+                                                    scale: 0.9,
+                                                }}
+                                                onClick={() =>
+                                                    handleApproveRejoin(
+                                                        requestUserId
+                                                    )
+                                                }
+                                                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-400 transition hover:bg-emerald-500/20 sm:h-8 sm:w-8 sm:rounded-xl"
+                                                title="Allow"
+                                                aria-label={`Approve rejoin request from ${
+                                                    request
+                                                        .user
+                                                        ?.name ||
+                                                    "user"
+                                                }`}
+                                            >
+                                                <FaCheck className="text-[9px] sm:text-[10px]" />
+                                            </motion.button>
+
+                                            <motion.button
+                                                type="button"
+                                                whileHover={{
+                                                    scale: 1.1,
+                                                    y: -2,
+                                                }}
+                                                whileTap={{
+                                                    scale: 0.9,
+                                                }}
+                                                onClick={() =>
+                                                    handleRejectRejoin(
+                                                        requestUserId
+                                                    )
+                                                }
+                                                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-red-500/10 text-red-400 transition hover:bg-red-500/20 sm:h-8 sm:w-8 sm:rounded-xl"
+                                                title="Reject"
+                                                aria-label={`Reject rejoin request from ${
+                                                    request
+                                                        .user
+                                                        ?.name ||
+                                                    "user"
+                                                }`}
+                                            >
+                                                <FaTimes className="text-[9px] sm:text-[10px]" />
+                                            </motion.button>
+                                        </motion.div>
+                                    );
+                                }
+                            )}
+                        </div>
+                    </motion.div>
+                )}
             </AnimatePresence>
 
             {/* ==========================================
@@ -935,30 +934,7 @@ const Participants = ({
                                                 <AnimatePresence>
                                                     {online &&
                                                         !wasRemoved && (
-                                                            <>
-                                                                <motion.span
-                                                                    animate={{
-                                                                        scale: [
-                                                                            1,
-                                                                            1.8,
-                                                                            1,
-                                                                        ],
-                                                                        opacity: [
-                                                                            0.7,
-                                                                            0,
-                                                                            0.7,
-                                                                        ],
-                                                                    }}
-                                                                    transition={{
-                                                                        duration:
-                                                                            2,
-                                                                        repeat: Infinity,
-                                                                    }}
-                                                                    className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-emerald-400"
-                                                                />
-
-                                                                <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-[#09090f] bg-emerald-400" />
-                                                            </>
+                                                            <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-[#09090f] bg-emerald-400" />
                                                         )}
 
                                                     {wasRemoved && (
@@ -1032,51 +1008,6 @@ const Participants = ({
                                                               ? "Online"
                                                               : "Offline"}
                                                     </span>
-
-                                                    {online &&
-                                                        !wasRemoved && (
-                                                            <motion.div
-                                                                className="flex shrink-0 items-center gap-[2px]"
-                                                                aria-hidden="true"
-                                                            >
-                                                                {[
-                                                                    0,
-                                                                    1,
-                                                                    2,
-                                                                    3,
-                                                                ].map(
-                                                                    (
-                                                                        bar
-                                                                    ) => (
-                                                                        <motion.span
-                                                                            key={
-                                                                                bar
-                                                                            }
-                                                                            animate={{
-                                                                                height: [
-                                                                                    3,
-                                                                                    5 +
-                                                                                        bar *
-                                                                                            2,
-                                                                                    3,
-                                                                                ],
-                                                                            }}
-                                                                            transition={{
-                                                                                duration:
-                                                                                    0.7 +
-                                                                                    bar *
-                                                                                        0.08,
-                                                                                repeat: Infinity,
-                                                                                delay:
-                                                                                    bar *
-                                                                                    0.08,
-                                                                            }}
-                                                                            className="w-[2px] rounded-full bg-emerald-400/70"
-                                                                        />
-                                                                    )
-                                                                )}
-                                                            </motion.div>
-                                                        )}
                                                 </div>
                                             </div>
 
@@ -1156,55 +1087,6 @@ const Participants = ({
                     </AnimatePresence>
                 )}
             </div>
-
-            {/* ==========================================
-                FOOTER ACTIVITY
-            ========================================== */}
-
-            {displayedParticipants.length >
-                0 && (
-                <motion.div
-                    initial={{
-                        opacity: 0,
-                        y: 10,
-                    }}
-                    animate={{
-                        opacity: 1,
-                        y: 0,
-                    }}
-                    className="relative z-10 mt-2 flex shrink-0 items-center justify-between rounded-lg border border-white/[0.05] bg-white/[0.02] px-2.5 py-1.5 sm:mt-4 sm:rounded-xl sm:px-3 sm:py-2"
-                >
-                    <div className="flex min-w-0 items-center gap-1.5 sm:gap-2">
-                        <motion.span
-                            animate={{
-                                rotate: [0, 360],
-                            }}
-                            transition={{
-                                duration: 8,
-                                repeat: Infinity,
-                                ease: "linear",
-                            }}
-                            className="shrink-0 text-[8px] text-violet-400 sm:text-[9px]"
-                        >
-                            <BsLightningChargeFill />
-                        </motion.span>
-
-                        <span className="truncate text-[7px] text-zinc-600 sm:text-[8px]">
-                            {totalOnline} online of{" "}
-                            {totalParticipants}{" "}
-                            participants
-                        </span>
-                    </div>
-
-                    <div className="flex shrink-0 items-center gap-1">
-                        <FaCircle className="text-[3px] text-emerald-400 sm:text-[4px]" />
-
-                        <span className="text-[7px] text-zinc-700 sm:text-[8px]">
-                            Live
-                        </span>
-                    </div>
-                </motion.div>
-            )}
         </div>
     );
 };

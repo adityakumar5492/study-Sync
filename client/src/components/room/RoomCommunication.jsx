@@ -135,35 +135,8 @@ const RoomCommunication = ({
     );
 
     /*
-     * IMPORTANT:
-     *
-     * Do not manually clear the unread badge when the Chat
-     * navigation button is clicked.
-     *
-     * ChatPanel is mounted when Chat becomes active and is
-     * responsible for:
-     *
-     * 1. Opening the chat state on the socket.
-     * 2. Marking messages as delivered/seen.
-     * 3. Reporting the resulting unread state.
-     *
-     * The socket "chat:unread-count" event is also listened to
-     * above, so the navigation badge stays synchronized with
-     * the server-side unread state.
-     */
-
-    /*
      * =========================================================
      * MOBILE KEYBOARD / VISUAL VIEWPORT
-     *
-     * IMPORTANT:
-     * Do NOT rely only on 100dvh here.
-     *
-     * On Android/iOS, when the keyboard opens, the layout
-     * viewport and visual viewport can behave differently.
-     *
-     * We therefore keep the mobile drawer tied directly to
-     * window.visualViewport.height.
      * =========================================================
      */
 
@@ -244,9 +217,6 @@ const RoomCommunication = ({
     /*
      * =========================================================
      * MOBILE BODY SCROLL LOCK
-     *
-     * When the communication drawer is open, the page behind
-     * it must not scroll while the user is chatting.
      * =========================================================
      */
 
@@ -694,22 +664,7 @@ const RoomCommunication = ({
                                 <p className="truncate text-[10px] font-bold text-white">
                                     Live Participants
                                 </p>
-
-                                <p className="mt-0.5 truncate text-[8px] text-slate-600">
-                                    {participantsCount}{" "}
-                                    {participantsCount === 1
-                                        ? "participant"
-                                        : "participants"}
-                                </p>
                             </div>
-                        </div>
-
-                        <div className="flex shrink-0 items-center gap-1.5 rounded-full border border-emerald-400/10 bg-emerald-500/[0.06] px-2 py-1">
-                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-
-                            <span className="text-[8px] font-bold text-emerald-400">
-                                {onlineCount} online
-                            </span>
                         </div>
                     </div>
 
@@ -902,10 +857,10 @@ const RoomCommunication = ({
                                         "participants"
                                     )
                                 }
-                                className="flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-xl px-1 py-2 text-[9px] font-semibold text-slate-400 transition-all duration-200 hover:bg-slate-800/80 hover:text-slate-200 sm:px-1.5 sm:py-2.5 sm:text-[10px]"
+                                className="flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-xl px-1 py-2.5 text-[10px] font-semibold text-slate-400 transition-all duration-200 hover:bg-slate-800/80 hover:text-slate-200 sm:px-1.5 sm:py-2.5 sm:text-[10px]"
                                 aria-label="Open participants"
                             >
-                                <FaUsers className="shrink-0 text-[9px]" />
+                                <FaUsers className="shrink-0 text-[10px]" />
 
                                 <span className="hidden truncate xs:inline sm:inline">
                                     People
@@ -925,10 +880,10 @@ const RoomCommunication = ({
                                         "chat"
                                     )
                                 }
-                                className="relative flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-xl px-1 py-2 text-[9px] font-semibold text-slate-400 transition-all duration-200 hover:bg-slate-800/80 hover:text-slate-200 sm:px-1.5 sm:py-2.5 sm:text-[10px]"
+                                className="relative flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-xl px-1 py-2.5 text-[10px] font-semibold text-slate-400 transition-all duration-200 hover:bg-slate-800/80 hover:text-slate-200 sm:px-1.5 sm:py-2.5 sm:text-[10px]"
                                 aria-label="Open chat"
                             >
-                                <FaComments className="shrink-0 text-[9px]" />
+                                <FaComments className="shrink-0 text-[10px]" />
 
                                 <span className="hidden truncate xs:inline sm:inline">
                                     Chat
@@ -946,10 +901,10 @@ const RoomCommunication = ({
                                         "voice"
                                     )
                                 }
-                                className="flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-xl px-1 py-2 text-[9px] font-semibold text-slate-400 transition-all duration-200 hover:bg-slate-800/80 hover:text-slate-200 sm:px-1.5 sm:py-2.5 sm:text-[10px]"
+                                className="flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-xl px-1 py-2.5 text-[10px] font-semibold text-slate-400 transition-all duration-200 hover:bg-slate-800/80 hover:text-slate-200 sm:px-1.5 sm:py-2.5 sm:text-[10px]"
                                 aria-label="Open voice"
                             >
-                                <FaMicrophone className="shrink-0 text-[9px]" />
+                                <FaMicrophone className="shrink-0 text-[10px]" />
 
                                 <span className="hidden truncate xs:inline sm:inline">
                                     Voice
@@ -965,10 +920,10 @@ const RoomCommunication = ({
                                         "drawing"
                                     )
                                 }
-                                className="flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-xl px-1 py-2 text-[9px] font-semibold text-slate-400 transition-all duration-200 hover:bg-slate-800/80 hover:text-slate-200 sm:px-1.5 sm:py-2.5 sm:text-[10px]"
+                                className="flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-xl px-1 py-2.5 text-[10px] font-semibold text-slate-400 transition-all duration-200 hover:bg-slate-800/80 hover:text-slate-200 sm:px-1.5 sm:py-2.5 sm:text-[10px]"
                                 aria-label="Open drawing"
                             >
-                                <FaPen className="shrink-0 text-[9px]" />
+                                <FaPen className="shrink-0 text-[10px]" />
 
                                 <span className="hidden truncate xs:inline sm:inline">
                                     Drawing
@@ -1104,27 +1059,7 @@ const RoomCommunication = ({
                                         <p className="truncate text-[10px] font-bold text-white sm:text-[11px]">
                                             Live Participants
                                         </p>
-
-                                        <p className="mt-0.5 truncate text-[8px] text-slate-600">
-                                            {participantsCount}{" "}
-                                            {participantsCount ===
-                                            1
-                                                ? "participant"
-                                                : "participants"}
-                                        </p>
                                     </div>
-                                </div>
-
-                                <div className="flex shrink-0 items-center gap-1.5 rounded-full border border-emerald-400/10 bg-emerald-500/[0.06] px-2 py-1">
-                                    <span className="relative flex h-1.5 w-1.5">
-                                        <span className="absolute inset-0 rounded-full bg-emerald-400 opacity-40" />
-
-                                        <span className="relative h-1.5 w-1.5 rounded-full bg-emerald-400" />
-                                    </span>
-
-                                    <span className="text-[8px] font-bold text-emerald-400">
-                                        {onlineCount} online
-                                    </span>
                                 </div>
                             </div>
 
