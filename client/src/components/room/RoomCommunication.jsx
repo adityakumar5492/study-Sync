@@ -1,12 +1,20 @@
-import { useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import {
+    useCallback,
+    useEffect,
+    useMemo,
+    useState,
+} from "react";
+
+import {
+    AnimatePresence,
+    motion,
+} from "framer-motion";
 
 import {
     FaUsers,
     FaComments,
     FaMicrophone,
     FaPen,
-    FaChevronDown,
     FaTimes,
 } from "react-icons/fa";
 
@@ -31,15 +39,138 @@ const RoomCommunication = ({
     const [mobileOpen, setMobileOpen] =
         useState(false);
 
+    /*
+     * =========================================================
+     * MOBILE KEYBOARD / VISUAL VIEWPORT
+     *
+     * IMPORTANT:
+     * Do NOT rely only on 100dvh here.
+     *
+     * On Android/iOS, when the keyboard opens, the layout
+     * viewport and visual viewport can behave differently.
+     *
+     * We therefore keep the mobile drawer tied directly to
+     * window.visualViewport.height.
+     * =========================================================
+     */
+
+    const [visualViewportHeight, setVisualViewportHeight] =
+        useState(null);
+
+    const [visualViewportOffsetTop, setVisualViewportOffsetTop] =
+        useState(0);
+
+    useEffect(() => {
+        if (typeof window === "undefined") {
+            return undefined;
+        }
+
+        const visualViewport = window.visualViewport;
+
+        if (!visualViewport) {
+            return undefined;
+        }
+
+        let frameId = null;
+
+        const updateVisualViewport = () => {
+            if (frameId) {
+                cancelAnimationFrame(frameId);
+            }
+
+            frameId = requestAnimationFrame(() => {
+                setVisualViewportHeight(
+                    Math.round(visualViewport.height)
+                );
+
+                setVisualViewportOffsetTop(
+                    Math.round(visualViewport.offsetTop)
+                );
+            });
+        };
+
+        updateVisualViewport();
+
+        visualViewport.addEventListener(
+            "resize",
+            updateVisualViewport
+        );
+
+        visualViewport.addEventListener(
+            "scroll",
+            updateVisualViewport
+        );
+
+        window.addEventListener(
+            "orientationchange",
+            updateVisualViewport
+        );
+
+        return () => {
+            if (frameId) {
+                cancelAnimationFrame(frameId);
+            }
+
+            visualViewport.removeEventListener(
+                "resize",
+                updateVisualViewport
+            );
+
+            visualViewport.removeEventListener(
+                "scroll",
+                updateVisualViewport
+            );
+
+            window.removeEventListener(
+                "orientationchange",
+                updateVisualViewport
+            );
+        };
+    }, []);
+
+    /*
+     * =========================================================
+     * MOBILE BODY SCROLL LOCK
+     *
+     * When the communication drawer is open, the page behind
+     * it must not scroll while the user is chatting.
+     * =========================================================
+     */
+
+    useEffect(() => {
+        if (!mobileOpen) {
+            return undefined;
+        }
+
+        const previousOverflow =
+            document.body.style.overflow;
+
+        const previousTouchAction =
+            document.body.style.touchAction;
+
+        document.body.style.overflow = "hidden";
+        document.body.style.touchAction = "none";
+
+        return () => {
+            document.body.style.overflow =
+                previousOverflow;
+
+            document.body.style.touchAction =
+                previousTouchAction;
+        };
+    }, [mobileOpen]);
+
     // ===========================
     // NORMALIZE USER ID
     // ===========================
 
-    const getUserId = (user) => {
-        if (!user) return null;
+    const getUserId = useCallback((user) => {
+        if (!user) {
+            return null;
+        }
 
         if (typeof user === "string") {
-            return user;
+            return user.toString();
         }
 
         if (typeof user === "object") {
@@ -52,55 +183,59 @@ const RoomCommunication = ({
         }
 
         return user?.toString() || null;
-    };
+    }, []);
 
     // ===========================
     // UNIQUE ROOM MEMBERS
     // ===========================
 
-    const uniqueMembers = Array.from(
-        new Map(
-            (room?.members || [])
-                .map((member) => {
-                    const userId =
-                        getUserId(member);
+    const uniqueMembers = useMemo(() => {
+        const members = Array.isArray(room?.members)
+            ? room.members
+            : [];
 
-                    if (!userId) {
-                        return null;
-                    }
+        const map = new Map();
 
-                    return [
-                        userId,
-                        member,
-                    ];
-                })
-                .filter(Boolean)
-        ).values()
-    );
+        members.forEach((member) => {
+            const userId = getUserId(member);
+
+            if (!userId) {
+                return;
+            }
+
+            if (!map.has(userId)) {
+                map.set(userId, member);
+            }
+        });
+
+        return Array.from(map.values());
+    }, [room?.members, getUserId]);
 
     // ===========================
     // UNIQUE ONLINE USERS
     // ===========================
 
-    const uniqueOnlineUsers = Array.from(
-        new Map(
-            (onlineUsers || [])
-                .map((onlineUser) => {
-                    const userId =
-                        getUserId(onlineUser);
+    const uniqueOnlineUsers = useMemo(() => {
+        const users = Array.isArray(onlineUsers)
+            ? onlineUsers
+            : [];
 
-                    if (!userId) {
-                        return null;
-                    }
+        const map = new Map();
 
-                    return [
-                        userId,
-                        onlineUser,
-                    ];
-                })
-                .filter(Boolean)
-        ).values()
-    );
+        users.forEach((onlineUser) => {
+            const userId = getUserId(onlineUser);
+
+            if (!userId) {
+                return;
+            }
+
+            if (!map.has(userId)) {
+                map.set(userId, onlineUser);
+            }
+        });
+
+        return Array.from(map.values());
+    }, [onlineUsers, getUserId]);
 
     // ===========================
     // COUNTS
@@ -123,10 +258,11 @@ const RoomCommunication = ({
         isHost ||
         drawingPermission?.mode === "everyone" ||
         (
-            drawingPermission?.mode ===
-                "selected" &&
-            drawingPermission?.allowedUsers?.includes(
-                currentUserId
+            drawingPermission?.mode === "selected" &&
+            drawingPermission?.allowedUsers?.some(
+                (id) =>
+                    id?.toString() ===
+                    currentUserId
             )
         );
 
@@ -134,42 +270,29 @@ const RoomCommunication = ({
     // MOBILE PANEL CHANGE
     // ===========================
 
-    const handlePanelChange = (panel) => {
-        if (activePanel === panel) {
-            setMobileOpen(
-                (previous) => !previous
-            );
+    const handlePanelChange = useCallback(
+        (panel) => {
+            if (activePanel === panel) {
+                setMobileOpen(
+                    (previous) => !previous
+                );
 
-            return;
-        }
+                return;
+            }
 
-        setActivePanel(panel);
-        setMobileOpen(true);
-    };
+            setActivePanel(panel);
+            setMobileOpen(true);
+        },
+        [activePanel]
+    );
 
     // ===========================
     // MOBILE CLOSE
     // ===========================
 
-    const closeMobilePanel = () => {
+    const closeMobilePanel = useCallback(() => {
         setMobileOpen(false);
-    };
-
-    // ===========================
-    // PANEL BUTTON CLASS
-    // ===========================
-
-    const panelButtonClass = (panel) => `
-        flex min-w-0 flex-1 items-center justify-center gap-1.5
-        rounded-xl px-1 py-2 text-[9px] font-semibold
-        transition-all duration-200
-        sm:px-1.5 sm:py-2.5 sm:text-[10px]
-        ${
-            activePanel === panel && mobileOpen
-                ? "bg-emerald-500/10 text-emerald-400"
-                : "text-slate-400 hover:bg-slate-800/80 hover:text-slate-200"
-        }
-    `;
+    }, []);
 
     // ===========================
     // DRAWING CONTENT
@@ -189,7 +312,6 @@ const RoomCommunication = ({
 
             {isHost && (
                 <div className="space-y-1.5 rounded-xl border border-slate-800/80 bg-slate-950/40 p-1.5 sm:space-y-2 sm:p-2">
-
                     {/* HOST ONLY */}
 
                     <button
@@ -203,16 +325,12 @@ const RoomCommunication = ({
                         className="flex w-full items-center gap-2.5 rounded-lg border border-transparent px-2.5 py-2 text-left text-[11px] text-slate-300 transition-colors hover:border-slate-700/70 hover:bg-slate-800/80 hover:text-white sm:gap-3 sm:px-3 sm:py-2.5 sm:text-sm"
                     >
                         <span
-                            className={`
-                                flex h-4 w-4 shrink-0 items-center justify-center
-                                rounded-full border-2
-                                ${
-                                    drawingPermission?.mode ===
-                                    "none"
-                                        ? "border-green-500"
-                                        : "border-slate-600"
-                                }
-                            `}
+                            className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 ${
+                                drawingPermission?.mode ===
+                                "none"
+                                    ? "border-green-500"
+                                    : "border-slate-600"
+                            }`}
                         >
                             {drawingPermission?.mode ===
                                 "none" && (
@@ -238,16 +356,12 @@ const RoomCommunication = ({
                         className="flex w-full items-center gap-2.5 rounded-lg border border-transparent px-2.5 py-2 text-left text-[11px] text-slate-300 transition-colors hover:border-slate-700/70 hover:bg-slate-800/80 hover:text-white sm:gap-3 sm:px-3 sm:py-2.5 sm:text-sm"
                     >
                         <span
-                            className={`
-                                flex h-4 w-4 shrink-0 items-center justify-center
-                                rounded-full border-2
-                                ${
-                                    drawingPermission?.mode ===
-                                    "everyone"
-                                        ? "border-green-500"
-                                        : "border-slate-600"
-                                }
-                            `}
+                            className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 ${
+                                drawingPermission?.mode ===
+                                "everyone"
+                                    ? "border-green-500"
+                                    : "border-slate-600"
+                            }`}
                         >
                             {drawingPermission?.mode ===
                                 "everyone" && (
@@ -260,7 +374,7 @@ const RoomCommunication = ({
                         </span>
                     </button>
 
-                    {/* SELECTED USERS */}
+                    {/* SELECTED */}
 
                     <button
                         type="button"
@@ -275,16 +389,12 @@ const RoomCommunication = ({
                         className="flex w-full items-center gap-2.5 rounded-lg border border-transparent px-2.5 py-2 text-left text-[11px] text-slate-300 transition-colors hover:border-slate-700/70 hover:bg-slate-800/80 hover:text-white sm:gap-3 sm:px-3 sm:py-2.5 sm:text-sm"
                     >
                         <span
-                            className={`
-                                flex h-4 w-4 shrink-0 items-center justify-center
-                                rounded-full border-2
-                                ${
-                                    drawingPermission?.mode ===
-                                    "selected"
-                                        ? "border-green-500"
-                                        : "border-slate-600"
-                                }
-                            `}
+                            className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 ${
+                                drawingPermission?.mode ===
+                                "selected"
+                                    ? "border-green-500"
+                                    : "border-slate-600"
+                            }`}
                         >
                             {drawingPermission?.mode ===
                                 "selected" && (
@@ -296,8 +406,6 @@ const RoomCommunication = ({
                             Selected Users
                         </span>
                     </button>
-
-                    {/* SELECTED USER LIST */}
 
                     {drawingPermission?.mode ===
                         "selected" && (
@@ -332,8 +440,10 @@ const RoomCommunication = ({
                                         const selected =
                                             drawingPermission
                                                 ?.allowedUsers
-                                                ?.includes(
-                                                    userId
+                                                ?.some(
+                                                    (id) =>
+                                                        id?.toString() ===
+                                                        userId
                                                 );
 
                                         const name =
@@ -358,7 +468,7 @@ const RoomCommunication = ({
                                                                   (
                                                                       id
                                                                   ) =>
-                                                                      id !==
+                                                                      id?.toString() !==
                                                                       userId
                                                               )
                                                             : [
@@ -377,15 +487,11 @@ const RoomCommunication = ({
                                                 className="flex w-full min-w-0 items-center gap-2.5 rounded-lg border border-transparent px-2.5 py-2 text-left text-[11px] text-slate-300 transition-colors hover:border-slate-700/70 hover:bg-slate-800/80 hover:text-white sm:gap-3 sm:px-3 sm:py-2.5 sm:text-sm"
                                             >
                                                 <span
-                                                    className={`
-                                                        flex h-4 w-4 shrink-0 items-center justify-center
-                                                        rounded border
-                                                        ${
-                                                            selected
-                                                                ? "border-green-500 bg-green-500"
-                                                                : "border-slate-600"
-                                                        }
-                                                    `}
+                                                    className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border ${
+                                                        selected
+                                                            ? "border-green-500 bg-green-500"
+                                                            : "border-slate-600"
+                                                    }`}
                                                 >
                                                     {selected && (
                                                         <span className="text-[9px] font-bold text-white">
@@ -407,21 +513,14 @@ const RoomCommunication = ({
                 </div>
             )}
 
-            {/* MEMBER STATUS */}
-
             {!isHost && (
                 <div className="rounded-xl border border-slate-800/80 bg-gradient-to-b from-slate-900 to-slate-950 p-3 shadow-lg shadow-black/10 sm:rounded-2xl sm:p-4 lg:p-5">
                     <div
-                        className={`
-                            mb-3 flex h-10 w-10 items-center justify-center
-                            rounded-xl
-                            sm:mb-4 sm:h-11 sm:w-11
-                            ${
-                                canDraw
-                                    ? "bg-green-500/10 text-green-400"
-                                    : "bg-slate-800 text-slate-500"
-                            }
-                        `}
+                        className={`mb-3 flex h-10 w-10 items-center justify-center rounded-xl sm:mb-4 sm:h-11 sm:w-11 ${
+                            canDraw
+                                ? "bg-green-500/10 text-green-400"
+                                : "bg-slate-800 text-slate-500"
+                        }`}
                     >
                         <FaPen size={14} />
                     </div>
@@ -448,10 +547,8 @@ const RoomCommunication = ({
 
     const mobilePanelContent = (
         <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-
             {activePanel === "participants" && (
                 <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-
                     <div className="flex shrink-0 items-center justify-between border-b border-slate-800/70 px-3 py-2.5">
                         <div className="flex min-w-0 items-center gap-2">
                             <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-green-500/10 text-green-400">
@@ -520,25 +617,38 @@ const RoomCommunication = ({
         </div>
     );
 
-    // ===========================
-    // MAIN
-    // ===========================
+    /*
+     * =========================================================
+     * MOBILE DRAWER STYLE
+     *
+     * When visualViewport exists, use its exact height.
+     *
+     * This is the important part for keyboard handling.
+     * =========================================================
+     */
+
+    const mobileDrawerStyle =
+        visualViewportHeight
+            ? {
+                  height: `${visualViewportHeight}px`,
+                  top: `${visualViewportOffsetTop}px`,
+              }
+            : {
+                  height: "100dvh",
+                  top: 0,
+              };
 
     return (
         <>
             {/* =====================================================
                 MOBILE COMMUNICATION
-                ZOOM-STYLE SIDE DRAWER
             ====================================================== */}
 
             <div className="lg:hidden">
-
                 <AnimatePresence>
                     {mobileOpen && (
                         <>
-                            {/* ==========================
-                                BACKDROP
-                            ========================== */}
+                            {/* BACKDROP */}
 
                             <motion.button
                                 type="button"
@@ -553,22 +663,15 @@ const RoomCommunication = ({
                                     opacity: 0,
                                 }}
                                 transition={{
-                                    duration: 0.2,
+                                    duration: 0.15,
                                 }}
                                 onClick={
                                     closeMobilePanel
                                 }
-                                className="
-                                    fixed inset-0 z-[100]
-                                    cursor-default
-                                    bg-black/60
-                                    backdrop-blur-[2px]
-                                "
+                                className="fixed inset-0 z-[100] cursor-default bg-black/60 backdrop-blur-[2px]"
                             />
 
-                            {/* ==========================
-                                SIDE DRAWER
-                            ========================== */}
+                            {/* MOBILE DRAWER */}
 
                             <motion.section
                                 initial={{
@@ -582,47 +685,33 @@ const RoomCommunication = ({
                                 }}
                                 transition={{
                                     type: "spring",
-                                    stiffness: 360,
-                                    damping: 34,
+                                    stiffness: 420,
+                                    damping: 38,
+                                    mass: 0.8,
                                 }}
+                                style={
+                                    mobileDrawerStyle
+                                }
                                 className="
-                                    fixed right-0 top-0 z-[110]
-                                    flex h-[100dvh]
-                                    w-[88vw] max-w-[420px]
+                                    fixed right-0 z-[110]
+                                    flex
+                                    w-[88vw]
+                                    max-w-[420px]
                                     flex-col
                                     overflow-hidden
-                                    border-l border-slate-700/80
+                                    border-l
+                                    border-slate-700/80
                                     bg-slate-950
                                     shadow-[-20px_0_60px_rgba(0,0,0,0.55)]
                                 "
                             >
+                                {/* DRAWER HEADER */}
 
-                                {/* ==========================
-                                    DRAWER HEADER
-                                ========================== */}
-
-                                <div className="
-                                    flex h-14 shrink-0
-                                    items-center justify-between
-                                    border-b border-slate-800/80
-                                    bg-slate-950/95
-                                    px-3
-                                ">
+                                <div className="flex h-14 shrink-0 items-center justify-between border-b border-slate-800/80 bg-slate-950/95 px-3">
                                     <div className="flex min-w-0 items-center gap-2">
+                                        <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-400" />
 
-                                        <span className="
-                                            h-1.5 w-1.5
-                                            shrink-0
-                                            rounded-full
-                                            bg-emerald-400
-                                        " />
-
-                                        <span className="
-                                            truncate
-                                            text-xs
-                                            font-semibold
-                                            text-white
-                                        ">
+                                        <span className="truncate text-xs font-semibold text-white">
                                             {activePanel ===
                                                 "participants" &&
                                                 "Participants"}
@@ -641,43 +730,21 @@ const RoomCommunication = ({
                                         </span>
                                     </div>
 
-                                    {/* CLOSE BUTTON */}
-
                                     <button
                                         type="button"
                                         onClick={
                                             closeMobilePanel
                                         }
-                                        className="
-                                            flex h-9 w-9
-                                            shrink-0
-                                            items-center
-                                            justify-center
-                                            rounded-xl
-                                            border
-                                            border-slate-800
-                                            bg-slate-900
-                                            text-slate-400
-                                            transition
-                                            hover:bg-slate-800
-                                            hover:text-white
-                                            active:scale-95
-                                        "
+                                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-800 bg-slate-900 text-slate-400 transition hover:bg-slate-800 hover:text-white active:scale-95"
                                         aria-label="Close communication panel"
                                     >
                                         <FaTimes className="text-sm" />
                                     </button>
                                 </div>
 
-                                {/* ==========================
-                                    DRAWER CONTENT
-                                ========================== */}
+                                {/* CONTENT */}
 
-                                <div className="
-                                    flex min-h-0
-                                    flex-1 flex-col
-                                    overflow-hidden
-                                ">
+                                <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
                                     {mobilePanelContent}
                                 </div>
                             </motion.section>
@@ -687,150 +754,109 @@ const RoomCommunication = ({
 
                 {/* =================================================
                     MOBILE BOTTOM DOCK
+
+                    Hide it while the communication drawer is open.
+                    This is especially important while typing because
+                    the keyboard should have only one persistent
+                    bottom interaction area: ChatPanel's composer.
                 ================================================== */}
 
-                <div
-                    className="
-                        fixed inset-x-0 bottom-0 z-[90]
-                        px-2 pb-2
-                        sm:px-3 sm:pb-3
-                    "
-                >
-                    <div
-                        className="
-                            mx-auto flex w-full max-w-xl
-                            items-stretch gap-1
-                            rounded-2xl
-                            border border-slate-700/80
-                            bg-slate-900/98
-                            p-1.5
-                            shadow-2xl shadow-black/40
-                            backdrop-blur-xl
-                        "
-                    >
+                {!mobileOpen && (
+                    <div className="fixed inset-x-0 bottom-0 z-[90] px-2 pb-2 sm:px-3 sm:pb-3">
+                        <div className="mx-auto flex w-full max-w-xl items-stretch gap-1 rounded-2xl border border-slate-700/80 bg-slate-900/98 p-1.5 shadow-2xl shadow-black/40 backdrop-blur-xl">
+                            {/* PARTICIPANTS */}
 
-                        {/* PARTICIPANTS */}
+                            <button
+                                type="button"
+                                onClick={() =>
+                                    handlePanelChange(
+                                        "participants"
+                                    )
+                                }
+                                className="flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-xl px-1 py-2 text-[9px] font-semibold text-slate-400 transition-all duration-200 hover:bg-slate-800/80 hover:text-slate-200 sm:px-1.5 sm:py-2.5 sm:text-[10px]"
+                                aria-label="Open participants"
+                            >
+                                <FaUsers className="shrink-0 text-[9px]" />
 
-                        <button
-                            type="button"
-                            onClick={() =>
-                                handlePanelChange(
-                                    "participants"
-                                )
-                            }
-                            className={panelButtonClass(
-                                "participants"
-                            )}
-                            aria-label="Open participants"
-                        >
-                            <FaUsers className="shrink-0 text-[9px]" />
+                                <span className="hidden truncate xs:inline sm:inline">
+                                    People
+                                </span>
 
-                            <span className="hidden truncate xs:inline sm:inline">
-                                People
-                            </span>
+                                <span className="shrink-0 rounded-full bg-slate-800 px-1.5 py-0.5 text-[8px] leading-none text-slate-500">
+                                    {participantsCount}
+                                </span>
+                            </button>
 
-                            <span className="
-                                shrink-0
-                                rounded-full
-                                bg-slate-800
-                                px-1.5 py-0.5
-                                text-[8px]
-                                leading-none
-                                text-slate-500
-                            ">
-                                {participantsCount}
-                            </span>
-                        </button>
+                            {/* CHAT */}
 
-                        {/* CHAT */}
+                            <button
+                                type="button"
+                                onClick={() =>
+                                    handlePanelChange(
+                                        "chat"
+                                    )
+                                }
+                                className="flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-xl px-1 py-2 text-[9px] font-semibold text-slate-400 transition-all duration-200 hover:bg-slate-800/80 hover:text-slate-200 sm:px-1.5 sm:py-2.5 sm:text-[10px]"
+                                aria-label="Open chat"
+                            >
+                                <FaComments className="shrink-0 text-[9px]" />
 
-                        <button
-                            type="button"
-                            onClick={() =>
-                                handlePanelChange(
-                                    "chat"
-                                )
-                            }
-                            className={panelButtonClass(
-                                "chat"
-                            )}
-                            aria-label="Open chat"
-                        >
-                            <FaComments className="shrink-0 text-[9px]" />
+                                <span className="hidden truncate xs:inline sm:inline">
+                                    Chat
+                                </span>
+                            </button>
 
-                            <span className="hidden truncate xs:inline sm:inline">
-                                Chat
-                            </span>
-                        </button>
+                            {/* VOICE */}
 
-                        {/* VOICE */}
+                            <button
+                                type="button"
+                                onClick={() =>
+                                    handlePanelChange(
+                                        "voice"
+                                    )
+                                }
+                                className="flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-xl px-1 py-2 text-[9px] font-semibold text-slate-400 transition-all duration-200 hover:bg-slate-800/80 hover:text-slate-200 sm:px-1.5 sm:py-2.5 sm:text-[10px]"
+                                aria-label="Open voice"
+                            >
+                                <FaMicrophone className="shrink-0 text-[9px]" />
 
-                        <button
-                            type="button"
-                            onClick={() =>
-                                handlePanelChange(
-                                    "voice"
-                                )
-                            }
-                            className={panelButtonClass(
-                                "voice"
-                            )}
-                            aria-label="Open voice"
-                        >
-                            <FaMicrophone className="shrink-0 text-[9px]" />
+                                <span className="hidden truncate xs:inline sm:inline">
+                                    Voice
+                                </span>
+                            </button>
 
-                            <span className="hidden truncate xs:inline sm:inline">
-                                Voice
-                            </span>
-                        </button>
+                            {/* DRAWING */}
 
-                        {/* DRAWING */}
+                            <button
+                                type="button"
+                                onClick={() =>
+                                    handlePanelChange(
+                                        "drawing"
+                                    )
+                                }
+                                className="flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-xl px-1 py-2 text-[9px] font-semibold text-slate-400 transition-all duration-200 hover:bg-slate-800/80 hover:text-slate-200 sm:px-1.5 sm:py-2.5 sm:text-[10px]"
+                                aria-label="Open drawing"
+                            >
+                                <FaPen className="shrink-0 text-[9px]" />
 
-                        <button
-                            type="button"
-                            onClick={() =>
-                                handlePanelChange(
-                                    "drawing"
-                                )
-                            }
-                            className={panelButtonClass(
-                                "drawing"
-                            )}
-                            aria-label="Open drawing"
-                        >
-                            <FaPen className="shrink-0 text-[9px]" />
-
-                            <span className="hidden truncate xs:inline sm:inline">
-                                Drawing
-                            </span>
-                        </button>
+                                <span className="hidden truncate xs:inline sm:inline">
+                                    Drawing
+                                </span>
+                            </button>
+                        </div>
                     </div>
-                </div>
+                )}
             </div>
 
             {/* =====================================================
                 DESKTOP COMMUNICATION SIDEBAR
-                DO NOT CHANGE DESKTOP BEHAVIOUR
+                UNCHANGED BEHAVIOUR
             ====================================================== */}
 
-            <div className="
-                hidden h-full min-h-0 min-w-0
-                flex-col overflow-hidden
-                bg-slate-950
-                lg:flex
-            ">
-
+            <div className="hidden h-full min-h-0 min-w-0 flex-col overflow-hidden bg-slate-950 lg:flex">
                 {/* DESKTOP TABS */}
 
-                <div className="
-                    grid shrink-0 grid-cols-4
-                    gap-px
-                    border-b border-slate-800/80
-                    bg-slate-900/95
-                    px-0.5 pt-0.5
-                    shadow-lg shadow-black/10
-                ">
-
+                <div className="grid shrink-0 grid-cols-4 gap-px border-b border-slate-800/80 bg-slate-900/95 px-0.5 pt-0.5 shadow-lg shadow-black/10">
                     {/* PARTICIPANTS */}
 
                     <button
@@ -840,48 +866,20 @@ const RoomCommunication = ({
                                 "participants"
                             )
                         }
-                        className={`
-                            flex min-w-0 items-center
-                            justify-center gap-1
-                            overflow-hidden
-                            rounded-t-lg
-                            px-1 py-2.5
-                            text-[10px]
-                            font-semibold
-                            transition-colors
-                            sm:gap-1.5
-                            sm:px-1.5 sm:py-3
-                            sm:text-[11px]
-                            ${
-                                activePanel ===
-                                "participants"
-                                    ? "bg-slate-800 text-green-400 shadow-sm"
-                                    : "text-slate-500 hover:bg-slate-800/80 hover:text-slate-200"
-                            }
-                        `}
+                        className={`flex min-w-0 items-center justify-center gap-1 overflow-hidden rounded-t-lg px-1 py-2.5 text-[10px] font-semibold transition-colors sm:gap-1.5 sm:px-1.5 sm:py-3 sm:text-[11px] ${
+                            activePanel ===
+                            "participants"
+                                ? "bg-slate-800 text-green-400 shadow-sm"
+                                : "text-slate-500 hover:bg-slate-800/80 hover:text-slate-200"
+                        }`}
                     >
-                        <FaUsers className="
-                            shrink-0
-                            text-[10px]
-                            sm:text-[11px]
-                        " />
+                        <FaUsers className="shrink-0 text-[10px] sm:text-[11px]" />
 
-                        <span className="
-                            min-w-0 truncate
-                        ">
+                        <span className="min-w-0 truncate">
                             Participants
                         </span>
 
-                        <span className="
-                            shrink-0
-                            rounded-full
-                            bg-slate-800
-                            px-1.5 py-0.5
-                            text-[8px]
-                            font-bold
-                            leading-none
-                            text-slate-500
-                        ">
+                        <span className="shrink-0 rounded-full bg-slate-800 px-1.5 py-0.5 text-[8px] font-bold leading-none text-slate-500">
                             {participantsCount}
                         </span>
                     </button>
@@ -893,29 +891,14 @@ const RoomCommunication = ({
                         onClick={() =>
                             setActivePanel("chat")
                         }
-                        className={`
-                            flex min-w-0 items-center
-                            justify-center gap-1.5
-                            overflow-hidden
-                            rounded-t-lg
-                            px-1 py-2.5
-                            text-[10px]
-                            font-semibold
-                            transition-colors
-                            sm:px-1.5 sm:py-3
-                            sm:text-[11px]
-                            ${
-                                activePanel === "chat"
-                                    ? "bg-slate-800 text-green-400 shadow-sm"
-                                    : "text-slate-500 hover:bg-slate-800/80 hover:text-slate-200"
-                            }
-                        `}
+                        className={`flex min-w-0 items-center justify-center gap-1.5 overflow-hidden rounded-t-lg px-1 py-2.5 text-[10px] font-semibold transition-colors sm:px-1.5 sm:py-3 sm:text-[11px] ${
+                            activePanel ===
+                            "chat"
+                                ? "bg-slate-800 text-green-400 shadow-sm"
+                                : "text-slate-500 hover:bg-slate-800/80 hover:text-slate-200"
+                        }`}
                     >
-                        <FaComments className="
-                            shrink-0
-                            text-[10px]
-                            sm:text-[11px]
-                        " />
+                        <FaComments className="shrink-0 text-[10px] sm:text-[11px]" />
 
                         <span className="truncate">
                             Chat
@@ -929,29 +912,14 @@ const RoomCommunication = ({
                         onClick={() =>
                             setActivePanel("voice")
                         }
-                        className={`
-                            flex min-w-0 items-center
-                            justify-center gap-1.5
-                            overflow-hidden
-                            rounded-t-lg
-                            px-1 py-2.5
-                            text-[10px]
-                            font-semibold
-                            transition-colors
-                            sm:px-1.5 sm:py-3
-                            sm:text-[11px]
-                            ${
-                                activePanel === "voice"
-                                    ? "bg-slate-800 text-green-400 shadow-sm"
-                                    : "text-slate-500 hover:bg-slate-800/80 hover:text-slate-200"
-                            }
-                        `}
+                        className={`flex min-w-0 items-center justify-center gap-1.5 overflow-hidden rounded-t-lg px-1 py-2.5 text-[10px] font-semibold transition-colors sm:px-1.5 sm:py-3 sm:text-[11px] ${
+                            activePanel ===
+                            "voice"
+                                ? "bg-slate-800 text-green-400 shadow-sm"
+                                : "text-slate-500 hover:bg-slate-800/80 hover:text-slate-200"
+                        }`}
                     >
-                        <FaMicrophone className="
-                            shrink-0
-                            text-[10px]
-                            sm:text-[11px]
-                        " />
+                        <FaMicrophone className="shrink-0 text-[10px] sm:text-[11px]" />
 
                         <span className="truncate">
                             Voice
@@ -967,30 +935,14 @@ const RoomCommunication = ({
                                 "drawing"
                             )
                         }
-                        className={`
-                            flex min-w-0 items-center
-                            justify-center gap-1.5
-                            overflow-hidden
-                            rounded-t-lg
-                            px-1 py-2.5
-                            text-[10px]
-                            font-semibold
-                            transition-colors
-                            sm:px-1.5 sm:py-3
-                            sm:text-[11px]
-                            ${
-                                activePanel ===
-                                "drawing"
-                                    ? "bg-slate-800 text-green-400 shadow-sm"
-                                    : "text-slate-500 hover:bg-slate-800/80 hover:text-slate-200"
-                            }
-                        `}
+                        className={`flex min-w-0 items-center justify-center gap-1.5 overflow-hidden rounded-t-lg px-1 py-2.5 text-[10px] font-semibold transition-colors sm:px-1.5 sm:py-3 sm:text-[11px] ${
+                            activePanel ===
+                            "drawing"
+                                ? "bg-slate-800 text-green-400 shadow-sm"
+                                : "text-slate-500 hover:bg-slate-800/80 hover:text-slate-200"
+                        }`}
                     >
-                        <FaPen className="
-                            shrink-0
-                            text-[9px]
-                            sm:text-[10px]
-                        " />
+                        <FaPen className="shrink-0 text-[9px] sm:text-[10px]" />
 
                         <span className="truncate">
                             Drawing
@@ -1000,64 +952,24 @@ const RoomCommunication = ({
 
                 {/* DESKTOP ACTIVE PANEL */}
 
-                <div className="
-                    flex min-h-0 min-w-0
-                    flex-1 flex-col
-                    overflow-hidden
-                    bg-slate-900/70
-                ">
-
+                <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-slate-900/70">
                     {/* PARTICIPANTS */}
 
                     {activePanel ===
                         "participants" && (
-                        <div className="
-                            flex h-full
-                            min-h-0 min-w-0
-                            flex-col
-                        ">
-                            <div className="
-                                flex shrink-0
-                                items-center
-                                justify-between
-                                border-b
-                                border-slate-800/70
-                                px-3 py-2.5
-                                sm:px-4 sm:py-3
-                            ">
-                                <div className="
-                                    flex min-w-0
-                                    items-center gap-2
-                                ">
-                                    <div className="
-                                        flex h-7 w-7
-                                        shrink-0
-                                        items-center
-                                        justify-center
-                                        rounded-lg
-                                        bg-green-500/10
-                                        text-green-400
-                                    ">
+                        <div className="flex h-full min-h-0 min-w-0 flex-col">
+                            <div className="flex shrink-0 items-center justify-between border-b border-slate-800/70 px-3 py-2.5 sm:px-4 sm:py-3">
+                                <div className="flex min-w-0 items-center gap-2">
+                                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-green-500/10 text-green-400">
                                         <FaUsers className="text-[10px]" />
                                     </div>
 
                                     <div className="min-w-0">
-                                        <p className="
-                                            truncate
-                                            text-[10px]
-                                            font-bold
-                                            text-white
-                                            sm:text-[11px]
-                                        ">
+                                        <p className="truncate text-[10px] font-bold text-white sm:text-[11px]">
                                             Live Participants
                                         </p>
 
-                                        <p className="
-                                            mt-0.5
-                                            truncate
-                                            text-[8px]
-                                            text-slate-600
-                                        ">
+                                        <p className="mt-0.5 truncate text-[8px] text-slate-600">
                                             {participantsCount}{" "}
                                             {participantsCount ===
                                             1
@@ -1067,51 +979,20 @@ const RoomCommunication = ({
                                     </div>
                                 </div>
 
-                                <div className="
-                                    flex shrink-0
-                                    items-center gap-1.5
-                                    rounded-full
-                                    border
-                                    border-emerald-400/10
-                                    bg-emerald-500/[0.06]
-                                    px-2 py-1
-                                ">
-                                    <span className="
-                                        relative
-                                        flex h-1.5 w-1.5
-                                    ">
-                                        <span className="
-                                            absolute inset-0
-                                            rounded-full
-                                            bg-emerald-400
-                                            opacity-40
-                                        " />
+                                <div className="flex shrink-0 items-center gap-1.5 rounded-full border border-emerald-400/10 bg-emerald-500/[0.06] px-2 py-1">
+                                    <span className="relative flex h-1.5 w-1.5">
+                                        <span className="absolute inset-0 rounded-full bg-emerald-400 opacity-40" />
 
-                                        <span className="
-                                            relative
-                                            h-1.5 w-1.5
-                                            rounded-full
-                                            bg-emerald-400
-                                        " />
+                                        <span className="relative h-1.5 w-1.5 rounded-full bg-emerald-400" />
                                     </span>
 
-                                    <span className="
-                                        text-[8px]
-                                        font-bold
-                                        text-emerald-400
-                                    ">
+                                    <span className="text-[8px] font-bold text-emerald-400">
                                         {onlineCount} online
                                     </span>
                                 </div>
                             </div>
 
-                            <div className="
-                                min-h-0 min-w-0
-                                flex-1
-                                overflow-y-auto
-                                overflow-x-hidden
-                                overscroll-contain
-                            ">
+                            <div className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain">
                                 <Participants
                                     room={room}
                                     roomId={roomId}
@@ -1132,12 +1013,7 @@ const RoomCommunication = ({
                     {/* CHAT */}
 
                     {activePanel === "chat" && (
-                        <div className="
-                            flex h-full
-                            min-h-0 min-w-0
-                            flex-1 flex-col
-                            overflow-hidden
-                        ">
+                        <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
                             <ChatPanel
                                 roomId={roomId}
                                 isHost={isHost}
@@ -1149,12 +1025,7 @@ const RoomCommunication = ({
                     {/* VOICE */}
 
                     {activePanel === "voice" && (
-                        <div className="
-                            flex h-full
-                            min-h-0 min-w-0
-                            flex-1 flex-col
-                            overflow-hidden
-                        ">
+                        <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
                             <VoicePanel
                                 roomId={roomId}
                                 currentUser={

@@ -1,75 +1,45 @@
-import {
-    memo,
-    useCallback,
-    useEffect,
-    useRef,
-    useState,
-} from "react";
-
+import { useCallback, useEffect, useRef, useState, memo } from "react";
 import { createPortal } from "react-dom";
-
-import {
-    FaPaperPlane,
-    FaCircle,
-    FaSmile,
-} from "react-icons/fa";
-
-import {
-    BsThreeDots,
-    BsLightningChargeFill,
-} from "react-icons/bs";
-
+import { FaPaperPlane, FaCircle, FaSmile } from "react-icons/fa";
+import { BsThreeDots, BsLightningChargeFill } from "react-icons/bs";
 import { motion } from "framer-motion";
-
 import EmojiPicker from "emoji-picker-react";
-
 import toast from "react-hot-toast";
 
 import { useAppSelector } from "../../redux/hooks";
 import socket from "../../socket/socket";
 import { getRoomMessages } from "../../api/room.api";
-
 import MessageBubble from "./MessageBubble";
 
-/* ================================================================
-   ANIMATED BACKGROUND
-================================================================ */
+/* -------------------------------------------------------------------------- */
+/* Animated background                                                        */
+/* -------------------------------------------------------------------------- */
 
-const AnimatedBackground = memo(function AnimatedBackground({
-    isMobile,
-}) {
+const AnimatedBackground = memo(function AnimatedBackground() {
     return (
         <div className="pointer-events-none absolute inset-0 overflow-hidden">
             <motion.div
-                animate={
-                    isMobile
-                        ? { opacity: 1 }
-                        : {
-                              x: [0, 30, -20, 0],
-                              y: [0, -20, 30, 0],
-                              scale: [1, 1.08, 0.96, 1],
-                          }
-                }
+                animate={{
+                    x: [0, 30, -20, 0],
+                    y: [0, -20, 30, 0],
+                    scale: [1, 1.08, 0.96, 1],
+                }}
                 transition={{
                     duration: 18,
-                    repeat: isMobile ? 0 : Infinity,
+                    repeat: Infinity,
                     ease: "easeInOut",
                 }}
                 className="absolute -right-24 -top-24 h-64 w-64 rounded-full bg-violet-600/[0.07] blur-[90px]"
             />
 
             <motion.div
-                animate={
-                    isMobile
-                        ? { opacity: 1 }
-                        : {
-                              x: [0, -25, 15, 0],
-                              y: [0, 20, -15, 0],
-                          }
-                }
+                animate={{
+                    x: [0, -25, 15, 0],
+                    y: [0, 20, -15, 0],
+                }}
                 transition={{
                     duration: 16,
-                    repeat: isMobile ? 0 : Infinity,
+                    repeat: Infinity,
                     ease: "easeInOut",
                 }}
                 className="absolute -bottom-24 -left-24 h-64 w-64 rounded-full bg-cyan-500/[0.05] blur-[90px]"
@@ -87,100 +57,29 @@ const AnimatedBackground = memo(function AnimatedBackground({
     );
 });
 
-/* ================================================================
-   CHAT HEADER
-================================================================ */
+/* -------------------------------------------------------------------------- */
+/* Chat header                                                                */
+/* -------------------------------------------------------------------------- */
 
-const ChatHeader = memo(function ChatHeader({
-    isConnected,
-}) {
+const ChatHeader = memo(function ChatHeader({ isConnected }) {
     return (
         <motion.div
-            initial={{
-                opacity: 0,
-                y: -15,
-            }}
-            animate={{
-                opacity: 1,
-                y: 0,
-            }}
-            className="
-                relative z-10
-                flex h-[68px] shrink-0
-                items-center justify-between
-                border-b border-white/[0.07]
-                bg-[#09090f]/80
-                px-4
-                backdrop-blur-2xl
-            "
+            initial={{ opacity: 0, y: -15 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="relative z-10 flex h-[68px] shrink-0 items-center justify-between border-b border-white/[0.07] bg-[#09090f]/80 px-4 backdrop-blur-2xl"
         >
-            <div className="flex items-center gap-3">
-                <motion.div
-                    animate={{
-                        boxShadow: [
-                            "0 0 0 rgba(139,92,246,0)",
-                            "0 0 22px rgba(139,92,246,.25)",
-                            "0 0 0 rgba(139,92,246,0)",
-                        ],
-                    }}
-                    transition={{
-                        duration: 2.5,
-                        repeat: Infinity,
-                    }}
-                    className="
-                        relative flex h-10 w-10
-                        items-center justify-center
-                        rounded-xl
-                        border border-violet-400/15
-                        bg-gradient-to-br
-                        from-violet-500/15
-                        to-cyan-400/10
-                    "
-                >
+            <div className="flex min-w-0 items-center gap-3">
+                <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-violet-400/15 bg-gradient-to-br from-violet-500/15 to-cyan-400/10">
                     <BsThreeDots className="text-sm text-violet-300" />
+                </div>
 
-                    <motion.span
-                        animate={{
-                            scale: [1, 1.5, 1],
-                            opacity: [0.7, 0, 0.7],
-                        }}
-                        transition={{
-                            duration: 2,
-                            repeat: Infinity,
-                        }}
-                        className="
-                            absolute inset-0
-                            rounded-xl
-                            border border-violet-400/20
-                        "
-                    />
-                </motion.div>
-
-                <div>
+                <div className="min-w-0">
                     <div className="flex items-center gap-2">
                         <h3 className="text-sm font-bold tracking-tight text-white">
                             Live Chat
                         </h3>
 
-                        <motion.span
-                            animate={{
-                                opacity: [
-                                    0.45,
-                                    1,
-                                    0.45,
-                                ],
-                            }}
-                            transition={{
-                                duration: 2,
-                                repeat: Infinity,
-                            }}
-                            className="
-                                h-1.5 w-1.5
-                                rounded-full
-                                bg-emerald-400
-                                shadow-[0_0_10px_#34d399]
-                            "
-                        />
+                        <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-400" />
                     </div>
 
                     <div className="mt-1 flex items-center gap-1.5">
@@ -188,9 +87,7 @@ const ChatHeader = memo(function ChatHeader({
                             Study together
                         </span>
 
-                        <span className="text-zinc-800">
-                            •
-                        </span>
+                        <span className="text-zinc-800">•</span>
 
                         <span
                             className={`text-[10px] ${
@@ -199,43 +96,54 @@ const ChatHeader = memo(function ChatHeader({
                                     : "text-red-400/80"
                             }`}
                         >
-                            {isConnected
-                                ? "Connected"
-                                : "Offline"}
+                            {isConnected ? "Connected" : "Offline"}
                         </span>
                     </div>
                 </div>
             </div>
 
-            <div className="flex items-center gap-2">
-                <motion.div
-                    animate={{
-                        scale: [1, 1.04, 1],
-                    }}
-                    transition={{
-                        duration: 2,
-                        repeat: Infinity,
-                    }}
-                    className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[9px] font-bold ${
-                        isConnected
-                            ? "border-emerald-400/15 bg-emerald-400/[0.06] text-emerald-300"
-                            : "border-red-400/15 bg-red-400/[0.06] text-red-300"
-                    }`}
-                >
-                    <FaCircle className="text-[5px]" />
-
-                    {isConnected
-                        ? "LIVE"
-                        : "OFFLINE"}
-                </motion.div>
+            <div
+                className={`flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-[9px] font-bold ${
+                    isConnected
+                        ? "border-emerald-400/15 bg-emerald-400/[0.06] text-emerald-300"
+                        : "border-red-400/15 bg-red-400/[0.06] text-red-300"
+                }`}
+            >
+                <FaCircle className="text-[5px]" />
+                {isConnected ? "LIVE" : "OFFLINE"}
             </div>
         </motion.div>
     );
 });
 
-/* ================================================================
-   MESSAGE LIST
-================================================================ */
+/* -------------------------------------------------------------------------- */
+/* Empty chat                                                                 */
+/* -------------------------------------------------------------------------- */
+
+const EmptyChat = memo(function EmptyChat() {
+    return (
+        <div className="flex h-full items-center justify-center px-4 text-center">
+            <div>
+                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl border border-violet-400/10 bg-gradient-to-br from-violet-500/10 to-cyan-400/10 text-violet-300">
+                    <BsLightningChargeFill />
+                </div>
+
+                <p className="mt-5 text-sm font-bold text-zinc-300">
+                    No messages yet.
+                </p>
+
+                <p className="mx-auto mt-2 max-w-[190px] text-[11px] leading-5 text-zinc-600">
+                    Start the discussion and turn this quiet room into a live
+                    study session.
+                </p>
+            </div>
+        </div>
+    );
+});
+
+/* -------------------------------------------------------------------------- */
+/* Message list                                                               */
+/* -------------------------------------------------------------------------- */
 
 const MessageList = memo(function MessageList({
     messages,
@@ -245,114 +153,53 @@ const MessageList = memo(function MessageList({
     isHost,
     onDelete,
 }) {
-    const messagesEndRef = useRef(null);
+    const messagesContainerRef = useRef(null);
 
-    /*
-     * Keep scrolling isolated from the input state.
-     *
-     * IMPORTANT:
-     * This effect only runs when the actual message array
-     * changes. Typing does not trigger scrolling.
-     */
+    const previousMessageCountRef = useRef(messages.length);
+
+    const previousLastMessageIdRef = useRef(
+        messages.length
+            ? messages[messages.length - 1]?._id
+            : null
+    );
+
     useEffect(() => {
-        const node = messagesEndRef.current;
+        const previousCount = previousMessageCountRef.current;
+        const currentCount = messages.length;
 
-        if (!node) {
+        const currentLastMessageId =
+            messages[currentCount - 1]?._id || null;
+
+        const messageWasAdded =
+            currentCount > previousCount ||
+            currentLastMessageId !== previousLastMessageIdRef.current;
+
+        previousMessageCountRef.current = currentCount;
+        previousLastMessageIdRef.current = currentLastMessageId;
+
+        if (!messageWasAdded || !messagesContainerRef.current) {
             return;
         }
 
         requestAnimationFrame(() => {
-            node.scrollIntoView({
+            const container = messagesContainerRef.current;
+
+            if (!container) return;
+
+            container.scrollTo({
+                top: container.scrollHeight,
                 behavior: "auto",
-                block: "end",
             });
         });
     }, [messages]);
 
     return (
         <div
-            className="
-                relative z-10
-                min-h-0 flex-1
-                space-y-3
-                overflow-y-auto
-                overscroll-contain
-                p-3
-                scrollbar-thin
-                scrollbar-track-transparent
-                scrollbar-thumb-white/10
-            "
+            ref={messagesContainerRef}
+            className="relative z-10 min-h-0 flex-1 space-y-3 overflow-x-hidden overflow-y-auto overscroll-contain p-3 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-white/10"
         >
             {messages.length === 0 ? (
-                <motion.div
-                    initial={{
-                        opacity: 0,
-                        scale: 0.94,
-                    }}
-                    animate={{
-                        opacity: 1,
-                        scale: 1,
-                    }}
-                    transition={{
-                        duration: 0.5,
-                    }}
-                    className="
-                        flex h-full
-                        items-center justify-center
-                        px-4 text-center
-                    "
-                >
-                    <div className="relative">
-                        <motion.div
-                            animate={{
-                                scale: [
-                                    1,
-                                    1.12,
-                                    1,
-                                ],
-                                rotate: [
-                                    0,
-                                    3,
-                                    -3,
-                                    0,
-                                ],
-                            }}
-                            transition={{
-                                duration: 5,
-                                repeat: Infinity,
-                                ease: "easeInOut",
-                            }}
-                            className="
-                                mx-auto flex h-16 w-16
-                                items-center justify-center
-                                rounded-2xl
-                                border border-violet-400/10
-                                bg-gradient-to-br
-                                from-violet-500/10
-                                to-cyan-400/10
-                                text-violet-300
-                                shadow-[0_0_50px_rgba(139,92,246,.12)]
-                            "
-                        >
-                            <BsLightningChargeFill />
-                        </motion.div>
-
-                        <p className="mt-5 text-sm font-bold text-zinc-300">
-                            No messages yet.
-                        </p>
-
-                        <p className="
-                            mx-auto mt-2 max-w-[190px]
-                            text-[11px] leading-5
-                            text-zinc-600
-                        ">
-                            Start the discussion
-                            and turn this quiet
-                            room into a live
-                            study session.
-                        </p>
-                    </div>
-                </motion.div>
+                <EmptyChat />
             ) : (
                 messages.map((msg, index) => {
                     const messageSenderId =
@@ -361,18 +208,12 @@ const MessageList = memo(function MessageList({
                         msg.sender?._id;
 
                     const isOwn =
-                        messageSenderId
-                            ?.toString() ===
+                        messageSenderId?.toString() ===
                         currentUserId?.toString();
 
-                    const canDelete =
-                        isHost || isOwn;
+                    const canDelete = isHost || isOwn;
 
                     return (
-                        /*
-                         * Intentionally NOT using motion/AnimatePresence
-                         * here. Existing messages must remain stable.
-                         */
                         <div
                             key={
                                 msg._id ||
@@ -381,10 +222,7 @@ const MessageList = memo(function MessageList({
                             className="group"
                         >
                             <MessageBubble
-                                sender={
-                                    msg.sender?.name ||
-                                    msg.sender
-                                }
+                                sender={msg.sender?.name || msg.sender}
                                 text={msg.message}
                                 avatar={
                                     msg.avatar ||
@@ -394,206 +232,119 @@ const MessageList = memo(function MessageList({
                                     msg.createdAt
                                         ? new Date(
                                               msg.createdAt
-                                          ).toLocaleTimeString(
-                                              [],
-                                              {
-                                                  hour: "2-digit",
-                                                  minute: "2-digit",
-                                              }
-                                          )
+                                          ).toLocaleTimeString([], {
+                                              hour: "2-digit",
+                                              minute: "2-digit",
+                                          })
                                         : ""
                                 }
                                 isOwn={isOwn}
-                                canDelete={
-                                    canDelete
-                                }
-                                onDelete={() =>
-                                    onDelete(
-                                        msg._id
-                                    )
-                                }
+                                canDelete={canDelete}
+                                onDelete={() => onDelete(msg._id)}
                             />
                         </div>
                     );
                 })
             )}
 
-            {/* TYPING INDICATOR */}
+            {typingUser && typingUser !== currentUserName && (
+                <div className="flex items-center gap-2 px-2 py-1">
+                    <div className="flex items-center gap-[3px] rounded-full border border-white/[0.06] bg-white/[0.025] px-3 py-2">
+                        <span className="text-[9px] text-zinc-500">
+                            {typingUser}
+                        </span>
 
-            {typingUser &&
-                typingUser !== currentUserName && (
-                    <motion.div
-                        initial={{
-                            opacity: 0,
-                            y: 5,
-                        }}
-                        animate={{
-                            opacity: 1,
-                            y: 0,
-                        }}
-                        className="
-                            flex items-center
-                            gap-2 px-2 py-1
-                        "
-                    >
-                        <div
-                            className="
-                                flex items-center
-                                gap-[3px]
-                                rounded-full
-                                border border-white/[0.06]
-                                bg-white/[0.025]
-                                px-3 py-2
-                            "
-                        >
-                            <span className="text-[9px] text-zinc-500">
-                                {typingUser}
-                            </span>
-
-                            {[0, 1, 2].map(
-                                (dot) => (
-                                    <motion.span
-                                        key={dot}
-                                        animate={{
-                                            y: [
-                                                0,
-                                                -3,
-                                                0,
-                                            ],
-                                            opacity: [
-                                                0.3,
-                                                1,
-                                                0.3,
-                                            ],
-                                        }}
-                                        transition={{
-                                            duration: 0.7,
-                                            repeat: Infinity,
-                                            delay:
-                                                dot *
-                                                0.12,
-                                        }}
-                                        className="
-                                            h-1 w-1
-                                            rounded-full
-                                            bg-violet-400
-                                        "
-                                    />
-                                )
-                            )}
-                        </div>
-                    </motion.div>
-                )}
-
-            <div ref={messagesEndRef} />
+                        {[0, 1, 2].map((dot) => (
+                            <motion.span
+                                key={dot}
+                                animate={{
+                                    y: [0, -3, 0],
+                                    opacity: [0.3, 1, 0.3],
+                                }}
+                                transition={{
+                                    duration: 0.7,
+                                    repeat: Infinity,
+                                    delay: dot * 0.12,
+                                }}
+                                className="h-1 w-1 rounded-full bg-violet-400"
+                            />
+                        ))}
+                    </div>
+                </div>
+            )}
         </div>
     );
 });
 
-/* ================================================================
-   MAIN CHAT PANEL
-================================================================ */
+/* -------------------------------------------------------------------------- */
+/* Chat panel                                                                 */
+/* -------------------------------------------------------------------------- */
 
 const ChatPanel = ({
     roomId,
     isHost = false,
     isMember = false,
 }) => {
-    const { user } = useAppSelector(
-        (state) => state.auth
-    );
+    const { user } = useAppSelector((state) => state.auth);
 
-    const [messages, setMessages] =
-        useState([]);
+    const [messages, setMessages] = useState([]);
+    const [input, setInput] = useState("");
+    const [typingUser, setTypingUser] = useState(null);
+    const [emojiOpen, setEmojiOpen] = useState(false);
 
-    const [input, setInput] =
-        useState("");
+    const [emojiPosition, setEmojiPosition] = useState({
+        top: 0,
+        left: 0,
+        width: 300,
+    });
 
-    const [typingUser, setTypingUser] =
-        useState(null);
+    const [isMobile, setIsMobile] = useState(false);
+    const [isConnected, setIsConnected] = useState(socket.connected);
 
-    const [emojiOpen, setEmojiOpen] =
-        useState(false);
-
-    const [emojiPosition, setEmojiPosition] =
-        useState({
-            top: 0,
-            left: 0,
-            width: 300,
-        });
-
-    const [isMobile, setIsMobile] =
-        useState(false);
-
-    const [isConnected, setIsConnected] =
-        useState(socket.connected);
-
-    /* ============================================================
-       REFS
-    ============================================================ */
-
+    const chatRootRef = useRef(null);
     const inputRef = useRef(null);
 
-    const typingTimeoutRef =
-        useRef(null);
+    const typingTimeoutRef = useRef(null);
+    const isTypingRef = useRef(false);
 
-    const isTypingRef =
-        useRef(false);
+    const userRef = useRef(user);
 
-    const userRef =
-        useRef(user);
+    const emojiButtonRef = useRef(null);
+    const emojiPickerRef = useRef(null);
 
-    const emojiButtonRef =
-        useRef(null);
+    /* ---------------------------------------------------------------------- */
+    /* Keep current user available inside socket callbacks                    */
+    /* ---------------------------------------------------------------------- */
 
-    const emojiPickerRef =
-        useRef(null);
-
-    /*
-     * Keep latest user available to socket callbacks
-     * without recreating listeners.
-     */
     useEffect(() => {
         userRef.current = user;
     }, [user]);
 
-    /* ============================================================
-       RESPONSIVE
-    ============================================================ */
+    /* ---------------------------------------------------------------------- */
+    /* Mobile detection                                                       */
+    /* ---------------------------------------------------------------------- */
 
     useEffect(() => {
         const mediaQuery = window.matchMedia(
             "(max-width: 639px)"
         );
 
-        const updateMobileState = (
-            event
-        ) => {
-            setIsMobile(
-                event.matches
-            );
+        const update = (event) => {
+            setIsMobile(event.matches);
         };
 
-        setIsMobile(
-            mediaQuery.matches
-        );
+        setIsMobile(mediaQuery.matches);
 
-        mediaQuery.addEventListener(
-            "change",
-            updateMobileState
-        );
+        mediaQuery.addEventListener("change", update);
 
         return () => {
-            mediaQuery.removeEventListener(
-                "change",
-                updateMobileState
-            );
+            mediaQuery.removeEventListener("change", update);
         };
     }, []);
 
-    /* ============================================================
-       SOCKET CONNECTION STATE
-    ============================================================ */
+    /* ---------------------------------------------------------------------- */
+    /* Socket connection status                                               */
+    /* ---------------------------------------------------------------------- */
 
     useEffect(() => {
         const handleConnect = () => {
@@ -604,149 +355,202 @@ const ChatPanel = ({
             setIsConnected(false);
         };
 
-        socket.on(
-            "connect",
-            handleConnect
-        );
+        socket.on("connect", handleConnect);
+        socket.on("disconnect", handleDisconnect);
 
-        socket.on(
-            "disconnect",
-            handleDisconnect
-        );
-
-        /*
-         * Socket can already be connected when component mounts.
-         */
-        setIsConnected(
-            socket.connected
-        );
+        setIsConnected(socket.connected);
 
         return () => {
-            socket.off(
-                "connect",
-                handleConnect
-            );
-
-            socket.off(
-                "disconnect",
-                handleDisconnect
-            );
+            socket.off("connect", handleConnect);
+            socket.off("disconnect", handleDisconnect);
         };
     }, []);
 
-    /* ============================================================
-       MOBILE CHAT INPUT FOCUS
-    ============================================================ */
+    /* ---------------------------------------------------------------------- */
+    /* Mobile viewport / keyboard handling                                    */
+    /* ---------------------------------------------------------------------- */
+
+    const syncMobileViewport = useCallback(() => {
+        if (!isMobile || !chatRootRef.current) {
+            return;
+        }
+
+        const viewport = window.visualViewport;
+
+        const viewportHeight =
+            viewport?.height || window.innerHeight;
+
+        const root = chatRootRef.current;
+
+        const top = root.getBoundingClientRect().top;
+
+        const height = Math.max(
+            0,
+            viewportHeight - top
+        );
+
+        root.style.height = `${height}px`;
+        root.style.maxHeight = `${height}px`;
+    }, [isMobile]);
 
     useEffect(() => {
         if (!isMobile) {
             return;
         }
 
-        /*
-         * Do not repeatedly focus on every render.
-         *
-         * This only runs when the room changes or mobile mode
-         * changes.
-         */
-        const timer = window.setTimeout(
-            () => {
-                if (
-                    socket.connected &&
-                    inputRef.current
-                ) {
-                    inputRef.current.focus({
-                        preventScroll: true,
-                    });
-                }
-            },
-            120
+        let frameId = null;
+
+        const update = () => {
+            if (frameId !== null) {
+                cancelAnimationFrame(frameId);
+            }
+
+            frameId = requestAnimationFrame(() => {
+                frameId = null;
+                syncMobileViewport();
+            });
+        };
+
+        update();
+
+        window.visualViewport?.addEventListener(
+            "resize",
+            update
         );
 
+        window.visualViewport?.addEventListener(
+            "scroll",
+            update
+        );
+
+        window.addEventListener("resize", update);
+
         return () => {
-            window.clearTimeout(
-                timer
+            if (frameId !== null) {
+                cancelAnimationFrame(frameId);
+            }
+
+            window.visualViewport?.removeEventListener(
+                "resize",
+                update
             );
+
+            window.visualViewport?.removeEventListener(
+                "scroll",
+                update
+            );
+
+            window.removeEventListener(
+                "resize",
+                update
+            );
+        };
+    }, [isMobile, syncMobileViewport]);
+
+    /* ---------------------------------------------------------------------- */
+    /* Input focus handling                                                   */
+    /* ---------------------------------------------------------------------- */
+
+    const handleInputFocus = useCallback(() => {
+        if (!isMobile) {
+            return;
+        }
+
+        syncMobileViewport();
+
+        requestAnimationFrame(() => {
+            syncMobileViewport();
+
+            requestAnimationFrame(() => {
+                syncMobileViewport();
+            });
+        });
+    }, [isMobile, syncMobileViewport]);
+
+    /* ---------------------------------------------------------------------- */
+    /* Desktop auto focus                                                     */
+    /* ---------------------------------------------------------------------- */
+
+    useEffect(() => {
+        if (isMobile) {
+            return;
+        }
+
+        const timeoutId = setTimeout(() => {
+            if (socket.connected) {
+                inputRef.current?.focus();
+            }
+        }, 100);
+
+        return () => {
+            clearTimeout(timeoutId);
         };
     }, [roomId, isMobile]);
 
-    /* ============================================================
-       DESKTOP EMOJI POSITION
-    ============================================================ */
+    /* ---------------------------------------------------------------------- */
+    /* Emoji picker positioning                                               */
+    /* ---------------------------------------------------------------------- */
 
-    const updateEmojiPosition =
-        useCallback(() => {
-            if (
-                isMobile ||
-                !emojiButtonRef.current
-            ) {
-                return;
-            }
+    const updateEmojiPosition = useCallback(() => {
+        if (
+            isMobile ||
+            !emojiButtonRef.current
+        ) {
+            return;
+        }
 
-            const button =
-                emojiButtonRef.current.getBoundingClientRect();
+        const button =
+            emojiButtonRef.current.getBoundingClientRect();
 
-            const viewportWidth =
-                window.innerWidth;
+        const viewportWidth = window.innerWidth;
 
-            const viewportHeight =
-                window.visualViewport
-                    ?.height ||
-                window.innerHeight;
+        const viewportHeight =
+            window.visualViewport?.height ||
+            window.innerHeight;
 
-            const pickerWidth = 300;
-            const pickerHeight = 360;
+        const pickerWidth = 300;
+        const pickerHeight = 360;
 
-            let left =
-                button.left +
-                button.width / 2 -
-                pickerWidth / 2;
+        let left =
+            button.left +
+            button.width / 2 -
+            pickerWidth / 2;
 
-            left = Math.max(
-                10,
-                Math.min(
-                    left,
-                    viewportWidth -
-                        pickerWidth -
-                        10
-                )
-            );
-
-            let top =
-                button.top -
-                pickerHeight -
-                10;
-
-            if (top < 10) {
-                top = Math.min(
-                    button.bottom + 10,
-                    viewportHeight -
-                        pickerHeight -
-                        10
-                );
-            }
-
-            top = Math.max(
-                10,
-                top
-            );
-
-            setEmojiPosition({
-                top,
+        left = Math.max(
+            10,
+            Math.min(
                 left,
-                width: pickerWidth,
-            });
-        }, [isMobile]);
+                viewportWidth -
+                    pickerWidth -
+                    10
+            )
+        );
 
-    /* ============================================================
-       EMOJI POSITION EVENTS
-    ============================================================ */
+        let top =
+            button.top -
+            pickerHeight -
+            10;
+
+        if (top < 10) {
+            top = Math.min(
+                button.bottom + 10,
+                viewportHeight -
+                    pickerHeight -
+                    10
+            );
+        }
+
+        top = Math.max(10, top);
+
+        setEmojiPosition({
+            top,
+            left,
+            width: pickerWidth,
+        });
+    }, [isMobile]);
 
     useEffect(() => {
-        if (
-            !emojiOpen ||
-            isMobile
-        ) {
+        if (!emojiOpen || isMobile) {
             return;
         }
 
@@ -769,16 +573,6 @@ const ChatPanel = ({
             true
         );
 
-        window.visualViewport?.addEventListener(
-            "resize",
-            update
-        );
-
-        window.visualViewport?.addEventListener(
-            "scroll",
-            update
-        );
-
         return () => {
             window.removeEventListener(
                 "resize",
@@ -790,16 +584,6 @@ const ChatPanel = ({
                 update,
                 true
             );
-
-            window.visualViewport?.removeEventListener(
-                "resize",
-                update
-            );
-
-            window.visualViewport?.removeEventListener(
-                "scroll",
-                update
-            );
         };
     }, [
         emojiOpen,
@@ -807,27 +591,19 @@ const ChatPanel = ({
         updateEmojiPosition,
     ]);
 
-    /* ============================================================
-       OUTSIDE EMOJI CLICK
-    ============================================================ */
+    /* ---------------------------------------------------------------------- */
+    /* Close emoji picker when clicking outside                               */
+    /* ---------------------------------------------------------------------- */
 
     useEffect(() => {
-        if (
-            !emojiOpen ||
-            isMobile
-        ) {
+        if (!emojiOpen || isMobile) {
             return;
         }
 
-        const handleOutsideClick = (
-            event
-        ) => {
-            const target =
-                event.target;
-
+        const handleOutsideClick = (event) => {
             if (
                 emojiButtonRef.current?.contains(
-                    target
+                    event.target
                 )
             ) {
                 return;
@@ -835,24 +611,13 @@ const ChatPanel = ({
 
             if (
                 emojiPickerRef.current?.contains(
-                    target
+                    event.target
                 )
             ) {
                 return;
             }
 
             setEmojiOpen(false);
-
-            /*
-             * Restore desktop input focus after picker closes.
-             */
-            requestAnimationFrame(
-                () => {
-                    inputRef.current?.focus({
-                        preventScroll: true,
-                    });
-                }
-            );
         };
 
         document.addEventListener(
@@ -868,27 +633,14 @@ const ChatPanel = ({
         };
     }, [emojiOpen, isMobile]);
 
-    /* ============================================================
-       ESCAPE
-    ============================================================ */
+    /* ---------------------------------------------------------------------- */
+    /* Escape closes emoji picker                                             */
+    /* ---------------------------------------------------------------------- */
 
     useEffect(() => {
-        const handleEscape = (
-            event
-        ) => {
-            if (
-                event.key === "Escape" &&
-                emojiOpen
-            ) {
+        const handleEscape = (event) => {
+            if (event.key === "Escape") {
                 setEmojiOpen(false);
-
-                requestAnimationFrame(
-                    () => {
-                        inputRef.current?.focus({
-                            preventScroll: true,
-                        });
-                    }
-                );
             }
         };
 
@@ -903,11 +655,11 @@ const ChatPanel = ({
                 handleEscape
             );
         };
-    }, [emojiOpen]);
+    }, []);
 
-    /* ============================================================
-       LOAD MESSAGES + SOCKET
-    ============================================================ */
+    /* ---------------------------------------------------------------------- */
+    /* Load messages + socket listeners                                       */
+    /* ---------------------------------------------------------------------- */
 
     useEffect(() => {
         if (
@@ -917,121 +669,123 @@ const ChatPanel = ({
             return;
         }
 
-        let mounted = true;
+        let active = true;
 
-        const loadMessages =
-            async () => {
-                try {
-                    const { data } =
-                        await getRoomMessages(
-                            roomId
-                        );
+        const mergeMessages = (
+            history,
+            existing
+        ) => {
+            if (!existing.length) {
+                return history;
+            }
 
-                    if (!mounted) {
-                        return;
-                    }
+            const historyIds = new Set(
+                history
+                    .map(
+                        (message) =>
+                            message?._id
+                    )
+                    .filter(Boolean)
+            );
 
-                    setMessages(
-                        data.messages || []
+            return [
+                ...history,
+                ...existing.filter(
+                    (message) =>
+                        !message?._id ||
+                        !historyIds.has(
+                            message._id
+                        )
+                ),
+            ];
+        };
+
+        const loadMessages = async () => {
+            try {
+                const { data } =
+                    await getRoomMessages(
+                        roomId
                     );
-                } catch (error) {
-                    if (!mounted) {
-                        return;
-                    }
 
+                if (!active) {
+                    return;
+                }
+
+                setMessages((previous) =>
+                    mergeMessages(
+                        data?.messages || [],
+                        previous
+                    )
+                );
+            } catch (error) {
+                if (active) {
                     toast.error(
-                        error.response
-                            ?.data
+                        error.response?.data
                             ?.message ||
                             "Failed to load chat history"
                     );
                 }
-            };
-
-        /* --------------------------------------------------------
-           NEW MESSAGE
-        -------------------------------------------------------- */
+            }
+        };
 
         const handleNewMessage = (
             message
         ) => {
-            if (!message) {
+            if (!active || !message) {
                 return;
             }
 
-            const currentUser =
-                userRef.current;
-
             const normalizedMessage = {
                 ...message,
-
                 senderId:
-                    message.senderId
-                        ?._id ||
+                    message.senderId?._id ||
                     message.senderId ||
                     message.sender?._id ||
-                    currentUser?._id ||
                     null,
             };
 
-            setMessages(
-                (previous) => {
-                    /*
-                     * Prevent duplicate message insertion.
-                     */
-                    if (
-                        normalizedMessage._id &&
-                        previous.some(
-                            (item) =>
-                                item._id ===
-                                normalizedMessage._id
-                        )
-                    ) {
-                        return previous;
-                    }
-
-                    return [
-                        ...previous,
-                        normalizedMessage,
-                    ];
+            setMessages((previous) => {
+                if (
+                    normalizedMessage._id &&
+                    previous.some(
+                        (item) =>
+                            item._id ===
+                            normalizedMessage._id
+                    )
+                ) {
+                    return previous;
                 }
-            );
+
+                return [
+                    ...previous,
+                    normalizedMessage,
+                ];
+            });
         };
 
-        /* --------------------------------------------------------
-           DELETE MESSAGE
-        -------------------------------------------------------- */
+        const handleMessageDeleted = ({
+            messageId,
+        } = {}) => {
+            if (!messageId) {
+                return;
+            }
 
-        const handleMessageDeleted =
-            ({ messageId }) => {
-                if (!messageId) {
-                    return;
-                }
-
-                setMessages(
-                    (previous) =>
-                        previous.filter(
-                            (message) =>
-                                message._id !==
-                                messageId
-                        )
-                );
-            };
-
-        /* --------------------------------------------------------
-           USER TYPING
-        -------------------------------------------------------- */
+            setMessages((previous) =>
+                previous.filter(
+                    (message) =>
+                        message._id !==
+                        messageId
+                )
+            );
+        };
 
         const handleUserTyping = ({
             user: typingName,
             userId,
-        }) => {
+        } = {}) => {
             const currentUser =
                 userRef.current;
 
-            /*
-             * Never show our own typing indicator.
-             */
             if (
                 userId &&
                 currentUser?._id &&
@@ -1043,35 +797,29 @@ const ChatPanel = ({
 
             if (
                 typingName &&
-                typingName !==
-                    currentUser?.name
+                typingName !== currentUser?.name
             ) {
-                setTypingUser(
-                    typingName
-                );
+                setTypingUser(typingName);
             }
         };
 
-        /* --------------------------------------------------------
-           STOP TYPING
-        -------------------------------------------------------- */
+        const handleUserStopTyping = ({
+            userId,
+        } = {}) => {
+            const currentUser =
+                userRef.current;
 
-        const handleUserStopTyping =
-            ({ userId } = {}) => {
-                const currentUser =
-                    userRef.current;
+            if (
+                userId &&
+                currentUser?._id &&
+                userId.toString() ===
+                    currentUser._id.toString()
+            ) {
+                return;
+            }
 
-                if (
-                    userId &&
-                    currentUser?._id &&
-                    userId.toString() ===
-                        currentUser._id.toString()
-                ) {
-                    return;
-                }
-
-                setTypingUser(null);
-            };
+            setTypingUser(null);
+        };
 
         socket.on(
             "chat:new-message",
@@ -1093,15 +841,10 @@ const ChatPanel = ({
             handleUserStopTyping
         );
 
-        /*
-         * Register listeners before loading history.
-         * This reduces the chance of missing a message that
-         * arrives during the HTTP request.
-         */
         loadMessages();
 
         return () => {
-            mounted = false;
+            active = false;
 
             socket.off(
                 "chat:new-message",
@@ -1129,13 +872,12 @@ const ChatPanel = ({
                 clearTimeout(
                     typingTimeoutRef.current
                 );
-
-                typingTimeoutRef.current =
-                    null;
             }
 
-            isTypingRef.current =
-                false;
+            typingTimeoutRef.current =
+                null;
+
+            isTypingRef.current = false;
 
             setTypingUser(null);
         };
@@ -1145,9 +887,9 @@ const ChatPanel = ({
         isMember,
     ]);
 
-    /* ============================================================
-       DELETE MESSAGE
-    ============================================================ */
+    /* ---------------------------------------------------------------------- */
+    /* Delete message                                                         */
+    /* ---------------------------------------------------------------------- */
 
     const handleDeleteMessage =
         useCallback(
@@ -1167,7 +909,6 @@ const ChatPanel = ({
                     toast.error(
                         "Socket disconnected."
                     );
-
                     return;
                 }
 
@@ -1184,9 +925,9 @@ const ChatPanel = ({
             [roomId]
         );
 
-    /* ============================================================
-       TYPING
-    ============================================================ */
+    /* ---------------------------------------------------------------------- */
+    /* Typing                                                                 */
+    /* ---------------------------------------------------------------------- */
 
     const handleTyping =
         useCallback(
@@ -1194,12 +935,6 @@ const ChatPanel = ({
                 const value =
                     event.target.value;
 
-                /*
-                 * CRITICAL:
-                 * Local input state updates FIRST and immediately.
-                 *
-                 * Socket work never controls the visual input.
-                 */
                 setInput(value);
 
                 if (
@@ -1212,9 +947,6 @@ const ChatPanel = ({
                 const currentUser =
                     userRef.current;
 
-                /*
-                 * EMPTY INPUT
-                 */
                 if (!value.trim()) {
                     if (
                         isTypingRef.current
@@ -1240,20 +972,14 @@ const ChatPanel = ({
                         clearTimeout(
                             typingTimeoutRef.current
                         );
-
-                        typingTimeoutRef.current =
-                            null;
                     }
+
+                    typingTimeoutRef.current =
+                        null;
 
                     return;
                 }
 
-                /*
-                 * Emit typing only once when the user
-                 * starts typing.
-                 *
-                 * This is much lighter on mobile.
-                 */
                 if (
                     !isTypingRef.current
                 ) {
@@ -1272,9 +998,6 @@ const ChatPanel = ({
                         true;
                 }
 
-                /*
-                 * Reset stop-typing timer.
-                 */
                 if (
                     typingTimeoutRef.current
                 ) {
@@ -1284,90 +1007,81 @@ const ChatPanel = ({
                 }
 
                 typingTimeoutRef.current =
-                    window.setTimeout(
-                        () => {
-                            const latestUser =
-                                userRef.current;
+                    setTimeout(() => {
+                        socket.emit(
+                            "chat:stop-typing",
+                            {
+                                roomId,
+                                user:
+                                    currentUser?.name,
+                                userId:
+                                    currentUser?._id,
+                            }
+                        );
 
-                            socket.emit(
-                                "chat:stop-typing",
-                                {
-                                    roomId,
-                                    user:
-                                        latestUser?.name,
-                                    userId:
-                                        latestUser?._id,
-                                }
-                            );
+                        isTypingRef.current =
+                            false;
 
-                            isTypingRef.current =
-                                false;
-
-                            typingTimeoutRef.current =
-                                null;
-                        },
-                        1200
-                    );
+                        typingTimeoutRef.current =
+                            null;
+                    }, 1200);
             },
             [roomId]
         );
 
-    /* ============================================================
-       RESTORE INPUT FOCUS
-    ============================================================ */
+    /* ---------------------------------------------------------------------- */
+    /* Restore focus after send                                               */
+    /* ---------------------------------------------------------------------- */
 
     const restoreInputFocus =
         useCallback(() => {
-            if (!inputRef.current) {
+            const inputElement =
+                inputRef.current;
+
+            if (
+                !inputElement ||
+                !isConnected
+            ) {
                 return;
             }
 
-            /*
-             * First frame.
-             */
-            requestAnimationFrame(
-                () => {
-                    inputRef.current?.focus({
+            inputElement.focus({
+                preventScroll: true,
+            });
+
+            if (isMobile) {
+                requestAnimationFrame(() => {
+                    inputElement.focus({
                         preventScroll: true,
                     });
 
-                    /*
-                     * Mobile browsers sometimes need a second
-                     * focus attempt after the click event.
-                     */
-                    if (isMobile) {
-                        window.setTimeout(
-                            () => {
-                                inputRef.current?.focus({
-                                    preventScroll: true,
-                                });
-                            },
-                            30
-                        );
-                    }
-                }
-            );
-        }, [isMobile]);
+                    syncMobileViewport();
+                });
+            }
+        }, [
+            isConnected,
+            isMobile,
+            syncMobileViewport,
+        ]);
 
-    /* ============================================================
-       SEND MESSAGE
-    ============================================================ */
+    /* ---------------------------------------------------------------------- */
+    /* Send message                                                           */
+    /* ---------------------------------------------------------------------- */
 
     const handleSend =
         useCallback(
             (event) => {
                 event?.preventDefault();
 
+                const currentInput =
+                    inputRef.current?.value ??
+                    input;
+
                 const text =
-                    input.trim();
+                    currentInput.trim();
 
                 if (!text) {
-                    /*
-                     * Even if there is no text, keep the
-                     * mobile input focused.
-                     */
                     restoreInputFocus();
-
                     return;
                 }
 
@@ -1377,16 +1091,12 @@ const ChatPanel = ({
                     );
 
                     restoreInputFocus();
-
                     return;
                 }
 
                 const currentUser =
                     userRef.current;
 
-                /*
-                 * SEND
-                 */
                 socket.emit(
                     "chat:send-message",
                     {
@@ -1401,9 +1111,6 @@ const ChatPanel = ({
                     }
                 );
 
-                /*
-                 * STOP TYPING
-                 */
                 socket.emit(
                     "chat:stop-typing",
                     {
@@ -1424,33 +1131,14 @@ const ChatPanel = ({
                     clearTimeout(
                         typingTimeoutRef.current
                     );
-
-                    typingTimeoutRef.current =
-                        null;
                 }
 
-                /*
-                 * IMPORTANT:
-                 *
-                 * Clear input immediately.
-                 *
-                 * This makes:
-                 * "Type a message..."
-                 *
-                 * appear immediately again.
-                 */
-                setInput("");
+                typingTimeoutRef.current =
+                    null;
 
-                /*
-                 * Desktop emoji picker closes.
-                 * Mobile picker doesn't exist.
-                 */
+                setInput("");
                 setEmojiOpen(false);
 
-                /*
-                 * Keep cursor in the input.
-                 * This is especially important on mobile.
-                 */
                 restoreInputFocus();
             },
             [
@@ -1460,29 +1148,27 @@ const ChatPanel = ({
             ]
         );
 
-    /* ============================================================
-       ENTER TO SEND
-    ============================================================ */
+    /* ---------------------------------------------------------------------- */
+    /* Enter to send                                                          */
+    /* ---------------------------------------------------------------------- */
 
     const handleKeyDown =
         useCallback(
             (event) => {
                 if (
-                    event.key ===
-                        "Enter" &&
+                    event.key === "Enter" &&
                     !event.shiftKey
                 ) {
                     event.preventDefault();
-
                     handleSend(event);
                 }
             },
             [handleSend]
         );
 
-    /* ============================================================
-       EMOJI SELECT
-    ============================================================ */
+    /* ---------------------------------------------------------------------- */
+    /* Emoji click                                                            */
+    /* ---------------------------------------------------------------------- */
 
     const handleEmojiClick =
         useCallback(
@@ -1499,113 +1185,75 @@ const ChatPanel = ({
                         previous + emoji
                 );
 
-                /*
-                 * Emoji selection must return focus
-                 * to the text field.
-                 */
-                requestAnimationFrame(
-                    () => {
-                        inputRef.current?.focus({
-                            preventScroll: true,
-                        });
-                    }
-                );
+                requestAnimationFrame(() => {
+                    inputRef.current?.focus({
+                        preventScroll: true,
+                    });
+                });
             },
             []
         );
 
-    /* ============================================================
-       TOGGLE DESKTOP EMOJI
-    ============================================================ */
+    /* ---------------------------------------------------------------------- */
+    /* Emoji toggle                                                           */
+    /* ---------------------------------------------------------------------- */
 
     const toggleEmojiPicker =
         useCallback(() => {
-            /*
-             * Mobile does not use the custom picker.
-             */
             if (isMobile) {
                 return;
             }
 
             setEmojiOpen(
-                (previous) =>
-                    !previous
+                (previous) => !previous
             );
 
             requestAnimationFrame(
-                () => {
-                    updateEmojiPosition();
-                }
+                updateEmojiPosition
             );
         }, [
             isMobile,
             updateEmojiPosition,
         ]);
 
-    /* ============================================================
-       PREVENT BUTTON FOCUS STEAL
-    ============================================================ */
+    /* ---------------------------------------------------------------------- */
+    /* Prevent button from stealing input focus                              */
+    /* ---------------------------------------------------------------------- */
 
     const preventFocusSteal =
-        useCallback(
-            (event) => {
-                /*
-                 * PointerDown is more reliable than only
-                 * mouseDown for touch devices.
-                 *
-                 * This prevents the send/emoji button from
-                 * stealing focus from the input.
-                 */
-                event.preventDefault();
-            },
-            []
-        );
+        useCallback((event) => {
+            event.preventDefault();
+        }, []);
 
-    /* ============================================================
-       DESKTOP EMOJI PORTAL
-    ============================================================ */
+    /* ---------------------------------------------------------------------- */
+    /* Emoji picker portal                                                    */
+    /* ---------------------------------------------------------------------- */
 
     const emojiPickerPortal =
         emojiOpen &&
         !isMobile &&
-        typeof document !==
-            "undefined"
+        typeof document !== "undefined"
             ? createPortal(
                   <div
                       ref={
                           emojiPickerRef
                       }
-                      className="
-                          fixed z-[99999]
-                      "
+                      className="fixed z-[99999]"
                       style={{
-                          top:
-                              emojiPosition.top,
-                          left:
-                              emojiPosition.left,
-                          width:
-                              emojiPosition.width,
+                          top: emojiPosition.top,
+                          left: emojiPosition.left,
+                          width: emojiPosition.width,
                       }}
                   >
-                      <div
-                          className="
-                              overflow-hidden
-                              rounded-2xl
-                              border border-white/10
-                              shadow-[0_20px_70px_rgba(0,0,0,0.65)]
-                          "
-                      >
+                      <div className="overflow-hidden rounded-2xl border border-white/10 shadow-[0_20px_70px_rgba(0,0,0,0.65)]">
                           <EmojiPicker
                               onEmojiClick={
                                   handleEmojiClick
                               }
                               width="100%"
-                              height={
-                                  360
-                              }
+                              height={360}
                               previewConfig={{
-                                  showPreview:
-                                      false,
+                                  showPreview: false,
                               }}
                               skinTonesDisabled={
                                   false
@@ -1613,9 +1261,7 @@ const ChatPanel = ({
                               searchDisabled={
                                   false
                               }
-                              lazyLoadEmojis={
-                                  true
-                              }
+                              lazyLoadEmojis
                               theme="dark"
                           />
                       </div>
@@ -1624,27 +1270,21 @@ const ChatPanel = ({
               )
             : null;
 
-    /* ============================================================
-       RENDER
-    ============================================================ */
+    /* ---------------------------------------------------------------------- */
+    /* Render                                                                 */
+    /* ---------------------------------------------------------------------- */
 
     return (
         <>
             <div
-                className="
-                    relative flex
-                    h-full min-h-0
-                    flex-col
-                    overflow-hidden
-                    bg-[#07070c]
-                    text-white
-                "
+                ref={chatRootRef}
+                className={`relative flex min-h-0 flex-col overflow-hidden bg-[#07070c] text-white ${
+                    isMobile
+                        ? "absolute inset-x-0 top-0"
+                        : "h-full"
+                }`}
             >
-                <AnimatedBackground
-                    isMobile={
-                        isMobile
-                    }
-                />
+                <AnimatedBackground />
 
                 <ChatHeader
                     isConnected={
@@ -1653,68 +1293,26 @@ const ChatPanel = ({
                 />
 
                 <MessageList
-                    messages={
-                        messages
-                    }
-                    typingUser={
-                        typingUser
-                    }
+                    messages={messages}
+                    typingUser={typingUser}
                     currentUserId={
                         user?._id
                     }
                     currentUserName={
                         user?.name
                     }
-                    isHost={
-                        isHost
-                    }
+                    isHost={isHost}
                     onDelete={
                         handleDeleteMessage
                     }
                 />
 
-                {/* ==================================================
-                    MESSAGE INPUT
-                ================================================== */}
-
                 <form
-                    onSubmit={
-                        handleSend
-                    }
-                    className="
-                        relative z-20
-                        shrink-0
-                        border-t
-                        border-white/[0.07]
-                        bg-[#08080e]/95
-                        p-2.5
-                        pb-[calc(0.625rem+env(safe-area-inset-bottom))]
-                        backdrop-blur-2xl
-                        sm:p-3
-                        sm:pb-3
-                    "
+                    onSubmit={handleSend}
+                    className="relative z-20 shrink-0 border-t border-white/[0.07] bg-[#08080e]/95 p-2.5 backdrop-blur-2xl sm:p-3"
                 >
-                    <div
-                        className="
-                            relative flex
-                            items-center
-                            gap-2
-                        "
-                    >
-                        <div
-                            className="
-                                pointer-events-none
-                                absolute -inset-2
-                                rounded-2xl
-                                bg-violet-500/[0.02]
-                                blur-xl
-                            "
-                        />
-
-                        {/* ==================================================
-                            DESKTOP EMOJI BUTTON
-                        ================================================== */}
-
+                    <div className="relative flex items-center gap-2">
+                        {/* Desktop emoji button */}
                         <button
                             ref={
                                 emojiButtonRef
@@ -1729,76 +1327,31 @@ const ChatPanel = ({
                             disabled={
                                 !isConnected
                             }
-                            className={`
-                                relative
-                                hidden
-                                h-11 w-11
-                                shrink-0
-                                items-center
-                                justify-center
-                                rounded-xl
-                                border
-                                transition-all
-                                duration-200
-                                sm:flex
-                                ${
-                                    emojiOpen
-                                        ? "border-violet-400/30 bg-violet-500/15 text-violet-300 shadow-[0_0_25px_rgba(139,92,246,.15)]"
-                                        : "border-white/[0.08] bg-white/[0.035] text-zinc-500 hover:border-violet-400/20 hover:bg-white/[0.06] hover:text-violet-300"
-                                }
-                                disabled:cursor-not-allowed
-                                disabled:opacity-40
-                            `}
+                            className={`relative hidden h-11 w-11 shrink-0 items-center justify-center rounded-xl border transition-all duration-200 sm:flex ${
+                                emojiOpen
+                                    ? "border-violet-400/30 bg-violet-500/15 text-violet-300"
+                                    : "border-white/[0.08] bg-white/[0.035] text-zinc-500 hover:border-violet-400/20 hover:bg-white/[0.06] hover:text-violet-300"
+                            }`}
                             aria-label={
                                 emojiOpen
                                     ? "Close emoji picker"
                                     : "Open emoji picker"
                             }
-                            title="Emoji"
                         >
-                            <FaSmile
-                                size={15}
-                            />
+                            <FaSmile size={15} />
                         </button>
 
-                        {/* ==================================================
-                            INPUT
-                        ================================================== */}
-
-                        <div
-                            className="
-                                group relative
-                                flex min-w-0
-                                flex-1
-                                items-center
-                            "
-                        >
-                            <motion.div
-                                animate={{
-                                    opacity:
-                                        input.trim()
-                                            ? 1
-                                            : 0,
-                                }}
-                                className="
-                                    pointer-events-none
-                                    absolute inset-0
-                                    rounded-xl
-                                    bg-violet-500/5
-                                    blur-md
-                                "
-                            />
-
+                        {/* Input */}
+                        <div className="group relative flex min-w-0 flex-1 items-center">
                             <input
-                                ref={
-                                    inputRef
-                                }
+                                ref={inputRef}
                                 type="text"
-                                value={
-                                    input
-                                }
+                                value={input}
                                 disabled={
                                     !isConnected
+                                }
+                                onFocus={
+                                    handleInputFocus
                                 }
                                 onKeyDown={
                                     handleKeyDown
@@ -1814,58 +1367,21 @@ const ChatPanel = ({
                                 autoComplete="off"
                                 autoCorrect="on"
                                 autoCapitalize="sentences"
-                                spellCheck="true"
-                                inputMode="text"
+                                spellCheck
                                 enterKeyHint="send"
-                                className="
-                                    relative
-                                    w-full min-w-0
-                                    rounded-xl
-                                    border
-                                    border-white/[0.08]
-                                    bg-white/[0.035]
-                                    px-4 py-3
-                                    text-xs
-                                    text-white
-                                    outline-none
-                                    placeholder:text-zinc-600
-                                    transition-colors
-                                    duration-150
-                                    focus:border-violet-400/30
-                                    focus:bg-white/[0.05]
-                                    focus:ring-4
-                                    focus:ring-violet-500/5
-                                    disabled:cursor-not-allowed
-                                    disabled:opacity-50
-                                "
+                                inputMode="text"
+                                className="relative w-full min-w-0 rounded-xl border border-white/[0.08] bg-white/[0.035] px-4 py-3 text-[16px] text-white outline-none placeholder:text-zinc-600 transition-[border-color,background-color,box-shadow] duration-150 focus:border-violet-400/30 focus:bg-white/[0.05] focus:ring-4 focus:ring-violet-500/5 disabled:cursor-not-allowed disabled:opacity-50 touch-manipulation sm:text-xs"
                             />
 
-                            {/* DESKTOP READY INDICATOR */}
-
                             {input.trim() && (
-                                <span
-                                    className="
-                                        pointer-events-none
-                                        absolute right-3
-                                        hidden
-                                        text-[8px]
-                                        font-bold
-                                        uppercase
-                                        tracking-widest
-                                        text-violet-400/70
-                                        sm:block
-                                    "
-                                >
+                                <span className="pointer-events-none absolute right-3 hidden text-[8px] font-bold uppercase tracking-widest text-violet-400/70 sm:block">
                                     ready
                                 </span>
                             )}
                         </div>
 
-                        {/* ==================================================
-                            SEND BUTTON
-                        ================================================== */}
-
-                        <button
+                        {/* Send button */}
+                        <motion.button
                             type="submit"
                             onPointerDown={
                                 preventFocusSteal
@@ -1874,29 +1390,24 @@ const ChatPanel = ({
                                 !isConnected ||
                                 !input.trim()
                             }
-                            className="
-                                relative
-                                flex h-11 w-11
-                                shrink-0
-                                items-center
-                                justify-center
-                                overflow-hidden
-                                rounded-xl
-                                bg-gradient-to-br
-                                from-violet-500
-                                to-cyan-400
-                                text-white
-                                shadow-[0_10px_35px_rgba(139,92,246,.18)]
-                                transition-transform
-                                duration-150
-                                active:scale-95
-                                disabled:cursor-not-allowed
-                                disabled:bg-white/5
-                                disabled:from-zinc-800
-                                disabled:to-zinc-800
-                                disabled:text-zinc-600
-                                disabled:shadow-none
-                            "
+                            whileHover={
+                                !isConnected ||
+                                !input.trim()
+                                    ? {}
+                                    : {
+                                          scale: 1.05,
+                                          rotate: -3,
+                                      }
+                            }
+                            whileTap={
+                                !isConnected ||
+                                !input.trim()
+                                    ? {}
+                                    : {
+                                          scale: 0.94,
+                                      }
+                            }
+                            className="relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-violet-500 to-cyan-400 text-white shadow-[0_10px_35px_rgba(139,92,246,.18)] transition disabled:cursor-not-allowed disabled:from-zinc-800 disabled:to-zinc-800 disabled:text-zinc-600 disabled:shadow-none touch-manipulation"
                             aria-label="Send message"
                         >
                             <motion.span
@@ -1914,51 +1425,24 @@ const ChatPanel = ({
                                     duration: 1.3,
                                     repeat: Infinity,
                                 }}
-                                className="
-                                    absolute
-                                    h-10 w-3
-                                    rotate-12
-                                    bg-white/30
-                                    blur-md
-                                "
+                                className="absolute h-10 w-3 rotate-12 bg-white/30 blur-md"
                             />
 
                             <FaPaperPlane
                                 size={13}
                                 className="relative"
                             />
-                        </button>
+                        </motion.button>
                     </div>
 
-                    {/* ==================================================
-                        DESKTOP HELPER
-                    ================================================== */}
-
-                    <div
-                        className="
-                            mt-2
-                            hidden
-                            items-center
-                            justify-between
-                            px-1
-                            lg:flex
-                        "
-                    >
+                    {/* Desktop helper text */}
+                    <div className="mt-2 hidden items-center justify-between px-1 lg:flex">
                         <div className="flex items-center gap-2">
                             <span className="text-[8px] text-zinc-700">
                                 Press
                             </span>
 
-                            <kbd
-                                className="
-                                    rounded
-                                    border border-white/[0.06]
-                                    bg-white/[0.025]
-                                    px-1.5 py-0.5
-                                    text-[7px]
-                                    text-zinc-600
-                                "
-                            >
+                            <kbd className="rounded border border-white/[0.06] bg-white/[0.025] px-1.5 py-0.5 text-[7px] text-zinc-600">
                                 ENTER
                             </kbd>
 
@@ -1967,35 +1451,10 @@ const ChatPanel = ({
                             </span>
                         </div>
 
-                        <motion.div
-                            animate={{
-                                opacity: [
-                                    0.4,
-                                    0.8,
-                                    0.4,
-                                ],
-                            }}
-                            transition={{
-                                duration: 2.5,
-                                repeat: Infinity,
-                            }}
-                            className="
-                                flex items-center
-                                gap-1.5
-                                text-[8px]
-                                text-zinc-700
-                            "
-                        >
-                            <span
-                                className="
-                                    h-1 w-1
-                                    rounded-full
-                                    bg-emerald-400
-                                "
-                            />
-
+                        <div className="flex items-center gap-1.5 text-[8px] text-zinc-700">
+                            <span className="h-1 w-1 rounded-full bg-emerald-400" />
                             real-time sync
-                        </motion.div>
+                        </div>
                     </div>
                 </form>
             </div>
