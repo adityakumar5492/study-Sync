@@ -38,8 +38,7 @@ const Room = () => {
 
     const dispatch = useAppDispatch();
 
-    const [activeTab, setActiveTab] =
-        useState("pdf");
+    const [activeTab, setActiveTab] = useState("pdf");
 
     /*
      * DESKTOP SIDEBAR
@@ -48,14 +47,15 @@ const Room = () => {
      * Communication panel stays on the left.
      *
      * Mobile:
-     * Communication panel is rendered BELOW
-     * the study workspace.
+     * Communication panel is controlled separately
+     * using mobilePanelOpen.
      */
-    const [sidebarOpen, setSidebarOpen] =
-        useState(true);
+    const [sidebarOpen, setSidebarOpen] = useState(true);
 
-    const [onlineUsers, setOnlineUsers] =
-        useState([]);
+    const [mobilePanelOpen, setMobilePanelOpen] =
+        useState(false);
+
+    const [onlineUsers, setOnlineUsers] = useState([]);
 
     const [drawingPermission, setDrawingPermission] =
         useState({
@@ -76,9 +76,7 @@ const Room = () => {
         currentRoom: room,
         loading,
         error,
-    } = useAppSelector(
-        (state) => state.room
-    );
+    } = useAppSelector((state) => state.room);
 
     const { user } = useAppSelector(
         (state) => state.auth
@@ -91,9 +89,7 @@ const Room = () => {
     const getUserId = (item) => {
         if (!item) return null;
 
-        if (
-            typeof item === "object"
-        ) {
+        if (typeof item === "object") {
             return (
                 item._id?.toString() ||
                 item.id?.toString() ||
@@ -109,30 +105,16 @@ const Room = () => {
     // UNIQUE ONLINE USERS
     // ===========================
 
-    /*
-     * Socket events can sometimes contain
-     * duplicate entries for the same user.
-     *
-     * A user must count only once.
-     */
     const uniqueOnlineUsers = useMemo(() => {
-        const users = Array.isArray(
-            onlineUsers
-        )
+        const users = Array.isArray(onlineUsers)
             ? onlineUsers
             : [];
 
         const seen = new Set();
 
         return users.filter((onlineUser) => {
-            const userId =
-                getUserId(onlineUser);
+            const userId = getUserId(onlineUser);
 
-            /*
-             * If a socket user does not contain
-             * an identifiable ID, keep it instead
-             * of accidentally removing valid data.
-             */
             if (!userId) {
                 return true;
             }
@@ -151,22 +133,15 @@ const Room = () => {
     // UNIQUE ROOM MEMBERS
     // ===========================
 
-    /*
-     * Same user should never visually appear
-     * multiple times in the participant list.
-     */
     const uniqueRoomMembers = useMemo(() => {
-        const members = Array.isArray(
-            room?.members
-        )
+        const members = Array.isArray(room?.members)
             ? room.members
             : [];
 
         const seen = new Set();
 
         return members.filter((member) => {
-            const memberId =
-                getUserId(member);
+            const memberId = getUserId(member);
 
             if (!memberId) {
                 return true;
@@ -185,9 +160,6 @@ const Room = () => {
     /*
      * Pass a deduplicated room object to the
      * communication UI without mutating Redux state.
-     *
-     * All other room logic still uses the original
-     * room object.
      */
     const communicationRoom = useMemo(() => {
         if (!room) return room;
@@ -216,12 +188,10 @@ const Room = () => {
 
     const isMember =
         uniqueRoomMembers.some((member) => {
-            const memberId =
-                getUserId(member);
+            const memberId = getUserId(member);
 
             return (
-                memberId ===
-                user?._id?.toString()
+                memberId === user?._id?.toString()
             );
         }) || false;
 
@@ -252,64 +222,41 @@ const Room = () => {
         // ONLINE USERS
         // ===========================
 
-        const handleOnlineUsers = ({
-            users,
-        }) => {
-            /*
-             * Deduplicate immediately when receiving
-             * the socket event.
-             *
-             * This prevents duplicate socket entries
-             * from reaching the UI.
-             */
-            const incomingUsers =
-                Array.isArray(users)
-                    ? users
-                    : [];
+        const handleOnlineUsers = ({ users }) => {
+            const incomingUsers = Array.isArray(users)
+                ? users
+                : [];
 
             const seen = new Set();
 
             const uniqueUsers =
-                incomingUsers.filter(
-                    (onlineUser) => {
-                        const userId =
-                            getUserId(
-                                onlineUser
-                            );
+                incomingUsers.filter((onlineUser) => {
+                    const userId =
+                        getUserId(onlineUser);
 
-                        if (!userId) {
-                            return true;
-                        }
-
-                        if (
-                            seen.has(
-                                userId
-                            )
-                        ) {
-                            return false;
-                        }
-
-                        seen.add(userId);
-
+                    if (!userId) {
                         return true;
                     }
-                );
 
-            setOnlineUsers(
-                uniqueUsers
-            );
+                    if (seen.has(userId)) {
+                        return false;
+                    }
+
+                    seen.add(userId);
+
+                    return true;
+                });
+
+            setOnlineUsers(uniqueUsers);
         };
 
         // ===========================
         // SOCKET ERROR
         // ===========================
 
-        const handleSocketError = (
-            message
-        ) => {
+        const handleSocketError = (message) => {
             toast.error(
-                message ||
-                    "Socket connection error."
+                message || "Socket connection error."
             );
         };
 
@@ -318,20 +265,14 @@ const Room = () => {
         // ===========================
 
         const handleMembersUpdated = () => {
-            dispatch(
-                getRoomThunk(
-                    room._id
-                )
-            );
+            dispatch(getRoomThunk(room._id));
         };
 
         // ===========================
         // USER REMOVED
         // ===========================
 
-        const handleRoomRemoved = ({
-            message,
-        }) => {
+        const handleRoomRemoved = ({ message }) => {
             toast.error(
                 message ||
                     "You have been removed from this room."
@@ -348,10 +289,7 @@ const Room = () => {
             roomId: requestRoomId,
             user: requestedUser,
         }) => {
-            if (
-                requestRoomId !==
-                room._id
-            ) {
+            if (requestRoomId !== room._id) {
                 return;
             }
 
@@ -361,19 +299,14 @@ const Room = () => {
 
             toast(
                 `${
-                    requestedUser?.name ||
-                    "A user"
+                    requestedUser?.name || "A user"
                 } requested to rejoin.`,
                 {
                     icon: "🔴",
                 }
             );
 
-            dispatch(
-                getRoomThunk(
-                    room._id
-                )
-            );
+            dispatch(getRoomThunk(room._id));
         };
 
         // ===========================
@@ -409,38 +342,29 @@ const Room = () => {
         // REGISTER USER
         // ===========================
 
-        socket.emit(
-            "user:register",
-            {
-                userId: user._id,
-            }
-        );
+        socket.emit("user:register", {
+            userId: user._id,
+        });
 
         // ===========================
         // JOIN ROOM
         // ===========================
 
-        socket.emit(
-            "room:join",
-            {
-                roomId: room._id,
-                user,
-                isHost,
-            }
-        );
+        socket.emit("room:join", {
+            roomId: room._id,
+            user,
+            isHost,
+        });
 
         // ===========================
         // CLEANUP
         // ===========================
 
         return () => {
-            socket.emit(
-                "room:leave",
-                {
-                    roomId: room._id,
-                    user,
-                }
-            );
+            socket.emit("room:leave", {
+                roomId: room._id,
+                user,
+            });
 
             socket.off(
                 "room:online-users",
@@ -485,9 +409,7 @@ const Room = () => {
             allowedUsers = [],
         }) => {
             setDrawingPermission({
-                mode:
-                    mode ||
-                    "everyone",
+                mode: mode || "everyone",
                 allowedUsers,
             });
         };
@@ -509,13 +431,8 @@ const Room = () => {
     // REMOVE MEMBER
     // ===========================
 
-    const handleRemoveMember = (
-        memberId
-    ) => {
-        if (
-            !room?._id ||
-            !memberId
-        ) {
+    const handleRemoveMember = (memberId) => {
+        if (!room?._id || !memberId) {
             return;
         }
 
@@ -527,14 +444,11 @@ const Room = () => {
             return;
         }
 
-        const member =
-            uniqueRoomMembers.find(
-                (participant) =>
-                    getUserId(
-                        participant
-                    ) ===
-                    memberId?.toString()
-            );
+        const member = uniqueRoomMembers.find(
+            (participant) =>
+                getUserId(participant) ===
+                memberId?.toString()
+        );
 
         if (!member) {
             return;
@@ -554,10 +468,7 @@ const Room = () => {
         const member =
             removeMemberModal.member;
 
-        if (
-            !room?._id ||
-            !member?._id
-        ) {
+        if (!room?._id || !member?._id) {
             setRemoveMemberModal({
                 open: false,
                 member: null,
@@ -568,14 +479,10 @@ const Room = () => {
 
         setRemovingMember(true);
 
-        socket.emit(
-            "room:remove-member",
-            {
-                roomId: room._id,
-                memberId:
-                    member._id,
-            }
-        );
+        socket.emit("room:remove-member", {
+            roomId: room._id,
+            memberId: member._id,
+        });
 
         setRemoveMemberModal({
             open: false,
@@ -617,18 +524,12 @@ const Room = () => {
             allowedUsers,
         };
 
-        setDrawingPermission(
-            permission
-        );
+        setDrawingPermission(permission);
 
-        socket.emit(
-            "drawing:permission-change",
-            {
-                roomId:
-                    room._id,
-                ...permission,
-            }
-        );
+        socket.emit("drawing:permission-change", {
+            roomId: room._id,
+            ...permission,
+        });
     };
 
     // ===========================
@@ -711,22 +612,7 @@ const Room = () => {
                 MAIN ROOM AREA
             ================================= */}
 
-            <div
-                className="
-                    flex
-                    min-h-0
-                    min-w-0
-                    flex-1
-                    flex-col
-                    overflow-y-auto
-                    overflow-x-hidden
-                    overscroll-contain
-                    bg-slate-950
-
-                    lg:flex-row
-                    lg:overflow-hidden
-                "
-            >
+            <div className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-slate-950 lg:flex-row">
 
                 {/* =================================
                     DESKTOP LEFT SIDEBAR
@@ -734,23 +620,7 @@ const Room = () => {
 
                 <aside
                     className={`
-                        relative
-                        hidden
-                        min-h-0
-                        shrink-0
-                        flex-col
-                        overflow-hidden
-                        border-r
-                        border-slate-800/80
-                        bg-slate-900
-                        shadow-2xl
-                        shadow-black/40
-                        transition-[width]
-                        duration-200
-                        ease-out
-
-                        lg:flex
-
+                        relative hidden min-h-0 shrink-0 flex-col overflow-hidden border-r border-slate-800/80 bg-slate-900 shadow-2xl shadow-black/40 transition-[width] duration-200 ease-out lg:flex
                         ${
                             sidebarOpen
                                 ? "lg:w-[320px] lg:max-w-[38vw]"
@@ -761,24 +631,14 @@ const Room = () => {
                     {sidebarOpen && (
                         <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
                             <RoomCommunication
-                                room={
-                                    communicationRoom
-                                }
-                                roomId={
-                                    room._id
-                                }
-                                currentUser={
-                                    user
-                                }
+                                room={communicationRoom}
+                                roomId={room._id}
+                                currentUser={user}
                                 onlineUsers={
                                     uniqueOnlineUsers
                                 }
-                                isHost={
-                                    isHost
-                                }
-                                isMember={
-                                    isMember
-                                }
+                                isHost={isHost}
+                                isMember={isMember}
                                 onRemoveMember={
                                     handleRemoveMember
                                 }
@@ -801,35 +661,11 @@ const Room = () => {
                     type="button"
                     onClick={() =>
                         setSidebarOpen(
-                            (open) =>
-                                !open
+                            (open) => !open
                         )
                     }
                     className={`
-                        absolute
-                        left-0
-                        top-1/2
-                        z-[100]
-                        hidden
-                        h-9
-                        w-9
-                        -translate-y-1/2
-                        items-center
-                        justify-center
-                        rounded-full
-                        border
-                        border-slate-700/80
-                        bg-slate-800/95
-                        text-slate-300
-                        shadow-xl
-                        shadow-black/30
-                        transition-all
-                        duration-200
-                        hover:bg-slate-700
-                        hover:text-white
-
-                        lg:flex
-
+                        absolute left-0 top-1/2 z-[100] hidden h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-slate-700/80 bg-slate-800/95 text-slate-300 shadow-xl shadow-black/30 transition-all duration-200 hover:bg-slate-700 hover:text-white lg:flex
                         ${
                             sidebarOpen
                                 ? "lg:left-[302px]"
@@ -848,114 +684,41 @@ const Room = () => {
                     }
                 >
                     {sidebarOpen ? (
-                        <FaChevronLeft
-                            size={11}
-                        />
+                        <FaChevronLeft size={11} />
                     ) : (
-                        <FaChevronRight
-                            size={11}
-                        />
+                        <FaChevronRight size={11} />
                     )}
                 </button>
 
                 {/* =================================
-                    STUDY + MOBILE COMMUNICATION
+                    STUDY WORKSPACE
                 ================================= */}
 
-                <div
-                    className="
-                        flex
-                        min-h-0
-                        min-w-0
-                        flex-col
-
-                        lg:flex-1
-                        lg:overflow-hidden
-                    "
-                >
+                <div className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
 
                     {/* =================================
                         MAIN STUDY WORKSPACE
                     ================================= */}
 
-                    <main
-                        className="
-                            flex
-                            min-h-[55dvh]
-                            h-[60dvh]
-                            w-full
-                            min-w-0
-                            shrink-0
-                            flex-col
-                            overflow-hidden
-                            bg-slate-950
-
-                            sm:min-h-[60dvh]
-                            sm:h-[65dvh]
-
-                            lg:h-auto
-                            lg:min-h-0
-                            lg:flex-1
-                        "
-                    >
+                    <main className="flex min-h-0 min-w-0 w-full flex-1 flex-col overflow-hidden bg-slate-950">
 
                         {/* =================================
                             WORKSPACE TABS
                         ================================= */}
 
-                        <div
-                            className="
-                                flex
-                                h-9
-                                min-h-9
-                                shrink-0
-                                border-b
-                                border-slate-800/80
-                                bg-slate-900/95
-                                px-1
-                                pt-1
-                                shadow-sm
-
-                                sm:h-10
-                                sm:min-h-10
-
-                                lg:h-11
-                                lg:min-h-11
-                            "
-                        >
+                        <div className="flex h-9 min-h-9 shrink-0 border-b border-slate-800/80 bg-slate-900/95 px-1 pt-1 shadow-sm sm:h-10 sm:min-h-10 lg:h-11 lg:min-h-11">
 
                             {/* PDF */}
 
                             <button
                                 type="button"
                                 onClick={() =>
-                                    setActiveTab(
-                                        "pdf"
-                                    )
+                                    setActiveTab("pdf")
                                 }
                                 className={`
-                                    flex
-                                    min-w-0
-                                    flex-1
-                                    items-center
-                                    justify-center
-                                    gap-1
-                                    rounded-t-lg
-                                    px-1.5
-                                    text-[10px]
-                                    font-semibold
-                                    transition-colors
-
-                                    sm:gap-1.5
-                                    sm:px-2
-                                    sm:text-xs
-
-                                    lg:px-3
-                                    lg:text-sm
-
+                                    flex min-w-0 flex-1 items-center justify-center gap-1 rounded-t-lg px-1.5 text-[10px] font-semibold transition-colors sm:gap-1.5 sm:px-2 sm:text-xs lg:px-3 lg:text-sm
                                     ${
-                                        activeTab ===
-                                        "pdf"
+                                        activeTab === "pdf"
                                             ? "bg-slate-800 text-green-400 shadow-sm"
                                             : "text-slate-500 hover:bg-slate-800/80 hover:text-slate-200"
                                     }
@@ -980,25 +743,7 @@ const Room = () => {
                                     )
                                 }
                                 className={`
-                                    flex
-                                    min-w-0
-                                    flex-1
-                                    items-center
-                                    justify-center
-                                    gap-1
-                                    rounded-t-lg
-                                    px-1.5
-                                    text-[10px]
-                                    font-semibold
-                                    transition-colors
-
-                                    sm:gap-1.5
-                                    sm:px-2
-                                    sm:text-xs
-
-                                    lg:px-3
-                                    lg:text-sm
-
+                                    flex min-w-0 flex-1 items-center justify-center gap-1 rounded-t-lg px-1.5 text-[10px] font-semibold transition-colors sm:gap-1.5 sm:px-2 sm:text-xs lg:px-3 lg:text-sm
                                     ${
                                         activeTab ===
                                         "whiteboard"
@@ -1021,53 +766,19 @@ const Room = () => {
                             STUDY WORKSPACE
                         ================================= */}
 
-                        <div
-                            className="
-                                min-h-0
-                                min-w-0
-                                flex-1
-                                overflow-hidden
-                                p-1
-
-                                sm:p-2
-
-                                lg:p-3
-                            "
-                        >
+                        <div className="min-h-0 min-w-0 flex-1 overflow-hidden p-1 sm:p-2 lg:p-3">
 
                             {/* =================================
                                 PDF
                             ================================= */}
 
-                            {activeTab ===
-                                "pdf" &&
+                            {activeTab === "pdf" &&
                                 room._id && (
-                                    <div
-                                        className="
-                                            h-full
-                                            min-h-0
-                                            min-w-0
-                                            overflow-hidden
-                                            rounded-lg
-                                            border
-                                            border-slate-800/80
-                                            bg-slate-900
-                                            shadow-xl
-                                            shadow-black/10
-
-                                            sm:rounded-xl
-                                        "
-                                    >
+                                    <div className="h-full min-h-0 min-w-0 overflow-hidden rounded-lg border border-slate-800/80 bg-slate-900 shadow-xl shadow-black/10 sm:rounded-xl">
                                         <PdfViewer
-                                            roomId={
-                                                room._id
-                                            }
-                                            room={
-                                                room
-                                            }
-                                            currentUser={
-                                                user
-                                            }
+                                            roomId={room._id}
+                                            room={room}
+                                            currentUser={user}
                                             drawingPermission={
                                                 drawingPermission
                                             }
@@ -1079,28 +790,10 @@ const Room = () => {
                                 WHITEBOARD
                             ================================= */}
 
-                            {activeTab ===
-                                "whiteboard" && (
-                                <div
-                                    className="
-                                        h-full
-                                        min-h-0
-                                        min-w-0
-                                        overflow-hidden
-                                        rounded-lg
-                                        border
-                                        border-slate-800/80
-                                        bg-white
-                                        shadow-xl
-                                        shadow-black/10
-
-                                        sm:rounded-xl
-                                    "
-                                >
+                            {activeTab === "whiteboard" && (
+                                <div className="h-full min-h-0 min-w-0 overflow-hidden rounded-lg border border-slate-800/80 bg-white shadow-xl shadow-black/10 sm:rounded-xl">
                                     <Whiteboard
-                                        roomId={
-                                            room._id
-                                        }
+                                        roomId={room._id}
                                     />
                                 </div>
                             )}
@@ -1108,56 +801,77 @@ const Room = () => {
                     </main>
 
                     {/* =================================
+                        MOBILE COMMUNICATION TOGGLE
+                    ================================= */}
+
+                    {!mobilePanelOpen && (
+                        <button
+                            type="button"
+                            onClick={() =>
+                                setMobilePanelOpen(true)
+                            }
+                            className="absolute bottom-3 right-3 z-30 rounded-xl border border-slate-700/80 bg-slate-800/95 px-3 py-2 text-[10px] font-semibold text-slate-300 shadow-xl shadow-black/30 backdrop-blur transition hover:bg-slate-700 hover:text-white lg:hidden"
+                            aria-label="Open communication"
+                        >
+                            💬 Communication
+                        </button>
+                    )}
+
+                    {/* =================================
                         MOBILE COMMUNICATION
                     ================================= */}
 
-                    <section
-                        className="
-                            flex
-                            min-h-[360px]
-                            w-full
-                            shrink-0
-                            flex-col
-                            overflow-hidden
-                            border-t
-                            border-slate-800/80
-                            bg-slate-900
+                    {mobilePanelOpen && (
+                        <section className="absolute inset-x-0 bottom-0 z-40 flex max-h-[70dvh] w-full flex-col overflow-hidden border-t border-slate-800/80 bg-slate-900 shadow-[0_-12px_40px_rgba(0,0,0,0.45)] lg:hidden">
 
-                            sm:min-h-[380px]
+                            {/* MOBILE PANEL HEADER */}
 
-                            lg:hidden
-                        "
-                    >
-                        <RoomCommunication
-                            room={
-                                communicationRoom
-                            }
-                            roomId={
-                                room._id
-                            }
-                            currentUser={
-                                user
-                            }
-                            onlineUsers={
-                                uniqueOnlineUsers
-                            }
-                            isHost={
-                                isHost
-                            }
-                            isMember={
-                                isMember
-                            }
-                            onRemoveMember={
-                                handleRemoveMember
-                            }
-                            drawingPermission={
-                                drawingPermission
-                            }
-                            onDrawingPermissionChange={
-                                handleDrawingPermissionChange
-                            }
-                        />
-                    </section>
+                            <div className="flex h-10 shrink-0 items-center justify-between border-b border-slate-800/80 bg-slate-950 px-3">
+                                <span className="text-xs font-semibold text-slate-300">
+                                    Communication
+                                </span>
+
+                                <button
+                                    type="button"
+                                    onClick={() =>
+                                        setMobilePanelOpen(
+                                            false
+                                        )
+                                    }
+                                    className="rounded-lg px-3 py-1.5 text-[10px] font-semibold text-slate-400 transition hover:bg-slate-800 hover:text-white"
+                                    aria-label="Hide communication"
+                                >
+                                    Hide
+                                </button>
+                            </div>
+
+                            {/* COMMUNICATION CONTENT */}
+
+                            <div className="min-h-0 flex-1 overflow-hidden">
+                                <RoomCommunication
+                                    room={
+                                        communicationRoom
+                                    }
+                                    roomId={room._id}
+                                    currentUser={user}
+                                    onlineUsers={
+                                        uniqueOnlineUsers
+                                    }
+                                    isHost={isHost}
+                                    isMember={isMember}
+                                    onRemoveMember={
+                                        handleRemoveMember
+                                    }
+                                    drawingPermission={
+                                        drawingPermission
+                                    }
+                                    onDrawingPermissionChange={
+                                        handleDrawingPermissionChange
+                                    }
+                                />
+                            </div>
+                        </section>
+                    )}
                 </div>
             </div>
 

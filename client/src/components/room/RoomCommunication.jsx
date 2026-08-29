@@ -7,7 +7,6 @@ import {
     FaPen,
     FaChevronUp,
     FaChevronDown,
-    FaTimes,
 } from "react-icons/fa";
 
 import Participants from "./Participants";
@@ -22,26 +21,26 @@ const RoomCommunication = ({
     isHost,
     isMember,
     onRemoveMember,
-
-    // Drawing permission
     drawingPermission,
     onDrawingPermissionChange,
 }) => {
     const [activePanel, setActivePanel] =
         useState("participants");
 
-    // Mobile drawer starts closed.
+    // Mobile communication drawer
     const [mobileOpen, setMobileOpen] =
         useState(false);
 
+    // Mobile communication controls
+    const [mobileControlsOpen, setMobileControlsOpen] =
+        useState(false);
+
     // ===========================
-    // Normalize User ID
+    // NORMALIZE USER ID
     // ===========================
 
     const getUserId = (user) => {
-        if (!user) {
-            return null;
-        }
+        if (!user) return null;
 
         if (typeof user === "string") {
             return user;
@@ -60,7 +59,7 @@ const RoomCommunication = ({
     };
 
     // ===========================
-    // Unique Room Members
+    // UNIQUE ROOM MEMBERS
     // ===========================
 
     const uniqueMembers = Array.from(
@@ -84,7 +83,7 @@ const RoomCommunication = ({
     );
 
     // ===========================
-    // Unique Online Users
+    // UNIQUE ONLINE USERS
     // ===========================
 
     const uniqueOnlineUsers = Array.from(
@@ -108,7 +107,7 @@ const RoomCommunication = ({
     );
 
     // ===========================
-    // Participant Counts
+    // COUNTS
     // ===========================
 
     const participantsCount =
@@ -118,7 +117,7 @@ const RoomCommunication = ({
         uniqueOnlineUsers.length;
 
     // ===========================
-    // Current User
+    // CURRENT USER
     // ===========================
 
     const currentUserId =
@@ -136,104 +135,75 @@ const RoomCommunication = ({
         );
 
     // ===========================
-    // Mobile Panel Handler
+    // MOBILE PANEL CHANGE
     // ===========================
 
     const handlePanelChange = (panel) => {
         setActivePanel(panel);
         setMobileOpen(true);
+
+        // Important:
+        // After selecting a panel, hide all four
+        // communication buttons so the selected
+        // panel gets maximum available space.
+        setMobileControlsOpen(false);
     };
 
     // ===========================
-    // Panel Button
+    // MOBILE TOGGLE
+    // ===========================
+
+    const toggleMobileCommunication = () => {
+        setMobileOpen(
+            (previous) => !previous
+        );
+    };
+
+    // ===========================
+    // MOBILE CONTROLS
+    // ===========================
+
+    const toggleMobileControls = () => {
+        setMobileControlsOpen(
+            (previous) => !previous
+        );
+    };
+
+    // ===========================
+    // PANEL BUTTON CLASS
     // ===========================
 
     const panelButtonClass = (panel) => `
-        flex
-        min-w-0
-        items-center
-        justify-center
-        gap-1.5
-        rounded-xl
-        px-1
-        py-2.5
-        text-[9px]
-        font-semibold
-        transition-all
-        duration-200
-
-        sm:px-1.5
-        sm:py-3
-        sm:text-[11px]
-
+        flex min-w-0 items-center justify-center gap-1.5
+        rounded-lg px-1 py-2 text-[9px] font-semibold
+        transition-all duration-200
+        sm:px-1.5 sm:py-2.5 sm:text-[10px]
         ${
             activePanel === panel
-                ? "bg-emerald-500/10 text-emerald-400 shadow-sm"
+                ? "bg-emerald-500/10 text-emerald-400"
                 : "text-slate-400 hover:bg-slate-800/80 hover:text-slate-200"
         }
     `;
 
     // ===========================
-    // Drawing Content
+    // DRAWING CONTENT
     // ===========================
 
     const drawingContent = (
-        <div
-            className="
-                h-full
-                min-h-0
-                min-w-0
-                overflow-y-auto
-                overflow-x-hidden
-                p-2.5
-
-                sm:p-3
-                lg:p-4
-            "
-        >
-            {/* Drawing Header */}
-
-            <div
-                className="
-                    mb-3
-                    rounded-xl
-                    border
-                    border-slate-800/80
-                    bg-slate-950/50
-                    p-3
-                    shadow-sm
-
-                    sm:mb-4
-                    sm:p-4
-                "
-            >
+        <div className="h-full min-h-0 min-w-0 overflow-y-auto overflow-x-hidden p-2.5 sm:p-3 lg:p-4">
+            <div className="mb-3 rounded-xl border border-slate-800/80 bg-slate-950/50 p-3 shadow-sm sm:mb-4 sm:p-4">
                 <h3 className="text-sm font-semibold tracking-tight text-white sm:text-base">
                     Drawing Access
                 </h3>
 
                 <p className="mt-1 text-[9px] leading-4 text-slate-500 sm:text-xs sm:leading-5">
-                    Choose who can annotate
-                    the PDF.
+                    Choose who can annotate the PDF.
                 </p>
             </div>
 
-            {/* Host Controls */}
-
             {isHost && (
-                <div
-                    className="
-                        space-y-1.5
-                        rounded-xl
-                        border
-                        border-slate-800/80
-                        bg-slate-950/40
-                        p-1.5
-
-                        sm:space-y-2
-                        sm:p-2
-                    "
-                >
-                    {/* Host Only */}
+                <div className="space-y-1.5 rounded-xl border border-slate-800/80 bg-slate-950/40 p-1.5 sm:space-y-2 sm:p-2">
+                    {/* HOST ONLY */}
 
                     <button
                         type="button"
@@ -243,41 +213,12 @@ const RoomCommunication = ({
                                 allowedUsers: [],
                             })
                         }
-                        className="
-                            flex
-                            w-full
-                            items-center
-                            gap-2.5
-                            rounded-lg
-                            border
-                            border-transparent
-                            px-2.5
-                            py-2
-                            text-left
-                            text-[11px]
-                            text-slate-300
-                            transition-colors
-                            hover:border-slate-700/70
-                            hover:bg-slate-800/80
-                            hover:text-white
-
-                            sm:gap-3
-                            sm:px-3
-                            sm:py-2.5
-                            sm:text-sm
-                        "
+                        className="flex w-full items-center gap-2.5 rounded-lg border border-transparent px-2.5 py-2 text-left text-[11px] text-slate-300 transition-colors hover:border-slate-700/70 hover:bg-slate-800/80 hover:text-white sm:gap-3 sm:px-3 sm:py-2.5 sm:text-sm"
                     >
                         <span
                             className={`
-                                flex
-                                h-4
-                                w-4
-                                shrink-0
-                                items-center
-                                justify-center
-                                rounded-full
-                                border-2
-
+                                flex h-4 w-4 shrink-0 items-center justify-center
+                                rounded-full border-2
                                 ${
                                     drawingPermission?.mode ===
                                     "none"
@@ -297,7 +238,7 @@ const RoomCommunication = ({
                         </span>
                     </button>
 
-                    {/* Everyone */}
+                    {/* EVERYONE */}
 
                     <button
                         type="button"
@@ -307,41 +248,12 @@ const RoomCommunication = ({
                                 allowedUsers: [],
                             })
                         }
-                        className="
-                            flex
-                            w-full
-                            items-center
-                            gap-2.5
-                            rounded-lg
-                            border
-                            border-transparent
-                            px-2.5
-                            py-2
-                            text-left
-                            text-[11px]
-                            text-slate-300
-                            transition-colors
-                            hover:border-slate-700/70
-                            hover:bg-slate-800/80
-                            hover:text-white
-
-                            sm:gap-3
-                            sm:px-3
-                            sm:py-2.5
-                            sm:text-sm
-                        "
+                        className="flex w-full items-center gap-2.5 rounded-lg border border-transparent px-2.5 py-2 text-left text-[11px] text-slate-300 transition-colors hover:border-slate-700/70 hover:bg-slate-800/80 hover:text-white sm:gap-3 sm:px-3 sm:py-2.5 sm:text-sm"
                     >
                         <span
                             className={`
-                                flex
-                                h-4
-                                w-4
-                                shrink-0
-                                items-center
-                                justify-center
-                                rounded-full
-                                border-2
-
+                                flex h-4 w-4 shrink-0 items-center justify-center
+                                rounded-full border-2
                                 ${
                                     drawingPermission?.mode ===
                                     "everyone"
@@ -361,7 +273,7 @@ const RoomCommunication = ({
                         </span>
                     </button>
 
-                    {/* Selected Users */}
+                    {/* SELECTED USERS */}
 
                     <button
                         type="button"
@@ -373,41 +285,12 @@ const RoomCommunication = ({
                                     [],
                             })
                         }
-                        className="
-                            flex
-                            w-full
-                            items-center
-                            gap-2.5
-                            rounded-lg
-                            border
-                            border-transparent
-                            px-2.5
-                            py-2
-                            text-left
-                            text-[11px]
-                            text-slate-300
-                            transition-colors
-                            hover:border-slate-700/70
-                            hover:bg-slate-800/80
-                            hover:text-white
-
-                            sm:gap-3
-                            sm:px-3
-                            sm:py-2.5
-                            sm:text-sm
-                        "
+                        className="flex w-full items-center gap-2.5 rounded-lg border border-transparent px-2.5 py-2 text-left text-[11px] text-slate-300 transition-colors hover:border-slate-700/70 hover:bg-slate-800/80 hover:text-white sm:gap-3 sm:px-3 sm:py-2.5 sm:text-sm"
                     >
                         <span
                             className={`
-                                flex
-                                h-4
-                                w-4
-                                shrink-0
-                                items-center
-                                justify-center
-                                rounded-full
-                                border-2
-
+                                flex h-4 w-4 shrink-0 items-center justify-center
+                                rounded-full border-2
                                 ${
                                     drawingPermission?.mode ===
                                     "selected"
@@ -427,7 +310,7 @@ const RoomCommunication = ({
                         </span>
                     </button>
 
-                    {/* User List */}
+                    {/* SELECTED USER LIST */}
 
                     {drawingPermission?.mode ===
                         "selected" && (
@@ -447,15 +330,7 @@ const RoomCommunication = ({
                                 </span>
                             </div>
 
-                            <div
-                                className="
-                                    max-h-[min(16rem,42vh)]
-                                    space-y-1
-                                    overflow-y-auto
-                                    overflow-x-hidden
-                                    pr-1
-                                "
-                            >
+                            <div className="max-h-[min(14rem,30vh)] space-y-1 overflow-y-auto overflow-x-hidden pr-1">
                                 {uniqueMembers.map(
                                     (member) => {
                                         const userId =
@@ -468,9 +343,11 @@ const RoomCommunication = ({
                                         }
 
                                         const selected =
-                                            drawingPermission?.allowedUsers?.includes(
-                                                userId
-                                            );
+                                            drawingPermission
+                                                ?.allowedUsers
+                                                ?.includes(
+                                                    userId
+                                                );
 
                                         const name =
                                             member?.name ||
@@ -484,7 +361,8 @@ const RoomCommunication = ({
                                                 type="button"
                                                 onClick={() => {
                                                     const current =
-                                                        drawingPermission?.allowedUsers ||
+                                                        drawingPermission
+                                                            ?.allowedUsers ||
                                                         [];
 
                                                     const next =
@@ -509,42 +387,12 @@ const RoomCommunication = ({
                                                         }
                                                     );
                                                 }}
-                                                className="
-                                                    flex
-                                                    w-full
-                                                    min-w-0
-                                                    items-center
-                                                    gap-2.5
-                                                    rounded-lg
-                                                    border
-                                                    border-transparent
-                                                    px-2.5
-                                                    py-2
-                                                    text-left
-                                                    text-[11px]
-                                                    text-slate-300
-                                                    transition-colors
-                                                    hover:border-slate-700/70
-                                                    hover:bg-slate-800/80
-                                                    hover:text-white
-
-                                                    sm:gap-3
-                                                    sm:px-3
-                                                    sm:py-2.5
-                                                    sm:text-sm
-                                                "
+                                                className="flex w-full min-w-0 items-center gap-2.5 rounded-lg border border-transparent px-2.5 py-2 text-left text-[11px] text-slate-300 transition-colors hover:border-slate-700/70 hover:bg-slate-800/80 hover:text-white sm:gap-3 sm:px-3 sm:py-2.5 sm:text-sm"
                                             >
                                                 <span
                                                     className={`
-                                                        flex
-                                                        h-4
-                                                        w-4
-                                                        shrink-0
-                                                        items-center
-                                                        justify-center
-                                                        rounded
-                                                        border
-
+                                                        flex h-4 w-4 shrink-0 items-center justify-center
+                                                        rounded border
                                                         ${
                                                             selected
                                                                 ? "border-green-500 bg-green-500"
@@ -572,40 +420,15 @@ const RoomCommunication = ({
                 </div>
             )}
 
-            {/* Member Status */}
+            {/* MEMBER STATUS */}
 
             {!isHost && (
-                <div
-                    className="
-                        rounded-xl
-                        border
-                        border-slate-800/80
-                        bg-gradient-to-b
-                        from-slate-900
-                        to-slate-950
-                        p-3
-                        shadow-lg
-                        shadow-black/10
-
-                        sm:rounded-2xl
-                        sm:p-4
-                        lg:p-5
-                    "
-                >
+                <div className="rounded-xl border border-slate-800/80 bg-gradient-to-b from-slate-900 to-slate-950 p-3 shadow-lg shadow-black/10 sm:rounded-2xl sm:p-4 lg:p-5">
                     <div
                         className={`
-                            mb-3
-                            flex
-                            h-10
-                            w-10
-                            items-center
-                            justify-center
+                            mb-3 flex h-10 w-10 items-center justify-center
                             rounded-xl
-
-                            sm:mb-4
-                            sm:h-11
-                            sm:w-11
-
+                            sm:mb-4 sm:h-11 sm:w-11
                             ${
                                 canDraw
                                     ? "bg-green-500/10 text-green-400"
@@ -633,135 +456,175 @@ const RoomCommunication = ({
     );
 
     // ===========================
-    // Main
+    // MOBILE ACTIVE PANEL
+    // ===========================
+
+    const mobilePanelContent = (
+        <div className="min-h-0 overflow-hidden">
+            {activePanel === "participants" && (
+                <div className="flex max-h-[30vh] min-h-0 flex-col">
+                    <div className="flex shrink-0 items-center justify-between border-b border-slate-800/70 px-3 py-2">
+                        <div className="flex min-w-0 items-center gap-2">
+                            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-green-500/10 text-green-400">
+                                <FaUsers className="text-[10px]" />
+                            </div>
+
+                            <div className="min-w-0">
+                                <p className="truncate text-[10px] font-bold text-white">
+                                    Live Participants
+                                </p>
+
+                                <p className="mt-0.5 truncate text-[8px] text-slate-600">
+                                    {participantsCount}{" "}
+                                    {participantsCount ===
+                                    1
+                                        ? "participant"
+                                        : "participants"}
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="flex shrink-0 items-center gap-1.5 rounded-full border border-emerald-400/10 bg-emerald-500/[0.06] px-2 py-1">
+                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+
+                            <span className="text-[8px] font-bold text-emerald-400">
+                                {onlineCount} online
+                            </span>
+                        </div>
+                    </div>
+
+                    <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain">
+                        <Participants
+                            room={room}
+                            roomId={roomId}
+                            participants={
+                                uniqueMembers
+                            }
+                            onlineUsers={
+                                uniqueOnlineUsers
+                            }
+                            onRemoveMember={
+                                onRemoveMember
+                            }
+                        />
+                    </div>
+                </div>
+            )}
+
+            {activePanel === "chat" && (
+                <div className="h-[30vh] min-h-0 overflow-hidden">
+                    <ChatPanel
+                        roomId={roomId}
+                        isHost={isHost}
+                        isMember={isMember}
+                    />
+                </div>
+            )}
+
+            {activePanel === "voice" && (
+                <div className="max-h-[30vh] min-h-0 overflow-y-auto overflow-x-hidden">
+                    <VoicePanel
+                        roomId={roomId}
+                        currentUser={currentUser}
+                    />
+                </div>
+            )}
+
+            {activePanel === "drawing" && (
+                <div className="max-h-[30vh] min-h-0 overflow-y-auto overflow-x-hidden">
+                    {drawingContent}
+                </div>
+            )}
+        </div>
+    );
+
+    // ===========================
+    // MAIN
     // ===========================
 
     return (
         <>
             {/* =====================================================
-                MOBILE COMMUNICATION DRAWER
-                -----------------------------------------------------
-                IMPORTANT:
-                This is FIXED on mobile, so it does NOT consume
-                any space from the PDF/layout.
+                MOBILE COMMUNICATION
             ====================================================== */}
 
-            <div
-                className="
-                    fixed
-                    bottom-0
-                    left-0
-                    right-0
-                    z-50
-                    px-3
-                    pb-3
-
-                    lg:hidden
-                "
-            >
+            <div className="fixed bottom-0 left-0 right-0 z-50 px-2 pb-2 sm:px-3 sm:pb-3 lg:hidden">
                 <div
                     className={`
-                        mx-auto
-                        w-full
-                        max-w-xl
-                        overflow-hidden
-                        rounded-2xl
-                        border
-                        border-slate-700/80
-                        bg-slate-900/95
-                        shadow-2xl
-                        shadow-black/40
+                        mx-auto w-full max-w-xl overflow-hidden
+                        rounded-2xl border border-slate-700/80
+                        bg-slate-900/95 shadow-2xl shadow-black/40
                         backdrop-blur-xl
-                        transition-all
-                        duration-200
-                        ${
-                            mobileOpen
-                                ? "max-h-[48vh]"
-                                : "max-h-[56px]"
-                        }
                     `}
                 >
-                    {/* =================================================
-                        MOBILE HEADER / HANDLE
-                    ================================================== */}
+                    {/* MOBILE HEADER */}
 
-                    <div
-                        className="
-                            flex
-                            h-12
-                            shrink-0
-                            items-center
-                            justify-center
-                            border-b
-                            border-slate-800/80
-                        "
-                    >
+                    <div className="flex h-11 shrink-0 items-center border-b border-slate-800/80">
                         <button
                             type="button"
-                            onClick={() =>
-                                setMobileOpen(
-                                    (previous) =>
-                                        !previous
-                                )
+                            onClick={
+                                toggleMobileCommunication
                             }
-                            className="
-                                flex
-                                h-full
-                                w-full
-                                items-center
-                                justify-center
-                                gap-2
-                                text-[11px]
-                                font-semibold
-                                text-slate-400
-                                transition-colors
-                                hover:text-white
-                            "
+                            className="flex h-full min-w-0 flex-1 items-center justify-center gap-2 px-3 text-[10px] font-semibold text-slate-400 transition-colors hover:text-white"
                             aria-label={
                                 mobileOpen
-                                    ? "Hide communication controls"
-                                    : "Show communication controls"
+                                    ? "Hide communication"
+                                    : "Show communication"
                             }
                         >
                             {mobileOpen ? (
                                 <>
-                                    <FaChevronDown className="text-[9px]" />
-                                    <span>
+                                    <FaChevronDown className="text-[8px]" />
+
+                                    <span className="truncate">
                                         Hide
                                     </span>
                                 </>
                             ) : (
                                 <>
-                                    <FaChevronUp className="text-[9px]" />
-                                    <span>
+                                    <FaChevronUp className="text-[8px]" />
+
+                                    <span className="truncate">
                                         Communication
                                     </span>
                                 </>
                             )}
                         </button>
+
+                        {mobileOpen && (
+                            <button
+                                type="button"
+                                onClick={
+                                    toggleMobileControls
+                                }
+                                className={`
+                                    mr-1.5 flex h-8 shrink-0 items-center
+                                    justify-center rounded-lg px-2.5
+                                    text-[9px] font-semibold transition-colors
+                                    ${
+                                        mobileControlsOpen
+                                            ? "bg-slate-800 text-emerald-400"
+                                            : "text-slate-500 hover:bg-slate-800 hover:text-white"
+                                    }
+                                `}
+                                aria-label="Communication controls"
+                            >
+                                {mobileControlsOpen
+                                    ? "Hide controls"
+                                    : "Controls"}
+                            </button>
+                        )}
                     </div>
 
                     {/* =================================================
-                        MOBILE CONTENT
+                        MOBILE CONTROLS
+                        Only visible when explicitly requested.
                     ================================================== */}
 
-                    {mobileOpen && (
-                        <>
-                            {/* Communication Tabs */}
-
-                            <div
-                                className="
-                                    grid
-                                    shrink-0
-                                    grid-cols-4
-                                    gap-1
-                                    border-b
-                                    border-slate-800/80
-                                    bg-slate-950/40
-                                    p-1.5
-                                "
-                            >
-                                {/* Participants */}
+                    {mobileOpen &&
+                        mobileControlsOpen && (
+                            <div className="grid grid-cols-4 gap-1 border-b border-slate-800/80 bg-slate-950/40 p-1.5">
+                                {/* PARTICIPANTS */}
 
                                 <button
                                     type="button"
@@ -774,34 +637,20 @@ const RoomCommunication = ({
                                         "participants"
                                     )}
                                 >
-                                    <FaUsers className="shrink-0 text-[10px]" />
+                                    <FaUsers className="shrink-0 text-[9px]" />
 
                                     <span className="truncate">
                                         People
                                     </span>
 
-                                    <span
-                                        className={`
-                                            shrink-0
-                                            rounded-full
-                                            px-1.5
-                                            py-0.5
-                                            text-[8px]
-                                            leading-none
-
-                                            ${
-                                                activePanel ===
-                                                "participants"
-                                                    ? "bg-emerald-500/10 text-emerald-400"
-                                                    : "bg-slate-800 text-slate-500"
-                                            }
-                                        `}
-                                    >
-                                        {participantsCount}
+                                    <span className="shrink-0 rounded-full bg-slate-800 px-1.5 py-0.5 text-[8px] leading-none text-slate-500">
+                                        {
+                                            participantsCount
+                                        }
                                     </span>
                                 </button>
 
-                                {/* Chat */}
+                                {/* CHAT */}
 
                                 <button
                                     type="button"
@@ -814,14 +663,14 @@ const RoomCommunication = ({
                                         "chat"
                                     )}
                                 >
-                                    <FaComments className="shrink-0 text-[10px]" />
+                                    <FaComments className="shrink-0 text-[9px]" />
 
                                     <span className="truncate">
                                         Chat
                                     </span>
                                 </button>
 
-                                {/* Voice */}
+                                {/* VOICE */}
 
                                 <button
                                     type="button"
@@ -834,14 +683,14 @@ const RoomCommunication = ({
                                         "voice"
                                     )}
                                 >
-                                    <FaMicrophone className="shrink-0 text-[10px]" />
+                                    <FaMicrophone className="shrink-0 text-[9px]" />
 
                                     <span className="truncate">
                                         Voice
                                     </span>
                                 </button>
 
-                                {/* Drawing */}
+                                {/* DRAWING */}
 
                                 <button
                                     type="button"
@@ -854,251 +703,38 @@ const RoomCommunication = ({
                                         "drawing"
                                     )}
                                 >
-                                    <FaPen className="shrink-0 text-[10px]" />
+                                    <FaPen className="shrink-0 text-[9px]" />
 
                                     <span className="truncate">
                                         Drawing
                                     </span>
                                 </button>
                             </div>
+                        )}
 
-                            {/* =================================================
-                                MOBILE ACTIVE PANEL
-                            ================================================== */}
+                    {/* =================================================
+                        MOBILE ACTIVE PANEL
 
-                            <div
-                                className="
-                                    min-h-0
-                                    overflow-hidden
-                                "
-                            >
-                                {activePanel ===
-                                    "participants" && (
-                                    <div
-                                        className="
-                                            flex
-                                            max-h-[38vh]
-                                            min-h-0
-                                            flex-col
-                                        "
-                                    >
-                                        {/* Participant Summary */}
+                        IMPORTANT:
+                        The four buttons are NOT kept open here.
+                        Only the selected panel remains visible.
+                    ================================================== */}
 
-                                        <div
-                                            className="
-                                                flex
-                                                shrink-0
-                                                items-center
-                                                justify-between
-                                                border-b
-                                                border-slate-800/70
-                                                px-3
-                                                py-2
-                                            "
-                                        >
-                                            <div className="flex min-w-0 items-center gap-2">
-                                                <div
-                                                    className="
-                                                        flex
-                                                        h-7
-                                                        w-7
-                                                        shrink-0
-                                                        items-center
-                                                        justify-center
-                                                        rounded-lg
-                                                        bg-green-500/10
-                                                        text-green-400
-                                                    "
-                                                >
-                                                    <FaUsers className="text-[10px]" />
-                                                </div>
-
-                                                <div className="min-w-0">
-                                                    <p className="truncate text-[10px] font-bold text-white">
-                                                        Live Participants
-                                                    </p>
-
-                                                    <p className="mt-0.5 truncate text-[8px] text-slate-600">
-                                                        {
-                                                            participantsCount
-                                                        }{" "}
-                                                        {participantsCount ===
-                                                        1
-                                                            ? "participant"
-                                                            : "participants"}
-                                                    </p>
-                                                </div>
-                                            </div>
-
-                                            <div
-                                                className="
-                                                    flex
-                                                    shrink-0
-                                                    items-center
-                                                    gap-1.5
-                                                    rounded-full
-                                                    border
-                                                    border-emerald-400/10
-                                                    bg-emerald-500/[0.06]
-                                                    px-2
-                                                    py-1
-                                                "
-                                            >
-                                                <span
-                                                    className="
-                                                        h-1.5
-                                                        w-1.5
-                                                        rounded-full
-                                                        bg-emerald-400
-                                                    "
-                                                />
-
-                                                <span className="text-[8px] font-bold text-emerald-400">
-                                                    {
-                                                        onlineCount
-                                                    }{" "}
-                                                    online
-                                                </span>
-                                            </div>
-                                        </div>
-
-                                        {/* Participants */}
-
-                                        <div
-                                            className="
-                                                min-h-0
-                                                flex-1
-                                                overflow-y-auto
-                                                overflow-x-hidden
-                                                overscroll-contain
-                                            "
-                                        >
-                                            <Participants
-                                                room={room}
-                                                roomId={
-                                                    roomId
-                                                }
-                                                participants={
-                                                    uniqueMembers
-                                                }
-                                                onlineUsers={
-                                                    uniqueOnlineUsers
-                                                }
-                                                onRemoveMember={
-                                                    onRemoveMember
-                                                }
-                                            />
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* CHAT */}
-
-                                {activePanel ===
-                                    "chat" && (
-                                    <div
-                                        className="
-                                            h-[38vh]
-                                            min-h-0
-                                            overflow-hidden
-                                        "
-                                    >
-                                        <ChatPanel
-                                            roomId={
-                                                roomId
-                                            }
-                                            isHost={
-                                                isHost
-                                            }
-                                            isMember={
-                                                isMember
-                                            }
-                                        />
-                                    </div>
-                                )}
-
-                                {/* VOICE */}
-
-                                {activePanel ===
-                                    "voice" && (
-                                    <div
-                                        className="
-                                            max-h-[38vh]
-                                            min-h-0
-                                            overflow-y-auto
-                                            overflow-x-hidden
-                                        "
-                                    >
-                                        <VoicePanel
-                                            roomId={
-                                                roomId
-                                            }
-                                            currentUser={
-                                                currentUser
-                                            }
-                                        />
-                                    </div>
-                                )}
-
-                                {/* DRAWING */}
-
-                                {activePanel ===
-                                    "drawing" && (
-                                    <div
-                                        className="
-                                            max-h-[38vh]
-                                            min-h-0
-                                            overflow-y-auto
-                                            overflow-x-hidden
-                                        "
-                                    >
-                                        {drawingContent}
-                                    </div>
-                                )}
-                            </div>
-                        </>
-                    )}
+                    {mobileOpen &&
+                        mobilePanelContent}
                 </div>
             </div>
 
             {/* =====================================================
                 DESKTOP COMMUNICATION SIDEBAR
-                -----------------------------------------------------
-                UNCHANGED BEHAVIOR.
-                Everything below lg remains the existing sidebar.
+                DO NOT CHANGE DESKTOP BEHAVIOUR
             ====================================================== */}
 
-            <div
-                className="
-                    hidden
-                    h-full
-                    min-h-0
-                    min-w-0
-                    flex-col
-                    overflow-hidden
-                    bg-slate-950
+            <div className="hidden h-full min-h-0 min-w-0 flex-col overflow-hidden bg-slate-950 lg:flex">
+                {/* DESKTOP TABS */}
 
-                    lg:flex
-                "
-            >
-                {/* Communication Tabs */}
-
-                <div
-                    className="
-                        grid
-                        shrink-0
-                        grid-cols-4
-                        gap-px
-                        border-b
-                        border-slate-800/80
-                        bg-slate-900/95
-                        px-0.5
-                        pt-0.5
-                        shadow-lg
-                        shadow-black/10
-                    "
-                >
-                    {/* Participants */}
+                <div className="grid shrink-0 grid-cols-4 gap-px border-b border-slate-800/80 bg-slate-900/95 px-0.5 pt-0.5 shadow-lg shadow-black/10">
+                    {/* PARTICIPANTS */}
 
                     <button
                         type="button"
@@ -1108,24 +744,10 @@ const RoomCommunication = ({
                             )
                         }
                         className={`
-                            flex
-                            min-w-0
-                            items-center
-                            justify-center
-                            gap-1
-                            overflow-hidden
-                            rounded-t-lg
-                            px-1
-                            py-2.5
-                            text-[10px]
-                            font-semibold
-                            transition-colors
-
-                            sm:gap-1.5
-                            sm:px-1.5
-                            sm:py-3
-                            sm:text-[11px]
-
+                            flex min-w-0 items-center justify-center gap-1
+                            overflow-hidden rounded-t-lg px-1 py-2.5
+                            text-[10px] font-semibold transition-colors
+                            sm:gap-1.5 sm:px-1.5 sm:py-3 sm:text-[11px]
                             ${
                                 activePanel ===
                                 "participants"
@@ -1140,29 +762,12 @@ const RoomCommunication = ({
                             Participants
                         </span>
 
-                        <span
-                            className={`
-                                shrink-0
-                                rounded-full
-                                px-1.5
-                                py-0.5
-                                text-[8px]
-                                font-bold
-                                leading-none
-
-                                ${
-                                    activePanel ===
-                                    "participants"
-                                        ? "bg-green-500/10 text-green-400"
-                                        : "bg-slate-800 text-slate-500"
-                                }
-                            `}
-                        >
+                        <span className="shrink-0 rounded-full bg-slate-800 px-1.5 py-0.5 text-[8px] font-bold leading-none text-slate-500">
                             {participantsCount}
                         </span>
                     </button>
 
-                    {/* Chat */}
+                    {/* CHAT */}
 
                     <button
                         type="button"
@@ -1170,26 +775,12 @@ const RoomCommunication = ({
                             setActivePanel("chat")
                         }
                         className={`
-                            flex
-                            min-w-0
-                            items-center
-                            justify-center
-                            gap-1.5
-                            overflow-hidden
-                            rounded-t-lg
-                            px-1
-                            py-2.5
-                            text-[10px]
-                            font-semibold
-                            transition-colors
-
-                            sm:px-1.5
-                            sm:py-3
-                            sm:text-[11px]
-
+                            flex min-w-0 items-center justify-center gap-1.5
+                            overflow-hidden rounded-t-lg px-1 py-2.5
+                            text-[10px] font-semibold transition-colors
+                            sm:px-1.5 sm:py-3 sm:text-[11px]
                             ${
-                                activePanel ===
-                                "chat"
+                                activePanel === "chat"
                                     ? "bg-slate-800 text-green-400 shadow-sm"
                                     : "text-slate-500 hover:bg-slate-800/80 hover:text-slate-200"
                             }
@@ -1202,7 +793,7 @@ const RoomCommunication = ({
                         </span>
                     </button>
 
-                    {/* Voice */}
+                    {/* VOICE */}
 
                     <button
                         type="button"
@@ -1210,26 +801,12 @@ const RoomCommunication = ({
                             setActivePanel("voice")
                         }
                         className={`
-                            flex
-                            min-w-0
-                            items-center
-                            justify-center
-                            gap-1.5
-                            overflow-hidden
-                            rounded-t-lg
-                            px-1
-                            py-2.5
-                            text-[10px]
-                            font-semibold
-                            transition-colors
-
-                            sm:px-1.5
-                            sm:py-3
-                            sm:text-[11px]
-
+                            flex min-w-0 items-center justify-center gap-1.5
+                            overflow-hidden rounded-t-lg px-1 py-2.5
+                            text-[10px] font-semibold transition-colors
+                            sm:px-1.5 sm:py-3 sm:text-[11px]
                             ${
-                                activePanel ===
-                                "voice"
+                                activePanel === "voice"
                                     ? "bg-slate-800 text-green-400 shadow-sm"
                                     : "text-slate-500 hover:bg-slate-800/80 hover:text-slate-200"
                             }
@@ -1242,31 +819,20 @@ const RoomCommunication = ({
                         </span>
                     </button>
 
-                    {/* Drawing */}
+                    {/* DRAWING */}
 
                     <button
                         type="button"
                         onClick={() =>
-                            setActivePanel("drawing")
+                            setActivePanel(
+                                "drawing"
+                            )
                         }
                         className={`
-                            flex
-                            min-w-0
-                            items-center
-                            justify-center
-                            gap-1.5
-                            overflow-hidden
-                            rounded-t-lg
-                            px-1
-                            py-2.5
-                            text-[10px]
-                            font-semibold
-                            transition-colors
-
-                            sm:px-1.5
-                            sm:py-3
-                            sm:text-[11px]
-
+                            flex min-w-0 items-center justify-center gap-1.5
+                            overflow-hidden rounded-t-lg px-1 py-2.5
+                            text-[10px] font-semibold transition-colors
+                            sm:px-1.5 sm:py-3 sm:text-[11px]
                             ${
                                 activePanel ===
                                 "drawing"
@@ -1283,53 +849,17 @@ const RoomCommunication = ({
                     </button>
                 </div>
 
-                {/* Desktop Active Panel */}
+                {/* DESKTOP ACTIVE PANEL */}
 
-                <div
-                    className="
-                        flex
-                        min-h-0
-                        min-w-0
-                        flex-1
-                        flex-col
-                        overflow-hidden
-                        bg-slate-900/70
-                    "
-                >
-                    {/* Participants */}
+                <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-slate-900/70">
+                    {/* PARTICIPANTS */}
 
                     {activePanel ===
                         "participants" && (
                         <div className="flex h-full min-h-0 min-w-0 flex-col">
-                            <div
-                                className="
-                                    flex
-                                    shrink-0
-                                    items-center
-                                    justify-between
-                                    border-b
-                                    border-slate-800/70
-                                    px-3
-                                    py-2.5
-
-                                    sm:px-4
-                                    sm:py-3
-                                "
-                            >
+                            <div className="flex shrink-0 items-center justify-between border-b border-slate-800/70 px-3 py-2.5 sm:px-4 sm:py-3">
                                 <div className="flex min-w-0 items-center gap-2">
-                                    <div
-                                        className="
-                                            flex
-                                            h-7
-                                            w-7
-                                            shrink-0
-                                            items-center
-                                            justify-center
-                                            rounded-lg
-                                            bg-green-500/10
-                                            text-green-400
-                                        "
-                                    >
+                                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-green-500/10 text-green-400">
                                         <FaUsers className="text-[10px]" />
                                     </div>
 
@@ -1350,20 +880,7 @@ const RoomCommunication = ({
                                     </div>
                                 </div>
 
-                                <div
-                                    className="
-                                        flex
-                                        shrink-0
-                                        items-center
-                                        gap-1.5
-                                        rounded-full
-                                        border
-                                        border-emerald-400/10
-                                        bg-emerald-500/[0.06]
-                                        px-2
-                                        py-1
-                                    "
-                                >
+                                <div className="flex shrink-0 items-center gap-1.5 rounded-full border border-emerald-400/10 bg-emerald-500/[0.06] px-2 py-1">
                                     <span className="relative flex h-1.5 w-1.5">
                                         <span className="absolute inset-0 rounded-full bg-emerald-400 opacity-40" />
 
@@ -1377,16 +894,7 @@ const RoomCommunication = ({
                                 </div>
                             </div>
 
-                            <div
-                                className="
-                                    min-h-0
-                                    min-w-0
-                                    flex-1
-                                    overflow-y-auto
-                                    overflow-x-hidden
-                                    overscroll-contain
-                                "
-                            >
+                            <div className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain">
                                 <Participants
                                     room={room}
                                     roomId={roomId}
@@ -1404,7 +912,7 @@ const RoomCommunication = ({
                         </div>
                     )}
 
-                    {/* Chat */}
+                    {/* CHAT */}
 
                     {activePanel === "chat" && (
                         <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
@@ -1416,7 +924,7 @@ const RoomCommunication = ({
                         </div>
                     )}
 
-                    {/* Voice */}
+                    {/* VOICE */}
 
                     {activePanel === "voice" && (
                         <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
@@ -1429,7 +937,7 @@ const RoomCommunication = ({
                         </div>
                     )}
 
-                    {/* Drawing */}
+                    {/* DRAWING */}
 
                     {activePanel === "drawing" &&
                         drawingContent}
