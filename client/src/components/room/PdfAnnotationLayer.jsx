@@ -95,6 +95,7 @@ const PdfAnnotationLayer = ({
 
     const erasingRef = useRef(false);
     const erasedInDragRef = useRef(new Set());
+    const activeTouchPointersRef = useRef(new Set());
 
     const [annotationToolbarOpen, setAnnotationToolbarOpen] =
         useState(false);
@@ -750,6 +751,27 @@ const PdfAnnotationLayer = ({
     const handlePointerDown = (
         event
     ) => {
+        if (event.pointerType === "touch") {
+            activeTouchPointersRef.current.add(
+                event.pointerId
+            );
+
+            if (activeTouchPointersRef.current.size > 1) {
+                drawingRef.current = false;
+                erasingRef.current = false;
+                currentStrokeRef.current = null;
+                lineStartRef.current = null;
+
+                if (syncTimerRef.current) {
+                    clearTimeout(syncTimerRef.current);
+                    syncTimerRef.current = null;
+                }
+
+                redraw();
+                return;
+            }
+        }
+
         if (
             !enabled ||
             !canDraw ||
@@ -964,6 +986,12 @@ const PdfAnnotationLayer = ({
     const handlePointerUp = (
         event
     ) => {
+        if (event.pointerType === "touch") {
+            activeTouchPointersRef.current.delete(
+                event.pointerId
+            );
+        }
+
         if (erasingRef.current) {
             erasingRef.current = false;
 
@@ -1299,15 +1327,7 @@ const PdfAnnotationLayer = ({
 
     const toggleToolbar = () => {
         setAnnotationToolbarOpen(
-            (open) => {
-                const next = !open;
-
-                if (!next) {
-                    setActiveTool(null);
-                }
-
-                return next;
-            }
+            (open) => !open
         );
     };
 

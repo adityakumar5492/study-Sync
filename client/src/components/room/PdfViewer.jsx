@@ -340,6 +340,15 @@ useEffect(() => {
     const zoomCommitTimeoutRef =
         useRef(null);
 
+    const pinchRef = useRef({
+        active: false,
+        startDistance: 0,
+        startZoom: 1,
+    });
+
+    const zoomRef = useRef(zoom);
+    zoomRef.current = zoom;
+
     useEffect(() => {
         if (
             zoomCommitTimeoutRef.current
@@ -366,7 +375,7 @@ useEffect(() => {
     }, [zoom]);
 
     // ===========================
-    // Touchpad Pinch Zoom
+    // Touchpad + Mobile Pinch Zoom
     // ===========================
 
     useEffect(() => {
@@ -424,11 +433,122 @@ useEffect(() => {
             }
         );
 
+        const getTouchDistance = (touches) => {
+            const first = touches[0];
+            const second = touches[1];
+
+            return Math.hypot(
+                second.clientX - first.clientX,
+                second.clientY - first.clientY
+            );
+        };
+
+        const handleTouchStart = (e) => {
+            if (e.touches.length !== 2) return;
+
+            const distance =
+                getTouchDistance(e.touches);
+
+            if (!distance) return;
+
+            pinchRef.current = {
+                active: true,
+                startDistance: distance,
+                startZoom: zoomRef.current,
+            };
+        };
+
+        const handleTouchMove = (e) => {
+            if (
+                !pinchRef.current.active ||
+                e.touches.length !== 2
+            ) {
+                return;
+            }
+
+            e.preventDefault();
+
+            const distance =
+                getTouchDistance(e.touches);
+
+            if (!distance || !pinchRef.current.startDistance) {
+                return;
+            }
+
+            const scale =
+                distance /
+                pinchRef.current.startDistance;
+
+            const nextZoom = Math.min(
+                3,
+                Math.max(
+                    0.5,
+                    pinchRef.current.startZoom * scale
+                )
+            );
+
+            setZoom(
+                Number(nextZoom.toFixed(2))
+            );
+        };
+
+        const handleTouchEnd = (e) => {
+            if (e.touches.length < 2) {
+                pinchRef.current.active = false;
+            }
+        };
+
+        element.addEventListener(
+            "touchstart",
+            handleTouchStart,
+            { passive: true }
+        );
+
+        element.addEventListener(
+            "touchmove",
+            handleTouchMove,
+            { passive: false }
+        );
+
+        element.addEventListener(
+            "touchend",
+            handleTouchEnd,
+            { passive: true }
+        );
+
+        element.addEventListener(
+            "touchcancel",
+            handleTouchEnd,
+            { passive: true }
+        );
+
         return () => {
             element.removeEventListener(
                 "wheel",
                 handleWheel
             );
+
+            element.removeEventListener(
+                "touchstart",
+                handleTouchStart
+            );
+
+            element.removeEventListener(
+                "touchmove",
+                handleTouchMove
+            );
+
+            element.removeEventListener(
+                "touchend",
+                handleTouchEnd
+            );
+
+            element.removeEventListener(
+                "touchcancel",
+                handleTouchEnd
+            );
+
+            pinchRef.current.active = false;
         };
     }, []);
 
@@ -1342,12 +1462,13 @@ useEffect(() => {
 
                 <div
                     ref={viewerRef}
-                    className="absolute inset-0 overflow-auto bg-[#030306] p-2 sm:p-3 md:p-4 lg:p-5"
+                    className="absolute inset-0 overflow-auto bg-[#030306] p-2 pb-20 sm:p-3 sm:pb-3 md:p-4 lg:p-5"
                     style={{
                         overscrollBehavior: "contain",
                         scrollbarWidth: "thin",
                         WebkitOverflowScrolling: "touch",
-                        touchAction: "pan-x pan-y",
+                        touchAction: "pan-x pan-y pinch-zoom",
+                        paddingBottom: "calc(5rem + env(safe-area-inset-bottom))",
                     }}
                 >
                     {pdfUrl ? (
