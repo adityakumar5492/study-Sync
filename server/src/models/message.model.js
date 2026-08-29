@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
 
-const messageStatusSchema = new mongoose.Schema(
+const messageRecipientSchema = new mongoose.Schema(
     {
         user: {
             type: mongoose.Schema.Types.ObjectId,
@@ -39,15 +39,27 @@ const messageSchema = new mongoose.Schema(
             maxlength: 1000,
         },
 
-        // Users whose socket has received this message.
+        /*
+         * =========================================================
+         * MESSAGE DELIVERY / READ STATUS
+         *
+         * deliveredTo:
+         * User is connected to the room and has received the
+         * message, but may not have opened the Chat panel.
+         *
+         * seenBy:
+         * User has actually opened/entered the Chat panel and
+         * the message has been marked as read.
+         * =========================================================
+         */
+
         deliveredTo: {
-            type: [messageStatusSchema],
+            type: [messageRecipientSchema],
             default: [],
         },
 
-        // Users who have actually opened/read this message.
         seenBy: {
-            type: [messageStatusSchema],
+            type: [messageRecipientSchema],
             default: [],
         },
     },
@@ -56,6 +68,22 @@ const messageSchema = new mongoose.Schema(
     }
 );
 
-messageSchema.index({ room: 1, createdAt: 1 });
+messageSchema.index({
+    room: 1,
+    createdAt: 1,
+});
 
-module.exports = mongoose.model("Message", messageSchema);
+messageSchema.index({
+    room: 1,
+    "deliveredTo.user": 1,
+});
+
+messageSchema.index({
+    room: 1,
+    "seenBy.user": 1,
+});
+
+module.exports = mongoose.model(
+    "Message",
+    messageSchema
+);

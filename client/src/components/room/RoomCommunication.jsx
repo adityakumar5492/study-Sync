@@ -41,6 +41,51 @@ const RoomCommunication = ({
 
     /*
      * =========================================================
+     * UNREAD CHAT MESSAGES
+     *
+     * ChatPanel is mounted only while the Chat tab is open.
+     * Therefore the unread count is controlled by ChatPanel
+     * while it is open, and reset when ChatPanel becomes active.
+     *
+     * IMPORTANT:
+     * Do not mark messages as seen from this component.
+     * ChatPanel owns delivered/seen events because it represents
+     * the actual visible chat section.
+     * =========================================================
+     */
+
+    const [unreadMessageCount, setUnreadMessageCount] =
+        useState(0);
+
+    const handleUnreadCountChange = useCallback(
+        (count) => {
+            const normalizedCount =
+                Number.isFinite(Number(count))
+                    ? Math.max(0, Number(count))
+                    : 0;
+
+            setUnreadMessageCount(
+                normalizedCount
+            );
+        },
+        []
+    );
+
+    /*
+     * When Chat becomes active, ChatPanel mounts and handles
+     * the actual read state. Clear the navigation badge
+     * immediately so the button does not keep showing stale
+     * unread messages while the chat is being opened.
+     */
+
+    useEffect(() => {
+        if (activePanel === "chat") {
+            setUnreadMessageCount(0);
+        }
+    }, [activePanel]);
+
+    /*
+     * =========================================================
      * MOBILE KEYBOARD / VISUAL VIEWPORT
      *
      * IMPORTANT:
@@ -272,6 +317,10 @@ const RoomCommunication = ({
 
     const handlePanelChange = useCallback(
         (panel) => {
+            if (panel === "chat") {
+                setUnreadMessageCount(0);
+            }
+
             if (activePanel === panel) {
                 setMobileOpen(
                     (previous) => !previous
@@ -285,6 +334,19 @@ const RoomCommunication = ({
         },
         [activePanel]
     );
+
+    // ===========================
+    // DESKTOP PANEL CHANGE
+    // ===========================
+
+    const handleDesktopPanelChange =
+        useCallback((panel) => {
+            if (panel === "chat") {
+                setUnreadMessageCount(0);
+            }
+
+            setActivePanel(panel);
+        }, []);
 
     // ===========================
     // MOBILE CLOSE
@@ -542,6 +604,18 @@ const RoomCommunication = ({
     );
 
     // ===========================
+    // CHAT BADGE
+    // ===========================
+
+    const chatBadge = unreadMessageCount > 0 && (
+        <span className="shrink-0 rounded-full bg-green-500 px-1.5 py-0.5 text-[8px] font-bold leading-none text-slate-950">
+            {unreadMessageCount > 99
+                ? "99+"
+                : unreadMessageCount}
+        </span>
+    );
+
+    // ===========================
     // MOBILE ACTIVE PANEL
     // ===========================
 
@@ -596,6 +670,9 @@ const RoomCommunication = ({
                         roomId={roomId}
                         isHost={isHost}
                         isMember={isMember}
+                        onUnreadCountChange={
+                            handleUnreadCountChange
+                        }
                     />
                 </div>
             )}
@@ -620,10 +697,6 @@ const RoomCommunication = ({
     /*
      * =========================================================
      * MOBILE DRAWER STYLE
-     *
-     * When visualViewport exists, use its exact height.
-     *
-     * This is the important part for keyboard handling.
      * =========================================================
      */
 
@@ -754,11 +827,6 @@ const RoomCommunication = ({
 
                 {/* =================================================
                     MOBILE BOTTOM DOCK
-
-                    Hide it while the communication drawer is open.
-                    This is especially important while typing because
-                    the keyboard should have only one persistent
-                    bottom interaction area: ChatPanel's composer.
                 ================================================== */}
 
                 {!mobileOpen && (
@@ -796,7 +864,7 @@ const RoomCommunication = ({
                                         "chat"
                                     )
                                 }
-                                className="flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-xl px-1 py-2 text-[9px] font-semibold text-slate-400 transition-all duration-200 hover:bg-slate-800/80 hover:text-slate-200 sm:px-1.5 sm:py-2.5 sm:text-[10px]"
+                                className="relative flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-xl px-1 py-2 text-[9px] font-semibold text-slate-400 transition-all duration-200 hover:bg-slate-800/80 hover:text-slate-200 sm:px-1.5 sm:py-2.5 sm:text-[10px]"
                                 aria-label="Open chat"
                             >
                                 <FaComments className="shrink-0 text-[9px]" />
@@ -804,6 +872,8 @@ const RoomCommunication = ({
                                 <span className="hidden truncate xs:inline sm:inline">
                                     Chat
                                 </span>
+
+                                {chatBadge}
                             </button>
 
                             {/* VOICE */}
@@ -850,7 +920,6 @@ const RoomCommunication = ({
 
             {/* =====================================================
                 DESKTOP COMMUNICATION SIDEBAR
-                UNCHANGED BEHAVIOUR
             ====================================================== */}
 
             <div className="hidden h-full min-h-0 min-w-0 flex-col overflow-hidden bg-slate-950 lg:flex">
@@ -862,7 +931,7 @@ const RoomCommunication = ({
                     <button
                         type="button"
                         onClick={() =>
-                            setActivePanel(
+                            handleDesktopPanelChange(
                                 "participants"
                             )
                         }
@@ -889,7 +958,9 @@ const RoomCommunication = ({
                     <button
                         type="button"
                         onClick={() =>
-                            setActivePanel("chat")
+                            handleDesktopPanelChange(
+                                "chat"
+                            )
                         }
                         className={`flex min-w-0 items-center justify-center gap-1.5 overflow-hidden rounded-t-lg px-1 py-2.5 text-[10px] font-semibold transition-colors sm:px-1.5 sm:py-3 sm:text-[11px] ${
                             activePanel ===
@@ -903,6 +974,8 @@ const RoomCommunication = ({
                         <span className="truncate">
                             Chat
                         </span>
+
+                        {chatBadge}
                     </button>
 
                     {/* VOICE */}
@@ -910,7 +983,9 @@ const RoomCommunication = ({
                     <button
                         type="button"
                         onClick={() =>
-                            setActivePanel("voice")
+                            handleDesktopPanelChange(
+                                "voice"
+                            )
                         }
                         className={`flex min-w-0 items-center justify-center gap-1.5 overflow-hidden rounded-t-lg px-1 py-2.5 text-[10px] font-semibold transition-colors sm:px-1.5 sm:py-3 sm:text-[11px] ${
                             activePanel ===
@@ -931,7 +1006,7 @@ const RoomCommunication = ({
                     <button
                         type="button"
                         onClick={() =>
-                            setActivePanel(
+                            handleDesktopPanelChange(
                                 "drawing"
                             )
                         }
@@ -1018,6 +1093,9 @@ const RoomCommunication = ({
                                 roomId={roomId}
                                 isHost={isHost}
                                 isMember={isMember}
+                                onUnreadCountChange={
+                                    handleUnreadCountChange
+                                }
                             />
                         </div>
                     )}
