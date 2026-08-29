@@ -1,3 +1,5 @@
+import { memo } from "react";
+
 import {
     FaTrash,
     FaUserCircle,
@@ -70,7 +72,53 @@ const MessageStatus = ({
     );
 };
 
+/*
+ * ================================================================
+ * PERFORMANCE NOTES (mobile chat audit)
+ * ================================================================
+ *
+ * This component previously ran THREE continuous, infinite
+ * Framer Motion animations PER MESSAGE:
+ *
+ *   1. Avatar glow (opacity + scale loop)
+ *   2. Online presence dot (opacity loop)
+ *   3. Own-message shimmer sweep (x-translate loop)
+ *
+ * Framer Motion drives these via JavaScript on every
+ * requestAnimationFrame tick. With a chat history of even a
+ * modest length, that is dozens of concurrent JS-driven
+ * animations competing with scroll compositing on a mobile CPU
+ * -- a well-known cause of exactly the "slow scrolling / messages
+ * don't feel persistent" symptom reported.
+ *
+ * Fix:
+ *   - Avatar glow + presence dot now use Tailwind's built-in
+ *     `animate-pulse`, which is a pure CSS keyframe animation.
+ *     CSS animations run on the compositor thread, not the main
+ *     JS thread, so they stay cheap no matter how many messages
+ *     are on screen.
+ *   - The own-message shimmer sweep was purely decorative and
+ *     required a continuous JS-driven translateX loop with no
+ *     equivalent cheap CSS alternative available without adding
+ *     a new global stylesheet (out of scope for this fix). It has
+ *     been replaced with a static soft highlight that preserves
+ *     the same visual language (a subtle light band on sent
+ *     bubbles) without any continuous animation cost.
+ *   - The one-time mount/entrance animation and the hover
+ *     interactions are left untouched -- they are not continuous
+ *     and are not part of the reported performance problem.
+ *
+ * Also: this component is now wrapped in `memo()`, and instead of
+ * receiving a fresh inline `onDelete` closure per render (which
+ * previously defeated memoization entirely), it receives a stable
+ * `messageId` + stable `onDelete(messageId)` callback. This lets
+ * React actually skip re-rendering bubbles that haven't changed
+ * when new messages are appended to a long chat history.
+ * ================================================================
+ */
+
 const MessageBubble = ({
+    messageId,
     sender,
     text,
     time,
@@ -134,17 +182,13 @@ const MessageBubble = ({
                 }}
                 className="relative mt-1 h-10 w-10 flex-shrink-0"
             >
-                <motion.div
-                    animate={{
-                        opacity: [0.15, 0.35, 0.15],
-                        scale: [0.9, 1.05, 0.9],
-                    }}
-                    transition={{
-                        duration: 3.5,
-                        repeat: Infinity,
-                        ease: "easeInOut",
-                    }}
-                    className={`absolute inset-0 rounded-full blur-md ${
+                {/*
+                 * Avatar glow.
+                 * CSS-only pulse (compositor thread) instead of a
+                 * per-message Framer Motion JS animation loop.
+                 */}
+                <div
+                    className={`absolute inset-0 animate-pulse rounded-full opacity-25 blur-md ${
                         isOwn
                             ? "bg-violet-500"
                             : "bg-cyan-400"
@@ -175,16 +219,11 @@ const MessageBubble = ({
                     </div>
                 )}
 
-                <motion.span
-                    animate={{
-                        opacity: [0.6, 1, 0.6],
-                    }}
-                    transition={{
-                        duration: 2,
-                        repeat: Infinity,
-                    }}
-                    className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-[#07070c] bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,.8)]"
-                />
+                {/*
+                 * Online presence dot.
+                 * CSS-only pulse instead of a per-message JS loop.
+                 */}
+                <span className="absolute bottom-0 right-0 h-2.5 w-2.5 animate-pulse rounded-full border-2 border-[#07070c] bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,.8)]" />
             </motion.div>
 
             {/* ==========================================
@@ -237,7 +276,11 @@ const MessageBubble = ({
                             whileTap={{
                                 scale: 0.9,
                             }}
-                            onClick={onDelete}
+                            onClick={() =>
+                                onDelete(
+                                    messageId
+                                )
+                            }
                             className="ml-1 flex h-6 w-6 items-center justify-center rounded-lg border border-transparent text-zinc-500 transition-all duration-200 hover:border-red-400/10 hover:bg-red-500/10 hover:text-red-400"
                             aria-label="Delete message"
                         >
@@ -265,22 +308,18 @@ const MessageBubble = ({
                             : "rounded-tl-md border border-white/[0.07] bg-white/[0.045] text-zinc-200 shadow-black/20 backdrop-blur-xl"
                     }`}
                 >
+                    {/*
+                     * Static soft highlight band on own messages.
+                     *
+                     * Previously an infinite Framer Motion
+                     * translateX sweep re-running on every
+                     * message. That is purely decorative, so it
+                     * has been replaced with a static highlight
+                     * that preserves the same visual language
+                     * without any continuous animation cost.
+                     */}
                     {isOwn && (
-                        <motion.div
-                            animate={{
-                                x: [
-                                    "-120%",
-                                    "120%",
-                                ],
-                            }}
-                            transition={{
-                                duration: 3.5,
-                                repeat: Infinity,
-                                repeatDelay: 2,
-                                ease: "linear",
-                            }}
-                            className="pointer-events-none absolute inset-y-0 left-0 w-8 rotate-12 bg-white/20 blur-md"
-                        />
+                        <div className="pointer-events-none absolute inset-y-0 left-0 w-10 -rotate-12 bg-white/10 blur-md" />
                     )}
 
                     {!isOwn && (
@@ -320,4 +359,4 @@ const MessageBubble = ({
     );
 };
 
-export default MessageBubble;
+export default memo(MessageBubble);
