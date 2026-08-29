@@ -34,11 +34,11 @@ const TOOLS = {
     ERASER: "eraser",
 };
 
-const getToolConfig = (tool) => {
+const getToolConfig = (tool, color = null) => {
     switch (tool) {
         case TOOLS.HIGHLIGHTER:
             return {
-                color: "#facc15",
+                color: color || "#facc15",
                 opacity: 0.35,
                 lineWidth: 18,
             };
@@ -52,7 +52,7 @@ const getToolConfig = (tool) => {
 
         case TOOLS.LINE:
             return {
-                color: "#22c55e",
+                color: color || "#22c55e",
                 opacity: 1,
                 lineWidth: 3,
             };
@@ -60,7 +60,7 @@ const getToolConfig = (tool) => {
         case TOOLS.PEN:
         default:
             return {
-                color: "#22c55e",
+                color: color || "#22c55e",
                 opacity: 1,
                 lineWidth: 3,
             };
@@ -95,7 +95,6 @@ const PdfAnnotationLayer = ({
 
     const erasingRef = useRef(false);
     const erasedInDragRef = useRef(new Set());
-    const activeTouchPointersRef = useRef(new Set());
 
     const [annotationToolbarOpen, setAnnotationToolbarOpen] =
         useState(false);
@@ -103,8 +102,17 @@ const PdfAnnotationLayer = ({
     const [activeTool, setActiveTool] =
         useState(null);
 
+    const [toolColors, setToolColors] = useState({
+        [TOOLS.PEN]: "#22c55e",
+        [TOOLS.HIGHLIGHTER]: "#facc15",
+        [TOOLS.LINE]: "#22c55e",
+    });
+
     const [portalNode, setPortalNode] =
         useState(null);
+
+    const rafRef = useRef(null);
+    const lastDrawPointRef = useRef(null);
 
     useEffect(() => {
         if (containerRef?.current) {
@@ -231,6 +239,43 @@ const PdfAnnotationLayer = ({
     };
 
     // ===========================
+    // Fast incremental drawing
+    // ===========================
+
+    const drawSegment = useCallback((stroke, from, to) => {
+        const canvas = canvasRef.current;
+        if (!canvas || !from || !to || !size.width || !size.height) {
+            return;
+        }
+
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return;
+
+        const dpr = window.devicePixelRatio || 1;
+
+        ctx.save();
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+
+        if (stroke.tool === TOOLS.ERASER) {
+            ctx.globalCompositeOperation = "destination-out";
+            ctx.globalAlpha = 1;
+        } else {
+            ctx.globalCompositeOperation = "source-over";
+            ctx.strokeStyle = stroke.color;
+            ctx.globalAlpha = stroke.opacity;
+        }
+
+        ctx.lineWidth = stroke.lineWidth;
+        ctx.beginPath();
+        ctx.moveTo(from.x * size.width, from.y * size.height);
+        ctx.lineTo(to.x * size.width, to.y * size.height);
+        ctx.stroke();
+        ctx.restore();
+    }, [size.width, size.height]);
+
+    // ===========================
     // Redraw
     // ===========================
 
@@ -322,6 +367,21 @@ const PdfAnnotationLayer = ({
         size.height,
         getPageData,
     ]);
+
+    const scheduleRedraw = useCallback(() => {
+        if (rafRef.current) return;
+
+        rafRef.current = requestAnimationFrame(() => {
+            rafRef.current = null;
+            redraw();
+        });
+    }, [redraw]);
+
+    useEffect(() => () => {
+        if (rafRef.current) {
+            cancelAnimationFrame(rafRef.current);
+        }
+    }, []);
 
     // ===========================
     // Real-time annotations
@@ -751,27 +811,6 @@ const PdfAnnotationLayer = ({
     const handlePointerDown = (
         event
     ) => {
-        if (event.pointerType === "touch") {
-            activeTouchPointersRef.current.add(
-                event.pointerId
-            );
-
-            if (activeTouchPointersRef.current.size > 1) {
-                drawingRef.current = false;
-                erasingRef.current = false;
-                currentStrokeRef.current = null;
-                lineStartRef.current = null;
-
-                if (syncTimerRef.current) {
-                    clearTimeout(syncTimerRef.current);
-                    syncTimerRef.current = null;
-                }
-
-                redraw();
-                return;
-            }
-        }
-
         if (
             !enabled ||
             !canDraw ||
@@ -816,7 +855,8 @@ const PdfAnnotationLayer = ({
 
         const config =
             getToolConfig(
-                activeTool
+                activeTool,
+                toolColors[activeTool]
             );
 
         const strokeId =
@@ -859,6 +899,8 @@ const PdfAnnotationLayer = ({
         canvas.setPointerCapture?.(
             event.pointerId
         );
+
+        lastDrawPointRef.current = position;
 
         if (
             roomId &&
@@ -919,20 +961,30 @@ const PdfAnnotationLayer = ({
                 event
             );
 
+        const previousPoint =
+            lastDrawPointRef.current || position;
+
         if (
             activeTool ===
             TOOLS.LINE
         ) {
-            currentStrokeRef.current.points =
-                [
-                    lineStartRef.current,
-                    position,
-                ];
+            currentStrokeRef.current.points = [
+                lineStartRef.current,
+                position,
+            ];
+            scheduleRedraw();
         } else {
             currentStrokeRef.current.points.push(
                 position
             );
+            drawSegment(
+                currentStrokeRef.current,
+                previousPoint,
+                position
+            );
         }
+
+        lastDrawPointRef.current = position;
 
         if (
             roomId &&
@@ -976,7 +1028,9 @@ const PdfAnnotationLayer = ({
             }
         }
 
-        redraw();
+        if (activeTool === TOOLS.LINE) {
+            scheduleRedraw();
+        }
     };
 
     // ===========================
@@ -986,12 +1040,6 @@ const PdfAnnotationLayer = ({
     const handlePointerUp = (
         event
     ) => {
-        if (event.pointerType === "touch") {
-            activeTouchPointersRef.current.delete(
-                event.pointerId
-            );
-        }
-
         if (erasingRef.current) {
             erasingRef.current = false;
 
@@ -1074,6 +1122,7 @@ const PdfAnnotationLayer = ({
 
         lineStartRef.current =
             null;
+        lastDrawPointRef.current = null;
 
         if (
             !stroke ||
@@ -1327,7 +1376,11 @@ const PdfAnnotationLayer = ({
 
     const toggleToolbar = () => {
         setAnnotationToolbarOpen(
-            (open) => !open
+            (open) => {
+                const next = !open;
+
+                return next;
+            }
         );
     };
 
@@ -1387,6 +1440,34 @@ const PdfAnnotationLayer = ({
             return <FaMinus />;
 
         return <FaEraser />;
+    };
+
+    // ===========================
+    // Annotation colors
+    // ===========================
+
+    const colorOptions = [
+        "#22c55e",
+        "#3b82f6",
+        "#a855f7",
+        "#ef4444",
+        "#f97316",
+        "#facc15",
+        "#ffffff",
+    ];
+
+    const activeColor =
+        toolColors[activeTool] || "#22c55e";
+
+    const selectColor = (color) => {
+        if (!activeTool || activeTool === TOOLS.SELECT || activeTool === TOOLS.ERASER) {
+            return;
+        }
+
+        setToolColors((current) => ({
+            ...current,
+            [activeTool]: color,
+        }));
     };
 
     // ===========================
@@ -1629,6 +1710,32 @@ const PdfAnnotationLayer = ({
                             )}
                         </motion.button>
 
+                        {activeTool &&
+                            activeTool !== TOOLS.SELECT &&
+                            activeTool !== TOOLS.ERASER && (
+                                <>
+                                    <span className="mx-1 h-7 w-px bg-white/[0.07]" />
+
+                                    <div className="flex items-center gap-1 rounded-xl border border-white/[0.06] bg-white/[0.025] px-1.5 py-1.5">
+                                        {colorOptions.map((color) => (
+                                            <button
+                                                key={color}
+                                                type="button"
+                                                onClick={() => selectColor(color)}
+                                                title={`Color ${color}`}
+                                                aria-label={`Select color ${color}`}
+                                                className={`h-5 w-5 rounded-full border transition-transform ${
+                                                    activeColor === color
+                                                        ? "scale-110 border-white shadow-[0_0_0_2px_rgba(255,255,255,.12)]"
+                                                        : "border-white/10 hover:scale-105"
+                                                }`}
+                                                style={{ backgroundColor: color }}
+                                            />
+                                        ))}
+                                    </div>
+                                </>
+                            )}
+
                         <span className="mx-1 h-7 w-px bg-white/[0.07]" />
 
                         {/* UNDO */}
@@ -1843,6 +1950,41 @@ const PdfAnnotationLayer = ({
             </div>
 
             {/* ==========================================
+                ANNOTATION CANVAS
+            ========================================== */}
+
+            <canvas
+                ref={canvasRef}
+                className="absolute left-0 top-0 z-20"
+                style={{
+                    touchAction: "none",
+                    pointerEvents:
+                        enabled &&
+                        canDraw &&
+                        activeTool &&
+                        activeTool !==
+                            TOOLS.SELECT
+                            ? "auto"
+                            : "none",
+                }}
+                onPointerDown={
+                    handlePointerDown
+                }
+                onPointerMove={
+                    handlePointerMove
+                }
+                onPointerUp={
+                    handlePointerUp
+                }
+                onPointerCancel={
+                    handlePointerUp
+                }
+            />
+
+            {portalNode &&
+                createPortal(
+                    <>
+            {/* ==========================================
                 LIVE ANNOTATION STATUS
             ========================================== */}
 
@@ -1865,7 +2007,7 @@ const PdfAnnotationLayer = ({
                                 opacity: 0,
                                 x: -10,
                             }}
-                            className="pointer-events-none absolute left-4 top-3 z-[80] flex items-center gap-2 rounded-xl border border-white/[0.08] bg-[#08080d]/85 px-3 py-2 shadow-[0_12px_40px_rgba(0,0,0,.3)] backdrop-blur-2xl"
+                            className="pointer-events-none absolute left-3 top-3 z-[120] flex items-center gap-2 rounded-xl border border-white/[0.08] bg-[#08080d]/85 px-3 py-2 shadow-[0_12px_40px_rgba(0,0,0,.3)] backdrop-blur-2xl"
                         >
                             <span className="relative flex h-2 w-2">
                                 <motion.span
@@ -1921,37 +2063,9 @@ const PdfAnnotationLayer = ({
                     )}
             </AnimatePresence>
 
-            {/* ==========================================
-                ANNOTATION CANVAS
-            ========================================== */}
-
-            <canvas
-                ref={canvasRef}
-                className="absolute left-0 top-0 z-20"
-                style={{
-                    touchAction: "none",
-                    pointerEvents:
-                        enabled &&
-                        canDraw &&
-                        activeTool &&
-                        activeTool !==
-                            TOOLS.SELECT
-                            ? "auto"
-                            : "none",
-                }}
-                onPointerDown={
-                    handlePointerDown
-                }
-                onPointerMove={
-                    handlePointerMove
-                }
-                onPointerUp={
-                    handlePointerUp
-                }
-                onPointerCancel={
-                    handlePointerUp
-                }
-            />
+                    </>,
+                    portalNode
+                )}
 
             {/* ==========================================
                 PORTALED TOOLBAR
