@@ -21,6 +21,7 @@ import {
 import Participants from "./Participants";
 import ChatPanel from "./ChatPanel";
 import VoicePanel from "./voice/VoicePanel";
+import socket from "../../socket/socket";
 
 const RoomCommunication = ({
     room,
@@ -43,19 +44,81 @@ const RoomCommunication = ({
      * =========================================================
      * UNREAD CHAT MESSAGES
      *
-     * ChatPanel is mounted only while the Chat tab is open.
-     * Therefore the unread count is controlled by ChatPanel
-     * while it is open, and reset when ChatPanel becomes active.
+     * The unread count belongs to the current user/socket.
      *
-     * IMPORTANT:
-     * Do not mark messages as seen from this component.
-     * ChatPanel owns delivered/seen events because it represents
-     * the actual visible chat section.
+     * The backend sends:
+     *
+     *     chat:unread-count
+     *
+     * whenever this user's unread count changes.
+     *
+     * RoomCommunication listens to that event even when
+     * ChatPanel is closed, so the Chat tab can continue showing
+     * the unread badge.
+     *
+     * ChatPanel remains responsible for opening the chat and
+     * marking messages as actually seen.
      * =========================================================
      */
 
     const [unreadMessageCount, setUnreadMessageCount] =
         useState(0);
+
+    /*
+     * =========================================================
+     * SOCKET UNREAD COUNT LISTENER
+     *
+     * IMPORTANT:
+     *
+     * Do NOT mark anything as seen here.
+     *
+     * This listener only receives the unread count belonging
+     * to this socket/user and updates the navigation badge.
+     * =========================================================
+     */
+
+    useEffect(() => {
+        if (!socket || !roomId) {
+            return undefined;
+        }
+
+        const handleUnreadCount = ({
+            roomId: eventRoomId,
+            count,
+        } = {}) => {
+            /*
+             * Ignore unread-count events belonging to another
+             * room.
+             */
+            if (
+                eventRoomId?.toString() !==
+                roomId?.toString()
+            ) {
+                return;
+            }
+
+            const normalizedCount =
+                Number.isFinite(Number(count))
+                    ? Math.max(0, Number(count))
+                    : 0;
+
+            setUnreadMessageCount(
+                normalizedCount
+            );
+        };
+
+        socket.on(
+            "chat:unread-count",
+            handleUnreadCount
+        );
+
+        return () => {
+            socket.off(
+                "chat:unread-count",
+                handleUnreadCount
+            );
+        };
+    }, [roomId]);
 
     const handleUnreadCountChange = useCallback(
         (count) => {
@@ -72,17 +135,22 @@ const RoomCommunication = ({
     );
 
     /*
-     * When Chat becomes active, ChatPanel mounts and handles
-     * the actual read state. Clear the navigation badge
-     * immediately so the button does not keep showing stale
-     * unread messages while the chat is being opened.
+     * IMPORTANT:
+     *
+     * Do not manually clear the unread badge when the Chat
+     * navigation button is clicked.
+     *
+     * ChatPanel is mounted when Chat becomes active and is
+     * responsible for:
+     *
+     * 1. Opening the chat state on the socket.
+     * 2. Marking messages as delivered/seen.
+     * 3. Reporting the resulting unread state.
+     *
+     * The socket "chat:unread-count" event is also listened to
+     * above, so the navigation badge stays synchronized with
+     * the server-side unread state.
      */
-
-    useEffect(() => {
-        if (activePanel === "chat") {
-            setUnreadMessageCount(0);
-        }
-    }, [activePanel]);
 
     /*
      * =========================================================
@@ -317,10 +385,6 @@ const RoomCommunication = ({
 
     const handlePanelChange = useCallback(
         (panel) => {
-            if (panel === "chat") {
-                setUnreadMessageCount(0);
-            }
-
             if (activePanel === panel) {
                 setMobileOpen(
                     (previous) => !previous
@@ -341,10 +405,6 @@ const RoomCommunication = ({
 
     const handleDesktopPanelChange =
         useCallback((panel) => {
-            if (panel === "chat") {
-                setUnreadMessageCount(0);
-            }
-
             setActivePanel(panel);
         }, []);
 
@@ -607,13 +667,14 @@ const RoomCommunication = ({
     // CHAT BADGE
     // ===========================
 
-    const chatBadge = unreadMessageCount > 0 && (
-        <span className="shrink-0 rounded-full bg-green-500 px-1.5 py-0.5 text-[8px] font-bold leading-none text-slate-950">
-            {unreadMessageCount > 99
-                ? "99+"
-                : unreadMessageCount}
-        </span>
-    );
+    const chatBadge =
+        unreadMessageCount > 0 && (
+            <span className="shrink-0 rounded-full bg-green-500 px-1.5 py-0.5 text-[8px] font-bold leading-none text-slate-950">
+                {unreadMessageCount > 99
+                    ? "99+"
+                    : unreadMessageCount}
+            </span>
+        );
 
     // ===========================
     // MOBILE ACTIVE PANEL

@@ -39,36 +39,122 @@ const Participants = ({
 }) => {
     const dispatch = useAppDispatch();
 
-    const { user } =
-        useAppSelector(
-            (state) => state.auth
-        );
+    const { user } = useAppSelector(
+        (state) => state.auth
+    );
 
-    const hostId =
-        typeof room?.host === "object"
-            ? room.host?._id?.toString()
-            : room?.host?.toString();
+    // ===========================
+    // NORMALIZE ID
+    // ===========================
 
-    const currentUserId =
-        user?._id?.toString();
+    const getUserId = (value) => {
+        if (!value) {
+            return null;
+        }
+
+        if (typeof value === "string") {
+            return value.toString();
+        }
+
+        if (typeof value === "object") {
+            return (
+                value._id?.toString() ||
+                value.id?.toString() ||
+                value.userId?.toString() ||
+                null
+            );
+        }
+
+        return value?.toString() || null;
+    };
+
+    // ===========================
+    // HOST / CURRENT USER
+    // ===========================
+
+    const hostId = getUserId(room?.host);
+
+    const currentUserId = getUserId(user);
 
     const isCurrentUserHost =
         hostId === currentUserId;
 
-    const isOnline = (participantId) =>
-        onlineUsers.some(
-            (u) =>
-                u._id?.toString() ===
-                participantId?.toString()
-        );
+    // ===========================
+    // UNIQUE PARTICIPANTS
+    // ===========================
+
+    const uniqueParticipants = (() => {
+        const map = new Map();
+
+        (Array.isArray(participants)
+            ? participants
+            : []
+        ).forEach((participant) => {
+            const id = getUserId(participant);
+
+            if (!id || map.has(id)) {
+                return;
+            }
+
+            map.set(id, participant);
+        });
+
+        return Array.from(map.values());
+    })();
 
     // ===========================
-    // Approve Rejoin
+    // UNIQUE ONLINE USERS
+    // ===========================
+
+    const uniqueOnlineUsers = (() => {
+        const map = new Map();
+
+        (Array.isArray(onlineUsers)
+            ? onlineUsers
+            : []
+        ).forEach((onlineUser) => {
+            const id = getUserId(onlineUser);
+
+            if (!id || map.has(id)) {
+                return;
+            }
+
+            map.set(id, onlineUser);
+        });
+
+        return Array.from(map.values());
+    })();
+
+    // ===========================
+    // ONLINE CHECK
+    // ===========================
+
+    const isOnline = (participantId) => {
+        const normalizedId =
+            getUserId(participantId);
+
+        if (!normalizedId) {
+            return false;
+        }
+
+        return uniqueOnlineUsers.some(
+            (onlineUser) =>
+                getUserId(onlineUser) ===
+                normalizedId
+        );
+    };
+
+    // ===========================
+    // APPROVE REJOIN
     // ===========================
 
     const handleApproveRejoin = async (
         userId
     ) => {
+        if (!userId) {
+            return;
+        }
+
         try {
             await approveRoomRejoin(
                 roomId,
@@ -99,12 +185,16 @@ const Participants = ({
     };
 
     // ===========================
-    // Reject Rejoin
+    // REJECT REJOIN
     // ===========================
 
     const handleRejectRejoin = async (
         userId
     ) => {
+        if (!userId) {
+            return;
+        }
+
         try {
             await rejectRoomRejoin(
                 roomId,
@@ -127,11 +217,11 @@ const Participants = ({
     };
 
     // ===========================
-    // Active Participants
+    // ACTIVE PARTICIPANTS
     // ===========================
 
     const activeParticipants =
-        participants.map(
+        uniqueParticipants.map(
             (participant) => ({
                 ...participant,
                 previouslyRemoved: false,
@@ -139,51 +229,67 @@ const Participants = ({
         );
 
     // ===========================
-    // Previously Removed
+    // PREVIOUSLY REMOVED
     // ===========================
 
-    const removedParticipants =
-        (room?.removedMembers || [])
-            .filter(
-                (entry) => entry.user
-            )
-            .map((entry) => ({
-                ...entry.user,
-                previouslyRemoved: true,
-                removedAt:
-                    entry.removedAt,
-            }));
+    const removedParticipants = (
+        Array.isArray(room?.removedMembers)
+            ? room.removedMembers
+            : []
+    )
+        .filter((entry) => entry?.user)
+        .map((entry) => ({
+            ...entry.user,
+            previouslyRemoved: true,
+            removedAt: entry.removedAt,
+        }));
+
+    // ===========================
+    // DISPLAYED PARTICIPANTS
+    // ===========================
 
     const displayedParticipants = [
         ...activeParticipants,
         ...removedParticipants.filter(
-            (removed) =>
-                !activeParticipants.some(
+            (removed) => {
+                const removedId =
+                    getUserId(removed);
+
+                return !activeParticipants.some(
                     (active) =>
-                        active._id?.toString() ===
-                        removed._id?.toString()
-                )
+                        getUserId(active) ===
+                        removedId
+                );
+            }
         ),
     ];
 
-    const pendingRequests =
-        room?.rejoinRequests?.filter(
-            (request) =>
-                request.status === "pending"
-        ) || [];
+    // ===========================
+    // PENDING REJOIN REQUESTS
+    // ===========================
+
+    const pendingRequests = (
+        Array.isArray(room?.rejoinRequests)
+            ? room.rejoinRequests
+            : []
+    ).filter(
+        (request) =>
+            request?.status === "pending" &&
+            request?.user
+    );
 
     // ===========================
-    // Counts
+    // COUNTS
     // ===========================
 
     const totalParticipants =
-        participants.length;
+        uniqueParticipants.length;
 
     const totalOnline =
-        onlineUsers.length;
+        uniqueOnlineUsers.length;
 
     return (
-        <div className="relative flex h-full min-h-0 flex-col overflow-hidden border-b border-white/[0.07] bg-[#07070c] p-3 text-white sm:p-4">
+        <div className="relative flex h-full min-h-0 min-w-0 flex-col overflow-hidden border-b border-white/[0.07] bg-[#07070c] p-3 text-white sm:p-4">
 
             {/* ==========================================
                 AMBIENT BACKGROUND
@@ -240,12 +346,9 @@ const Participants = ({
                     opacity: 1,
                     y: 0,
                 }}
-                className="relative z-10 mb-3 flex min-w-0 items-center justify-between gap-2 sm:mb-5 sm:gap-3"
+                className="relative z-10 mb-3 flex min-w-0 shrink-0 items-center justify-between gap-2 sm:mb-5 sm:gap-3"
             >
                 <div className="flex min-w-0 items-center gap-2 sm:gap-3">
-
-                    {/* Icon */}
-
                     <motion.div
                         whileHover={{
                             scale: 1.08,
@@ -268,8 +371,6 @@ const Participants = ({
                         />
                     </motion.div>
 
-                    {/* Title */}
-
                     <div className="min-w-0">
                         <div className="flex min-w-0 items-center gap-1.5 sm:gap-2">
                             <h3 className="truncate text-xs font-bold tracking-tight text-white sm:text-sm">
@@ -288,8 +389,6 @@ const Participants = ({
                             />
                         </div>
 
-                        {/* Total participant count */}
-
                         <p className="mt-1 truncate text-[8px] text-zinc-500 sm:text-[9px]">
                             {totalParticipants}{" "}
                             {totalParticipants === 1
@@ -300,9 +399,7 @@ const Participants = ({
                     </div>
                 </div>
 
-                {/* ==========================================
-                    ONLINE / TOTAL COUNTER
-                ========================================== */}
+                {/* ONLINE COUNTER */}
 
                 <motion.div
                     animate={{
@@ -326,7 +423,7 @@ const Participants = ({
                         className="absolute inset-y-0 w-5 bg-white/10 blur-md"
                     />
 
-                    <span className="relative flex items-center gap-1 sm:gap-1.5 text-[8px] font-bold text-emerald-300 sm:text-[9px]">
+                    <span className="relative flex items-center gap-1 text-[8px] font-bold text-emerald-300 sm:gap-1.5 sm:text-[9px]">
                         <span className="relative flex h-2 w-2 items-center justify-center">
                             <motion.span
                                 animate={{
@@ -343,7 +440,8 @@ const Participants = ({
                             <span className="relative h-1.5 w-1.5 rounded-full bg-emerald-400" />
                         </span>
 
-                        {totalOnline} / {totalParticipants} Online
+                        {totalOnline} /{" "}
+                        {totalParticipants} Online
                     </span>
                 </motion.div>
             </motion.div>
@@ -364,7 +462,6 @@ const Participants = ({
                 className="relative z-10 mb-3 shrink-0 overflow-hidden rounded-xl border border-white/[0.07] bg-white/[0.025] p-2.5 backdrop-blur-xl sm:mb-4 sm:rounded-2xl sm:p-3"
             >
                 <div className="flex min-w-0 items-center justify-between gap-2">
-
                     <div className="min-w-0">
                         <p className="text-[7px] font-black uppercase tracking-[.18em] text-zinc-600 sm:text-[8px]">
                             Live presence
@@ -381,25 +478,28 @@ const Participants = ({
                         </p>
                     </div>
 
-                    {/* Online avatars */}
-
                     <div className="flex shrink-0 -space-x-1.5 sm:-space-x-2">
-                        {onlineUsers
+                        {uniqueOnlineUsers
                             .slice(0, 5)
                             .map(
                                 (
                                     onlineUser,
                                     index
                                 ) => {
+                                    const userId =
+                                        getUserId(
+                                            onlineUser
+                                        );
+
                                     const color =
                                         getCollaboratorColor(
-                                            onlineUser._id?.toString()
+                                            userId
                                         );
 
                                     return (
                                         <motion.div
                                             key={
-                                                onlineUser._id ||
+                                                userId ||
                                                 index
                                             }
                                             initial={{
@@ -425,7 +525,8 @@ const Participants = ({
                                                     color,
                                             }}
                                         >
-                                            {onlineUser.name?.[0]?.toUpperCase() ||
+                                            {onlineUser?.name?.[0]?.toUpperCase() ||
+                                                onlineUser?.username?.[0]?.toUpperCase() ||
                                                 "U"}
 
                                             <span className="absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full border-2 border-[#09090f] bg-emerald-400 sm:h-2.5 sm:w-2.5" />
@@ -441,8 +542,6 @@ const Participants = ({
                         )}
                     </div>
                 </div>
-
-                {/* Animated activity line */}
 
                 <div className="mt-2.5 h-px overflow-hidden bg-white/[0.05] sm:mt-3">
                     <motion.div
@@ -523,101 +622,117 @@ const Participants = ({
                                 </span>
                             </div>
 
-                            <div className="max-h-32 space-y-1.5 overflow-y-auto pr-1 sm:max-h-40 sm:space-y-2">
+                            <div className="max-h-32 space-y-1.5 overflow-y-auto overscroll-contain pr-1 sm:max-h-40 sm:space-y-2">
                                 {pendingRequests.map(
                                     (
                                         request,
                                         index
-                                    ) => (
-                                        <motion.div
-                                            key={
-                                                request
-                                                    .user
-                                                    ?._id
-                                            }
-                                            initial={{
-                                                opacity: 0,
-                                                x: -15,
-                                            }}
-                                            animate={{
-                                                opacity: 1,
-                                                x: 0,
-                                            }}
-                                            transition={{
-                                                delay:
-                                                    index *
-                                                    0.08,
-                                            }}
-                                            className="group flex min-w-0 items-center gap-1.5 rounded-lg border border-white/[0.05] bg-black/20 p-1.5 sm:gap-2 sm:rounded-xl sm:p-2"
-                                        >
+                                    ) => {
+                                        const requestUserId =
+                                            getUserId(
+                                                request.user
+                                            );
+
+                                        return (
                                             <motion.div
-                                                whileHover={{
-                                                    scale: 1.08,
+                                                key={
+                                                    requestUserId ||
+                                                    index
+                                                }
+                                                initial={{
+                                                    opacity: 0,
+                                                    x: -15,
                                                 }}
-                                                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-red-500/10 sm:h-9 sm:w-9 sm:rounded-xl"
+                                                animate={{
+                                                    opacity: 1,
+                                                    x: 0,
+                                                }}
+                                                transition={{
+                                                    delay:
+                                                        index *
+                                                        0.08,
+                                                }}
+                                                className="group flex min-w-0 items-center gap-1.5 rounded-lg border border-white/[0.05] bg-black/20 p-1.5 sm:gap-2 sm:rounded-xl sm:p-2"
                                             >
-                                                <FaUserCircle className="text-lg text-red-400 sm:text-xl" />
-                                            </motion.div>
+                                                <motion.div
+                                                    whileHover={{
+                                                        scale: 1.08,
+                                                    }}
+                                                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-red-500/10 sm:h-9 sm:w-9 sm:rounded-xl"
+                                                >
+                                                    <FaUserCircle className="text-lg text-red-400 sm:text-xl" />
+                                                </motion.div>
 
-                                            <div className="min-w-0 flex-1">
-                                                <p className="truncate text-[9px] font-semibold text-white sm:text-[10px]">
-                                                    {
-                                                        request
+                                                <div className="min-w-0 flex-1">
+                                                    <p className="truncate text-[9px] font-semibold text-white sm:text-[10px]">
+                                                        {request
                                                             .user
-                                                            ?.name
+                                                            ?.name ||
+                                                            request
+                                                                .user
+                                                                ?.username ||
+                                                            "User"}
+                                                    </p>
+
+                                                    <p className="mt-0.5 text-[7px] text-red-400/80 sm:text-[8px]">
+                                                        Previously removed
+                                                    </p>
+                                                </div>
+
+                                                <motion.button
+                                                    type="button"
+                                                    whileHover={{
+                                                        scale: 1.1,
+                                                        y: -2,
+                                                    }}
+                                                    whileTap={{
+                                                        scale: 0.9,
+                                                    }}
+                                                    onClick={() =>
+                                                        handleApproveRejoin(
+                                                            requestUserId
+                                                        )
                                                     }
-                                                </p>
-
-                                                <p className="mt-0.5 text-[7px] text-red-400/80 sm:text-[8px]">
-                                                    Previously removed
-                                                </p>
-                                            </div>
-
-                                            <motion.button
-                                                type="button"
-                                                whileHover={{
-                                                    scale: 1.1,
-                                                    y: -2,
-                                                }}
-                                                whileTap={{
-                                                    scale: 0.9,
-                                                }}
-                                                onClick={() =>
-                                                    handleApproveRejoin(
+                                                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-400 transition hover:bg-emerald-500/20 sm:h-8 sm:w-8 sm:rounded-xl"
+                                                    title="Allow"
+                                                    aria-label={`Approve rejoin request from ${
                                                         request
                                                             .user
-                                                            ?._id
-                                                    )
-                                                }
-                                                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-400 transition hover:bg-emerald-500/20 sm:h-8 sm:w-8 sm:rounded-xl"
-                                                title="Allow"
-                                            >
-                                                <FaCheck className="text-[9px] sm:text-[10px]" />
-                                            </motion.button>
+                                                            ?.name ||
+                                                        "user"
+                                                    }`}
+                                                >
+                                                    <FaCheck className="text-[9px] sm:text-[10px]" />
+                                                </motion.button>
 
-                                            <motion.button
-                                                type="button"
-                                                whileHover={{
-                                                    scale: 1.1,
-                                                    y: -2,
-                                                }}
-                                                whileTap={{
-                                                    scale: 0.9,
-                                                }}
-                                                onClick={() =>
-                                                    handleRejectRejoin(
+                                                <motion.button
+                                                    type="button"
+                                                    whileHover={{
+                                                        scale: 1.1,
+                                                        y: -2,
+                                                    }}
+                                                    whileTap={{
+                                                        scale: 0.9,
+                                                    }}
+                                                    onClick={() =>
+                                                        handleRejectRejoin(
+                                                            requestUserId
+                                                        )
+                                                    }
+                                                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-red-500/10 text-red-400 transition hover:bg-red-500/20 sm:h-8 sm:w-8 sm:rounded-xl"
+                                                    title="Reject"
+                                                    aria-label={`Reject rejoin request from ${
                                                         request
                                                             .user
-                                                            ?._id
-                                                    )
-                                                }
-                                                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-red-500/10 text-red-400 transition hover:bg-red-500/20 sm:h-8 sm:w-8 sm:rounded-xl"
-                                                title="Reject"
-                                            >
-                                                <FaTimes className="text-[9px] sm:text-[10px]" />
-                                            </motion.button>
-                                        </motion.div>
-                                    )
+                                                            ?.name ||
+                                                        "user"
+                                                    }`}
+                                                >
+                                                    <FaTimes className="text-[9px] sm:text-[10px]" />
+                                                </motion.button>
+                                            </motion.div>
+                                        );
+                                    }
                                 )}
                             </div>
                         </motion.div>
@@ -628,8 +743,7 @@ const Participants = ({
                 PARTICIPANTS LIST
             ========================================== */}
 
-            <div className="relative z-10 min-h-0 flex-1 space-y-2 overflow-y-auto pr-1 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-white/10">
-
+            <div className="relative z-10 min-h-0 min-w-0 flex-1 space-y-2 overflow-y-auto overflow-x-hidden overscroll-contain pr-1 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-white/10">
                 {displayedParticipants.length ===
                 0 ? (
                     <motion.div
@@ -677,13 +791,19 @@ const Participants = ({
                                 participant,
                                 index
                             ) => {
-                                const online =
-                                    isOnline(
-                                        participant._id
+                                const participantId =
+                                    getUserId(
+                                        participant
                                     );
 
-                                const participantId =
-                                    participant._id?.toString();
+                                if (!participantId) {
+                                    return null;
+                                }
+
+                                const online =
+                                    isOnline(
+                                        participantId
+                                    );
 
                                 const collaboratorColor =
                                     getCollaboratorColor(
@@ -701,10 +821,16 @@ const Participants = ({
                                 const wasRemoved =
                                     participant.previouslyRemoved;
 
+                                const participantName =
+                                    participant.name ||
+                                    participant.username ||
+                                    participant.email ||
+                                    "User";
+
                                 return (
                                     <motion.div
                                         key={
-                                            participant._id
+                                            participantId
                                         }
                                         initial={{
                                             opacity: 0,
@@ -745,8 +871,6 @@ const Participants = ({
                                                   : "border-white/[0.055] bg-white/[0.02] hover:border-white/[0.1] hover:bg-white/[0.04]"
                                         }`}
                                     >
-                                        {/* Hover sweep */}
-
                                         {!wasRemoved && (
                                             <motion.div
                                                 initial={{
@@ -764,8 +888,7 @@ const Participants = ({
                                         )}
 
                                         <div className="relative flex min-w-0 items-center gap-2 sm:gap-3">
-
-                                            {/* Avatar */}
+                                            {/* AVATAR */}
 
                                             <motion.div
                                                 whileHover={{
@@ -809,8 +932,6 @@ const Participants = ({
                                                     />
                                                 </div>
 
-                                                {/* Online pulse */}
-
                                                 <AnimatePresence>
                                                     {online &&
                                                         !wasRemoved && (
@@ -846,7 +967,7 @@ const Participants = ({
                                                 </AnimatePresence>
                                             </motion.div>
 
-                                            {/* User details */}
+                                            {/* USER DETAILS */}
 
                                             <div className="min-w-0 flex-1">
                                                 <p
@@ -856,9 +977,9 @@ const Participants = ({
                                                             : "text-white"
                                                     }`}
                                                 >
-                                                    <span className="truncate">
+                                                    <span className="min-w-0 truncate">
                                                         {
-                                                            participant.name
+                                                            participantName
                                                         }
                                                     </span>
 
@@ -895,7 +1016,7 @@ const Participants = ({
                                                         )}
                                                 </p>
 
-                                                <div className="mt-1 flex items-center gap-1.5">
+                                                <div className="mt-1 flex min-w-0 items-center gap-1.5">
                                                     <span
                                                         className={`truncate text-[8px] sm:text-[9px] ${
                                                             wasRemoved
@@ -959,7 +1080,7 @@ const Participants = ({
                                                 </div>
                                             </div>
 
-                                            {/* Host badge */}
+                                            {/* HOST BADGE */}
 
                                             {isHost &&
                                                 !wasRemoved && (
@@ -968,7 +1089,7 @@ const Participants = ({
                                                     </span>
                                                 )}
 
-                                            {/* Remove active member */}
+                                            {/* REMOVE MEMBER */}
 
                                             {isCurrentUserHost &&
                                                 !isHost &&
@@ -985,19 +1106,19 @@ const Participants = ({
                                                         }}
                                                         onClick={() =>
                                                             onRemoveMember?.(
-                                                                participant._id
+                                                                participantId
                                                             )
                                                         }
                                                         className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-transparent text-zinc-600 opacity-100 transition-all hover:border-red-500/10 hover:bg-red-500/10 hover:text-red-400 sm:h-8 sm:w-8 sm:rounded-xl sm:opacity-0 sm:group-hover:opacity-100"
                                                         title="Remove member"
-                                                        aria-label={`Remove ${participant.name}`}
+                                                        aria-label={`Remove ${participantName}`}
                                                     >
                                                         <FaUserMinus className="text-[9px] sm:text-[10px]" />
                                                     </motion.button>
                                                 )}
                                         </div>
 
-                                        {/* Tiny active progress line */}
+                                        {/* ACTIVE PROGRESS LINE */}
 
                                         {online &&
                                             !wasRemoved && (

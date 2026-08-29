@@ -500,9 +500,6 @@ const MessageList = memo(function MessageList({
                                             msg._id
                                         )
                                     }
-                                    status={msg.status}
-                                    deliveredTo={msg.deliveredTo}
-                                    seenBy={msg.seenBy}
                                 />
                             </div>
                         );
@@ -659,6 +656,111 @@ const ChatPanel = ({
     useEffect(() => {
         userRef.current = user;
     }, [user]);
+
+    /* ============================================================
+       CHAT OPEN / CLOSE STATE
+
+       ChatPanel owns the actual chat-open lifecycle.
+       RoomCommunication only displays the navigation badge.
+
+       When this component mounts, tell the server that Chat is
+       open so the server can mark existing unread messages as
+       seen. When it unmounts, tell the server that Chat is closed
+       so future messages remain unread.
+
+       Re-emit chat:open after reconnect because the server-side
+       socket state is lost when a Socket.IO connection is rebuilt.
+    ============================================================ */
+
+    useEffect(() => {
+        if (
+            !roomId ||
+            (!isHost && !isMember)
+        ) {
+            return undefined;
+        }
+
+        const currentUser = userRef.current;
+        const userId = currentUser?._id;
+
+        if (!userId) {
+            return undefined;
+        }
+
+        const openChat = () => {
+            if (!socket.connected) {
+                return;
+            }
+
+            socket.emit("chat:open", {
+                roomId,
+                userId,
+            });
+        };
+
+        const handleConnect = () => {
+            openChat();
+        };
+
+        socket.on("connect", handleConnect);
+
+        openChat();
+
+        return () => {
+            socket.off("connect", handleConnect);
+
+            if (socket.connected) {
+                socket.emit("chat:close", {
+                    roomId,
+                });
+            }
+        };
+    }, [roomId, isHost, isMember]);
+
+    /*
+     * Keep the optional parent callback synchronized with the
+     * server unread-count event while ChatPanel is mounted.
+     * The parent remains the owner of the navigation badge.
+     */
+    useEffect(() => {
+        if (!onUnreadCountChange || !roomId) {
+            return undefined;
+        }
+
+        const handleUnreadCount = ({
+            roomId: eventRoomId,
+            count,
+        } = {}) => {
+            if (
+                eventRoomId?.toString() !==
+                roomId?.toString()
+            ) {
+                return;
+            }
+
+            const normalizedCount =
+                Number.isFinite(Number(count))
+                    ? Math.max(0, Number(count))
+                    : 0;
+
+            onUnreadCountChange(normalizedCount);
+        };
+
+        socket.on(
+            "chat:unread-count",
+            handleUnreadCount
+        );
+
+        return () => {
+            socket.off(
+                "chat:unread-count",
+                handleUnreadCount
+            );
+        };
+    }, [
+        roomId,
+        onUnreadCountChange,
+    ]);
 
     /* ============================================================
        DEVICE / BREAKPOINT
@@ -1111,53 +1213,6 @@ const ChatPanel = ({
     }, [emojiOpen]);
 
     /* ============================================================
-       CHAT VISIBILITY / READ STATE
-
-       ChatPanel is mounted only while the Chat tab is open.
-       Mounting therefore means the user is actively viewing chat.
-       RoomCommunication will own unread counting while this component
-       is unmounted.
-    ============================================================ */
-
-    useEffect(() => {
-        if (
-            !roomId ||
-            (!isHost && !isMember)
-        ) {
-            return;
-        }
-
-        const openChat = () => {
-            const currentUser = userRef.current;
-
-            if (
-                !socket.connected ||
-                !currentUser?._id
-            ) {
-                return;
-            }
-
-            socket.emit("chat:open", {
-                roomId,
-                userId: currentUser._id,
-            });
-        };
-
-        socket.on("connect", openChat);
-        openChat();
-
-        return () => {
-            socket.off("connect", openChat);
-
-            if (socket.connected) {
-                socket.emit("chat:close", {
-                    roomId,
-                });
-            }
-        };
-    }, [roomId, isHost, isMember]);
-
-    /* ============================================================
        LOAD CHAT + SOCKET EVENTS
     ============================================================ */
 
@@ -1253,51 +1308,6 @@ const ChatPanel = ({
                                 previous
                             )
                     );
-
-                    // History is being loaded because the Chat tab is open.
-                    // Mark only messages sent by other users as delivered + seen.
-                    const currentUser = userRef.current;
-
-                    if (
-                        currentUser?._id &&
-                        socket.connected
-                    ) {
-                        history.forEach((message) => {
-                            const senderId =
-                                message?.senderId?._id ||
-                                message?.senderId ||
-                                message?.sender?._id;
-
-                            if (
-                                !message?._id ||
-                                !senderId ||
-                                senderId.toString() ===
-                                    currentUser._id.toString()
-                            ) {
-                                return;
-                            }
-
-                            socket.emit(
-                                "chat:message-delivered",
-                                {
-                                    roomId,
-                                    messageId: message._id,
-                                    userId: currentUser._id,
-                                }
-                            );
-
-                            socket.emit(
-                                "chat:message-seen",
-                                {
-                                    roomId,
-                                    messageId: message._id,
-                                    userId: currentUser._id,
-                                }
-                            );
-                        });
-                    }
-
-                    onUnreadCountChange?.(0);
                 } catch (error) {
                     if (!active) {
                         return;
@@ -1319,163 +1329,52 @@ const ChatPanel = ({
            NEW MESSAGE
         -------------------------------------------------------- */
 
-        const handleNewMessage = (message) => {
-            if (!active || !message) {
-                return;
-            }
-
-            const normalizedMessage = {
-                ...message,
-                senderId:
-                    message?.senderId?._id ||
-                    message?.senderId ||
-                    message?.sender?._id ||
-                    null,
-                deliveredTo: Array.isArray(message?.deliveredTo)
-                    ? message.deliveredTo
-                    : [],
-                seenBy: Array.isArray(message?.seenBy)
-                    ? message.seenBy
-                    : [],
-            };
-
-            const currentUser = userRef.current;
-            const senderId = normalizedMessage.senderId;
-            const isOwn =
-                senderId?.toString() ===
-                currentUser?._id?.toString();
-
-            setMessages((previous) => {
-                if (
-                    normalizedMessage._id &&
-                    previous.some(
-                        (item) =>
-                            item._id === normalizedMessage._id
-                    )
-                ) {
-                    return previous;
-                }
-
-                return [
-                    ...previous,
-                    normalizedMessage,
-                ];
-            });
-
-            // This handler exists only while ChatPanel is open.
-            // Therefore incoming messages are immediately read.
-            if (
-                !isOwn &&
-                currentUser?._id &&
-                normalizedMessage._id &&
-                socket.connected
-            ) {
-                socket.emit(
-                    "chat:message-delivered",
-                    {
-                        roomId,
-                        messageId: normalizedMessage._id,
-                        userId: currentUser._id,
-                    }
-                );
-
-                socket.emit(
-                    "chat:message-seen",
-                    {
-                        roomId,
-                        messageId: normalizedMessage._id,
-                        userId: currentUser._id,
-                    }
-                );
-            }
-        };
-
-        /* --------------------------------------------------------
-           MESSAGE STATUS
-
-           Server emits this after another participant receives or
-           reads one of our messages.
-        -------------------------------------------------------- */
-
-        const handleMessageStatus = ({
-            messageId,
-            userId,
-            status,
-        } = {}) => {
+        const handleNewMessage = (
+            message
+        ) => {
             if (
                 !active ||
-                !messageId ||
-                !userId ||
-                !status
+                !message
             ) {
                 return;
             }
 
-            setMessages((previous) =>
-                previous.map((message) => {
+            const normalizedMessage =
+                {
+                    ...message,
+
+                    senderId:
+                        message
+                            .senderId
+                            ?._id ||
+                        message.senderId ||
+                        message
+                            .sender
+                            ?._id ||
+                        null,
+                };
+
+            setMessages(
+                (previous) => {
+                    /*
+                     * Prevent duplicate socket messages.
+                     */
                     if (
-                        message?._id?.toString() !==
-                        messageId.toString()
+                        normalizedMessage._id &&
+                        previous.some(
+                            (item) =>
+                                item._id ===
+                                normalizedMessage._id
+                        )
                     ) {
-                        return message;
+                        return previous;
                     }
 
-                    const deliveredTo = Array.isArray(
-                        message.deliveredTo
-                    )
-                        ? [...message.deliveredTo]
-                        : [];
-
-                    const seenBy = Array.isArray(
-                        message.seenBy
-                    )
-                        ? [...message.seenBy]
-                        : [];
-
-                    const hasUser = (entries) =>
-                        entries.some((entry) => {
-                            const id =
-                                entry?.user?._id ||
-                                entry?.user ||
-                                entry;
-                            return (
-                                id?.toString() ===
-                                userId.toString()
-                            );
-                        });
-
-                    if (
-                        status === "delivered" &&
-                        !hasUser(deliveredTo)
-                    ) {
-                        deliveredTo.push({
-                            user: userId,
-                            at: new Date(),
-                        });
-                    }
-
-                    if (status === "seen") {
-                        if (!hasUser(deliveredTo)) {
-                            deliveredTo.push({
-                                user: userId,
-                                at: new Date(),
-                            });
-                        }
-
-                        if (!hasUser(seenBy)) {
-                            seenBy.push({
-                                user: userId,
-                                at: new Date(),
-                            });
-                        }
-                    }
-
-                    return {
-                        ...message,
-                        deliveredTo,
-                        seenBy,
-                    };
-                })
+                    return [
+                        ...previous,
+                        normalizedMessage,
+                    ];
+                }
             );
         };
 
@@ -1568,11 +1467,6 @@ const ChatPanel = ({
         );
 
         socket.on(
-            "chat:message-status",
-            handleMessageStatus
-        );
-
-        socket.on(
             "chat:message-deleted",
             handleMessageDeleted
         );
@@ -1599,11 +1493,6 @@ const ChatPanel = ({
             socket.off(
                 "chat:new-message",
                 handleNewMessage
-            );
-
-            socket.off(
-                "chat:message-status",
-                handleMessageStatus
             );
 
             socket.off(
