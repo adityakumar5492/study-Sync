@@ -15,12 +15,12 @@ const Room = require("../models/room.model");
  *      -> Receiver gets unread message count
  *
  * 3. Receiver OPENS ChatPanel
- *      -> Receiver's unread messages become seen
+ *      -> Receiver's unread messages become Seen
  *      -> Sender sees: ✓✓ Seen
  *      -> Receiver unread count becomes 0
  *
  * 4. Receiver already has ChatPanel OPEN
- *      -> New message becomes seen immediately
+ *      -> New message becomes Seen immediately
  *
  * IMPORTANT:
  * Being inside the room does NOT mean the chat is open.
@@ -161,9 +161,6 @@ const isRoomUser = (room, userId) => {
 /*
  * ============================================================
  * GET UNREAD COUNT
- *
- * Count messages sent by other users that this user has not
- * seen yet.
  * ============================================================
  */
 
@@ -221,9 +218,91 @@ const emitUnreadCount = async (
 
 /*
  * ============================================================
- * MARK MESSAGES AS SEEN
+ * ADD MESSAGE STATUS SAFELY
  *
- * This function is ONLY called when ChatPanel is actually open.
+ * Prevents duplicate delivered/seen entries for the same user.
+ * ============================================================
+ */
+
+const addDeliveredStatus = async (
+    message,
+    userId,
+    at = new Date()
+) => {
+    const normalizedUserId =
+        normalizeId(userId);
+
+    if (!normalizedUserId) {
+        return false;
+    }
+
+    message.deliveredTo =
+        message.deliveredTo || [];
+
+    const alreadyDelivered =
+        message.deliveredTo.some(
+            (entry) =>
+                normalizeId(
+                    entry?.user?._id ||
+                        entry?.user ||
+                        entry
+                ) === normalizedUserId
+        );
+
+    if (alreadyDelivered) {
+        return false;
+    }
+
+    message.deliveredTo.push({
+        user: userId,
+        at,
+    });
+
+    return true;
+};
+
+const addSeenStatus = async (
+    message,
+    userId,
+    at = new Date()
+) => {
+    const normalizedUserId =
+        normalizeId(userId);
+
+    if (!normalizedUserId) {
+        return false;
+    }
+
+    message.seenBy =
+        message.seenBy || [];
+
+    const alreadySeen =
+        message.seenBy.some(
+            (entry) =>
+                normalizeId(
+                    entry?.user?._id ||
+                        entry?.user ||
+                        entry
+                ) === normalizedUserId
+        );
+
+    if (alreadySeen) {
+        return false;
+    }
+
+    message.seenBy.push({
+        user: userId,
+        at,
+    });
+
+    return true;
+};
+
+/*
+ * ============================================================
+ * MARK ROOM MESSAGES AS SEEN
+ *
+ * Called ONLY when ChatPanel is actually open.
  * ============================================================
  */
 
@@ -233,14 +312,13 @@ const markRoomMessagesAsSeen = async (
     roomId,
     userId
 ) => {
-    if (!roomId || !userId) {
+    if (!roomId || !userId || !socket) {
         return;
     }
 
     /*
-     * Security check:
-     *
-     * This socket must actually have ChatPanel open.
+     * The socket must have explicitly registered the ChatPanel
+     * as open.
      */
     if (
         !isChatOpenForSocket(
@@ -251,85 +329,99 @@ const markRoomMessagesAsSeen = async (
         return;
     }
 
+    const normalizedUserId =
+        normalizeId(userId);
+
     const unreadMessages =
         await Message.find({
             room: roomId,
             sender: {
-                $ne: userId,
+                $ne: normalizedUserId,
             },
             "seenBy.user": {
-                $ne: userId,
+                $ne: normalizedUserId,
             },
-        }).select("_id sender");
+        }).select(
+            "_id sender deliveredTo seenBy"
+        );
 
     if (unreadMessages.length === 0) {
         await emitUnreadCount(
             socket,
             roomId,
-            userId
+            normalizedUserId
         );
 
         return;
     }
 
-    /*
-     * Add delivered + seen entries.
-     *
-     * Since the ChatPanel is open, the message is considered
-     * delivered and seen.
-     */
+    const statusUpdates = [];
     const now = new Date();
 
-    await Message.updateMany(
-        {
-            _id: {
-                $in: unreadMessages.map(
-                    (message) =>
-                        message._id
-                ),
-            },
-        },
-        {
-            $push: {
-                deliveredTo: {
-                    user: userId,
-                    at: now,
-                },
-
-                seenBy: {
-                    user: userId,
-                    at: now,
-                },
-            },
-        }
-    );
-
-    /*
-     * Notify everyone in the room about seen status.
-     */
     for (
         const message of unreadMessages
+    ) {
+        /*
+         * Add delivered status if missing.
+         */
+        const deliveredAdded =
+            await addDeliveredStatus(
+                message,
+                normalizedUserId,
+                now
+            );
+
+        /*
+         * Add seen status.
+         */
+        const seenAdded =
+            await addSeenStatus(
+                message,
+                normalizedUserId,
+                now
+            );
+
+        if (
+            deliveredAdded ||
+            seenAdded
+        ) {
+            await message.save();
+        }
+
+        /*
+         * Notify only if the message actually
+         * became seen.
+         */
+        if (seenAdded) {
+            statusUpdates.push(
+                message._id
+            );
+        }
+    }
+
+    /*
+     * Notify everyone in the room.
+     */
+    for (
+        const messageId of statusUpdates
     ) {
         io.to(roomId).emit(
             "chat:message-status",
             {
-                messageId:
-                    message._id,
-                userId,
+                messageId,
+                userId: normalizedUserId,
                 status: "seen",
             }
         );
     }
 
     /*
-     * Chat is now completely caught up.
+     * Chat is now caught up.
      */
-    socket.emit(
-        "chat:unread-count",
-        {
-            roomId,
-            count: 0,
-        }
+    await emitUnreadCount(
+        socket,
+        roomId,
+        normalizedUserId
     );
 };
 
@@ -370,17 +462,17 @@ module.exports = (io, socket) => {
                     return;
                 }
 
+                const normalizedUserId =
+                    normalizeId(userId);
+
                 /*
-                 * Store authenticated user information on socket
-                 * when available.
-                 *
-                 * This is also used when a new message is sent.
+                 * Store authenticated user on socket.
                  */
                 socket.data =
                     socket.data || {};
 
                 socket.data.userId =
-                    normalizeId(userId);
+                    normalizedUserId;
 
                 /*
                  * Register ChatPanel as OPEN.
@@ -399,14 +491,14 @@ module.exports = (io, socket) => {
                 );
 
                 /*
-                 * Opening ChatPanel means all unread messages
-                 * currently in this room are now seen.
+                 * Opening ChatPanel means all unread
+                 * messages are seen.
                  */
                 await markRoomMessagesAsSeen(
                     io,
                     socket,
                     roomId,
-                    userId
+                    normalizedUserId
                 );
             } catch (error) {
                 console.error(
@@ -430,11 +522,6 @@ module.exports = (io, socket) => {
                 return;
             }
 
-            /*
-             * ChatPanel is no longer open.
-             *
-             * Future messages must NOT automatically become seen.
-             */
             removeOpenChatSocket(
                 roomId,
                 socket.id
@@ -477,10 +564,13 @@ module.exports = (io, socket) => {
                     return;
                 }
 
+                const normalizedSenderId =
+                    normalizeId(senderId);
+
                 if (
                     !isRoomUser(
                         room,
-                        senderId
+                        normalizedSenderId
                     )
                 ) {
                     return;
@@ -493,44 +583,27 @@ module.exports = (io, socket) => {
                     socket.data || {};
 
                 socket.data.userId =
-                    normalizeId(senderId);
+                    normalizedSenderId;
 
                 /*
-                 * IMPORTANT:
+                 * New messages ALWAYS begin as Sent.
                  *
-                 * New messages start with NO delivered/seen
-                 * recipients.
-                 *
-                 * Therefore sender initially sees only:
-                 *
-                 *       ✓
-                 *
-                 * until the receiver actually opens ChatPanel.
+                 * Only an actual receiver socket with ChatPanel
+                 * open can immediately move it to Seen.
                  */
                 const savedMessage =
                     await Message.create({
                         room: roomId,
-                        sender: senderId,
-                        message: message.trim(),
+                        sender: normalizedSenderId,
+                        message:
+                            message.trim(),
                         deliveredTo: [],
                         seenBy: [],
                     });
 
-                const populatedMessage =
-                    await Message.findById(
-                        savedMessage._id
-                    ).populate(
-                        "sender",
-                        "name avatar"
-                    );
-
-                if (!populatedMessage) {
-                    return;
-                }
-
                 /*
                  * =================================================
-                 * FIND RECIPIENTS WHO CURRENTLY HAVE CHAT OPEN
+                 * FIND USERS WITH CHAT PANEL OPEN
                  * =================================================
                  */
 
@@ -575,25 +648,37 @@ module.exports = (io, socket) => {
                         );
 
                     /*
-                     * Never treat sender as recipient.
+                     * Never treat sender as receiver.
                      */
                     if (
                         recipientUserId ===
-                        normalizeId(
-                            senderId
+                        normalizedSenderId
+                    ) {
+                        continue;
+                    }
+
+                    /*
+                     * Verify room membership.
+                     */
+                    if (
+                        !isRoomUser(
+                            room,
+                            recipientUserId
                         )
                     ) {
                         continue;
                     }
 
                     /*
-                     * Make sure the socket's user is actually
-                     * a member/host of this room.
+                     * Confirm ChatPanel is still open.
+                     *
+                     * This protects against stale socket
+                     * registrations.
                      */
                     if (
-                        !isRoomUser(
-                            room,
-                            recipientUserId
+                        !isChatOpenForSocket(
+                            roomId,
+                            socketId
                         )
                     ) {
                         continue;
@@ -606,43 +691,88 @@ module.exports = (io, socket) => {
 
                 /*
                  * =================================================
-                 * IMMEDIATELY SEEN ONLY FOR OPEN CHAT
+                 * MARK MESSAGE SEEN FOR OPEN RECIPIENTS
                  * =================================================
                  */
+
+                const now = new Date();
+
+                for (
+                    const userId of
+                        seenUserIds
+                ) {
+                    await addDeliveredStatus(
+                        savedMessage,
+                        userId,
+                        now
+                    );
+
+                    await addSeenStatus(
+                        savedMessage,
+                        userId,
+                        now
+                    );
+                }
 
                 if (
                     seenUserIds.size > 0
                 ) {
-                    const now =
-                        new Date();
-
-                    const statusEntries =
-                        Array.from(
-                            seenUserIds
-                        ).map(
-                            (userId) => ({
-                                user: userId,
-                                at: now,
-                            })
-                        );
-
-                    await Message.findByIdAndUpdate(
-                        savedMessage._id,
-                        {
-                            $push: {
-                                deliveredTo: {
-                                    $each:
-                                        statusEntries,
-                                },
-
-                                seenBy: {
-                                    $each:
-                                        statusEntries,
-                                },
-                            },
-                        }
-                    );
+                    await savedMessage.save();
                 }
+
+                /*
+                 * Populate sender AFTER status changes.
+                 */
+                const populatedMessage =
+                    await Message.findById(
+                        savedMessage._id
+                    ).populate(
+                        "sender",
+                        "name avatar"
+                    );
+
+                if (!populatedMessage) {
+                    return;
+                }
+
+                /*
+                 * =================================================
+                 * BUILD STATUS ARRAYS FROM DATABASE STATE
+                 *
+                 * Do NOT create separate new Date() values here.
+                 * The client should receive the actual stored state.
+                 * =================================================
+                 */
+
+                const deliveredTo =
+                    (
+                        populatedMessage
+                            .deliveredTo || []
+                    ).map(
+                        (entry) => ({
+                            user:
+                                normalizeId(
+                                    entry?.user?._id ||
+                                        entry?.user
+                                ),
+                            at: entry?.at,
+                        })
+                    );
+
+                const seenBy =
+                    (
+                        populatedMessage
+                            .seenBy || []
+                    ).map(
+                        (entry) => ({
+                            user:
+                                normalizeId(
+                                    entry?.user?._id ||
+                                        entry?.user
+                                ),
+                            at: entry?.at,
+                        })
+                    );
 
                 /*
                  * =================================================
@@ -679,33 +809,9 @@ module.exports = (io, socket) => {
                             populatedMessage
                                 .createdAt,
 
-                        deliveredTo:
-                            seenUserIds.size > 0
-                                ? Array.from(
-                                      seenUserIds
-                                  ).map(
-                                      (userId) => ({
-                                          user:
-                                              userId,
-                                          at:
-                                              new Date(),
-                                      })
-                                  )
-                                : [],
+                        deliveredTo,
 
-                        seenBy:
-                            seenUserIds.size > 0
-                                ? Array.from(
-                                      seenUserIds
-                                  ).map(
-                                      (userId) => ({
-                                          user:
-                                              userId,
-                                          at:
-                                              new Date(),
-                                      })
-                                  )
-                                : [],
+                        seenBy,
                     }
                 );
 
@@ -730,8 +836,7 @@ module.exports = (io, socket) => {
 
                             userId,
 
-                            status:
-                                "seen",
+                            status: "seen",
                         }
                     );
                 }
@@ -739,9 +844,6 @@ module.exports = (io, socket) => {
                 /*
                  * =================================================
                  * UPDATE UNREAD COUNTS
-                 *
-                 * Every recipient whose ChatPanel is CLOSED
-                 * should receive an updated unread count.
                  * =================================================
                  */
 
@@ -775,20 +877,17 @@ module.exports = (io, socket) => {
                             );
 
                         /*
-                         * Do not send unread count to sender.
+                         * Sender does not receive unread count.
                          */
                         if (
                             recipientUserId ===
-                            normalizeId(
-                                senderId
-                            )
+                            normalizedSenderId
                         ) {
                             continue;
                         }
 
                         /*
-                         * If ChatPanel is open, the message was
-                         * already seen, so no unread badge.
+                         * Open ChatPanel means message was seen.
                          */
                         if (
                             isChatOpenForSocket(
@@ -796,9 +895,18 @@ module.exports = (io, socket) => {
                                 socketId
                             )
                         ) {
+                            await emitUnreadCount(
+                                recipientSocket,
+                                roomId,
+                                recipientUserId
+                            );
+
                             continue;
                         }
 
+                        /*
+                         * Closed ChatPanel -> update unread count.
+                         */
                         await emitUnreadCount(
                             recipientSocket,
                             roomId,
@@ -819,19 +927,13 @@ module.exports = (io, socket) => {
      * ============================================================
      * MESSAGE DELIVERED
      *
-     * Kept for compatibility with the existing ChatPanel.
+     * Compatibility event.
      *
-     * IMPORTANT:
+     * ChatPanel closed:
+     *      -> ignore
      *
-     * Delivered does NOT mean seen.
-     *
-     * However, for the requested WhatsApp-like behaviour,
-     * a message is not marked delivered merely because the
-     * receiver is somewhere inside the room.
-     *
-     * If ChatPanel is closed, it stays Sent.
-     *
-     * If ChatPanel is open, the message is immediately seen.
+     * ChatPanel open:
+     *      -> message becomes Seen
      * ============================================================
      */
 
@@ -854,11 +956,7 @@ module.exports = (io, socket) => {
                 }
 
                 /*
-                 * Delivered event is only accepted when ChatPanel
-                 * is actually open.
-                 *
-                 * This prevents room presence from turning
-                 * Sent into Delivered.
+                 * Must have ChatPanel open.
                  */
                 if (
                     !isChatOpenForSocket(
@@ -876,10 +974,26 @@ module.exports = (io, socket) => {
                     return;
                 }
 
+                const normalizedUserId =
+                    normalizeId(userId);
+
+                /*
+                 * Security:
+                 * userId must belong to this socket.
+                 */
+                if (
+                    socket.data?.userId &&
+                    normalizeId(
+                        socket.data.userId
+                    ) !== normalizedUserId
+                ) {
+                    return;
+                }
+
                 if (
                     !isRoomUser(
                         room,
-                        userId
+                        normalizedUserId
                     )
                 ) {
                     return;
@@ -904,62 +1018,59 @@ module.exports = (io, socket) => {
                 }
 
                 /*
-                 * Sender cannot mark own message delivered.
+                 * Sender cannot mark own message.
                  */
                 if (
                     normalizeId(
                         message.sender
                     ) ===
-                    normalizeId(userId)
+                    normalizedUserId
                 ) {
                     return;
                 }
 
                 /*
-                 * If ChatPanel is open, this message should be
-                 * seen rather than merely delivered.
-                 *
-                 * The dedicated message-seen event handles it.
-                 *
-                 * We therefore keep this event as a compatibility
-                 * event and only add Delivered if it is genuinely
-                 * missing.
+                 * Since ChatPanel is open, immediately mark Seen.
                  */
-                const alreadyDelivered =
-                    message.deliveredTo?.some(
-                        (entry) =>
-                            normalizeId(
-                                entry?.user?._id ||
-                                    entry?.user ||
-                                    entry
-                            ) ===
-                            normalizeId(userId)
+                const now = new Date();
+
+                const deliveredAdded =
+                    await addDeliveredStatus(
+                        message,
+                        normalizedUserId,
+                        now
+                    );
+
+                const seenAdded =
+                    await addSeenStatus(
+                        message,
+                        normalizedUserId,
+                        now
                     );
 
                 if (
-                    alreadyDelivered
+                    deliveredAdded ||
+                    seenAdded
                 ) {
-                    return;
+                    await message.save();
                 }
 
-                message.deliveredTo =
-                    message.deliveredTo ||
-                    [];
+                if (seenAdded) {
+                    io.to(roomId).emit(
+                        "chat:message-status",
+                        {
+                            messageId,
+                            userId:
+                                normalizedUserId,
+                            status: "seen",
+                        }
+                    );
+                }
 
-                message.deliveredTo.push({
-                    user: userId,
-                    at: new Date(),
-                });
-
-                await message.save();
-
-                io.to(roomId).emit(
-                    "chat:message-status",
-                    {
-                        messageId,
-                        userId,
-                        status: "delivered",
-                    }
+                await emitUnreadCount(
+                    socket,
+                    roomId,
+                    normalizedUserId
                 );
             } catch (error) {
                 console.error(
@@ -973,8 +1084,6 @@ module.exports = (io, socket) => {
     /*
      * ============================================================
      * MESSAGE SEEN
-     *
-     * Only valid when ChatPanel is actually open.
      * ============================================================
      */
 
@@ -997,7 +1106,7 @@ module.exports = (io, socket) => {
                 }
 
                 /*
-                 * The socket must have ChatPanel open.
+                 * ChatPanel must actually be open.
                  */
                 if (
                     !isChatOpenForSocket(
@@ -1015,10 +1124,26 @@ module.exports = (io, socket) => {
                     return;
                 }
 
+                const normalizedUserId =
+                    normalizeId(userId);
+
+                /*
+                 * Security:
+                 * userId must belong to this socket.
+                 */
+                if (
+                    socket.data?.userId &&
+                    normalizeId(
+                        socket.data.userId
+                    ) !== normalizedUserId
+                ) {
+                    return;
+                }
+
                 if (
                     !isRoomUser(
                         room,
-                        userId
+                        normalizedUserId
                     )
                 ) {
                     return;
@@ -1049,96 +1174,62 @@ module.exports = (io, socket) => {
                     normalizeId(
                         message.sender
                     ) ===
-                    normalizeId(userId)
+                    normalizedUserId
                 ) {
                     return;
                 }
 
-                const alreadySeen =
-                    message.seenBy?.some(
-                        (entry) =>
-                            normalizeId(
-                                entry?.user?._id ||
-                                    entry?.user ||
-                                    entry
-                            ) ===
-                            normalizeId(userId)
+                const now = new Date();
+
+                /*
+                 * Delivered first.
+                 */
+                const deliveredAdded =
+                    await addDeliveredStatus(
+                        message,
+                        normalizedUserId,
+                        now
+                    );
+
+                /*
+                 * Then Seen.
+                 */
+                const seenAdded =
+                    await addSeenStatus(
+                        message,
+                        normalizedUserId,
+                        now
                     );
 
                 if (
-                    alreadySeen
+                    deliveredAdded ||
+                    seenAdded
                 ) {
-                    return;
+                    await message.save();
                 }
 
-                message.deliveredTo =
-                    message.deliveredTo ||
-                    [];
-
-                message.seenBy =
-                    message.seenBy ||
-                    [];
-
                 /*
-                 * If delivered status does not exist,
-                 * add it first.
+                 * Only emit when state actually changed.
                  */
-                const alreadyDelivered =
-                    message.deliveredTo.some(
-                        (entry) =>
-                            normalizeId(
-                                entry?.user?._id ||
-                                    entry?.user ||
-                                    entry
-                            ) ===
-                            normalizeId(userId)
+                if (seenAdded) {
+                    io.to(roomId).emit(
+                        "chat:message-status",
+                        {
+                            messageId,
+                            userId:
+                                normalizedUserId,
+                            status: "seen",
+                        }
                     );
-
-                const now =
-                    new Date();
-
-                if (
-                    !alreadyDelivered
-                ) {
-                    message.deliveredTo.push({
-                        user: userId,
-                        at: now,
-                    });
                 }
 
-                message.seenBy.push({
-                    user: userId,
-                    at: now,
-                });
-
-                await message.save();
-
                 /*
-                 * Tell everyone in room that this message
-                 * has been seen.
+                 * Synchronize unread count.
                  */
-                io.to(roomId).emit(
-                    "chat:message-status",
-                    {
-                        messageId,
-                        userId,
-                        status: "seen",
-                    }
-                );
-
-                /*
-                 * Keep receiver unread badge synchronized.
-                 */
-                socket.emit(
-                    "chat:unread-count",
-                    {
-                        roomId,
-                        count:
-                            await getUnreadCount(
-                                roomId,
-                                userId
-                            ),
-                    }
+                await emitUnreadCount(
+                    socket,
+                    roomId,
+                    normalizedUserId
                 );
             } catch (error) {
                 console.error(
@@ -1248,16 +1339,10 @@ module.exports = (io, socket) => {
                     return;
                 }
 
-                /*
-                 * Delete from database.
-                 */
                 await Message.findByIdAndDelete(
                     messageId
                 );
 
-                /*
-                 * Notify everyone.
-                 */
                 io.to(roomId).emit(
                     "chat:message-deleted",
                     {
@@ -1334,10 +1419,6 @@ module.exports = (io, socket) => {
     /*
      * ============================================================
      * SOCKET DISCONNECT
-     * ============================================================
-     *
-     * A disconnected socket must NEVER remain registered as
-     * having ChatPanel open.
      * ============================================================
      */
 
