@@ -794,29 +794,34 @@ const Room = () => {
                     {/* =================================
                         MOBILE COMMUNICATION
 
-                        RoomCommunication owns the complete
-                        mobile bottom dock/sheet.
+                        IMPORTANT:
+                        This instance exists ONLY on
+                        mobile/tablet. The desktop sidebar
+                        above remains the only communication
+                        instance on desktop.
                     ================================= */}
 
-                    <RoomCommunication
-                        room={communicationRoom}
-                        roomId={room._id}
-                        currentUser={user}
-                        onlineUsers={
-                            uniqueOnlineUsers
-                        }
-                        isHost={isHost}
-                        isMember={isMember}
-                        onRemoveMember={
-                            handleRemoveMember
-                        }
-                        drawingPermission={
-                            drawingPermission
-                        }
-                        onDrawingPermissionChange={
-                            handleDrawingPermissionChange
-                        }
-                    />
+                    <div className="lg:hidden">
+                        <RoomCommunication
+                            room={communicationRoom}
+                            roomId={room._id}
+                            currentUser={user}
+                            onlineUsers={
+                                uniqueOnlineUsers
+                            }
+                            isHost={isHost}
+                            isMember={isMember}
+                            onRemoveMember={
+                                handleRemoveMember
+                            }
+                            drawingPermission={
+                                drawingPermission
+                            }
+                            onDrawingPermissionChange={
+                                handleDrawingPermissionChange
+                            }
+                        />
+                    </div>
                 </div>
             </div>
 
