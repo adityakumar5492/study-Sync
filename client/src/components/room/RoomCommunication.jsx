@@ -542,7 +542,19 @@ const RoomCommunication = ({
                 ================================================== */}
 
                 {mobileOpen && (
-                    <section className="mx-auto mb-2 flex max-h-[70dvh] w-full max-w-xl flex-col overflow-hidden rounded-2xl border border-slate-700/80 bg-slate-900/98 shadow-[0_-18px_60px_rgba(0,0,0,0.5)] backdrop-blur-xl">
+                        <section
+    className={`
+        mx-auto mb-2 flex w-full max-w-xl flex-col
+        overflow-hidden rounded-2xl
+        border border-slate-700/80
+        bg-slate-900/98
+        shadow-[0_-18px_60px_rgba(0,0,0,0.5)]
+        backdrop-blur-xl
+
+        max-h-[55dvh]
+        sm:max-h-[60dvh]
+    `}
+>
                         {/* SHEET HEADER */}
 
                         <div className="flex h-11 shrink-0 items-center justify-between border-b border-slate-800/80 bg-slate-950/95 px-3">
