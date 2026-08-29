@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 
 import {
     FaUsers,
@@ -6,6 +7,7 @@ import {
     FaMicrophone,
     FaPen,
     FaChevronDown,
+    FaTimes,
 } from "react-icons/fa";
 
 import Participants from "./Participants";
@@ -187,6 +189,7 @@ const RoomCommunication = ({
 
             {isHost && (
                 <div className="space-y-1.5 rounded-xl border border-slate-800/80 bg-slate-950/40 p-1.5 sm:space-y-2 sm:p-2">
+
                     {/* HOST ONLY */}
 
                     <button
@@ -445,8 +448,10 @@ const RoomCommunication = ({
 
     const mobilePanelContent = (
         <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+
             {activePanel === "participants" && (
                 <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+
                     <div className="flex shrink-0 items-center justify-between border-b border-slate-800/70 px-3 py-2.5">
                         <div className="flex min-w-0 items-center gap-2">
                             <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-green-500/10 text-green-400">
@@ -460,8 +465,7 @@ const RoomCommunication = ({
 
                                 <p className="mt-0.5 truncate text-[8px] text-slate-600">
                                     {participantsCount}{" "}
-                                    {participantsCount ===
-                                    1
+                                    {participantsCount === 1
                                         ? "participant"
                                         : "participants"}
                                 </p>
@@ -481,15 +485,9 @@ const RoomCommunication = ({
                         <Participants
                             room={room}
                             roomId={roomId}
-                            participants={
-                                uniqueMembers
-                            }
-                            onlineUsers={
-                                uniqueOnlineUsers
-                            }
-                            onRemoveMember={
-                                onRemoveMember
-                            }
+                            participants={uniqueMembers}
+                            onlineUsers={uniqueOnlineUsers}
+                            onRemoveMember={onRemoveMember}
                         />
                     </div>
                 </div>
@@ -530,166 +528,283 @@ const RoomCommunication = ({
         <>
             {/* =====================================================
                 MOBILE COMMUNICATION
-
-                The mobile communication UI is fixed to the
-                viewport and therefore never consumes normal
-                workspace height.
+                ZOOM-STYLE SIDE DRAWER
             ====================================================== */}
 
-            <div className="fixed inset-x-0 bottom-0 z-[90] px-2 pb-2 sm:px-3 sm:pb-3 lg:hidden">
-                {/* =================================================
-                    MOBILE BOTTOM SHEET
-                ================================================== */}
+            <div className="lg:hidden">
 
-                {mobileOpen && (
-                        <section
-    className={`
-        mx-auto mb-2 flex w-full max-w-xl flex-col
-        overflow-hidden rounded-2xl
-        border border-slate-700/80
-        bg-slate-900/98
-        shadow-[0_-18px_60px_rgba(0,0,0,0.5)]
-        backdrop-blur-xl
+                <AnimatePresence>
+                    {mobileOpen && (
+                        <>
+                            {/* ==========================
+                                BACKDROP
+                            ========================== */}
 
-        max-h-[55dvh]
-        sm:max-h-[60dvh]
-    `}
->
-                        {/* SHEET HEADER */}
-
-                        <div className="flex h-11 shrink-0 items-center justify-between border-b border-slate-800/80 bg-slate-950/95 px-3">
-                            <div className="flex min-w-0 items-center gap-2">
-                                <div className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-
-                                <span className="truncate text-[10px] font-semibold text-slate-300">
-                                    {activePanel ===
-                                        "participants" &&
-                                        "Participants"}
-
-                                    {activePanel === "chat" &&
-                                        "Chat"}
-
-                                    {activePanel === "voice" &&
-                                        "Voice"}
-
-                                    {activePanel ===
-                                        "drawing" &&
-                                        "Drawing"}
-                                </span>
-                            </div>
-
-                            <button
+                            <motion.button
                                 type="button"
+                                aria-label="Close communication panel"
+                                initial={{
+                                    opacity: 0,
+                                }}
+                                animate={{
+                                    opacity: 1,
+                                }}
+                                exit={{
+                                    opacity: 0,
+                                }}
+                                transition={{
+                                    duration: 0.2,
+                                }}
                                 onClick={
                                     closeMobilePanel
                                 }
-                                className="flex h-8 shrink-0 items-center gap-1.5 rounded-lg px-2.5 text-[9px] font-semibold text-slate-400 transition-colors hover:bg-slate-800 hover:text-white"
-                                aria-label="Hide communication"
+                                className="
+                                    fixed inset-0 z-[100]
+                                    cursor-default
+                                    bg-black/60
+                                    backdrop-blur-[2px]
+                                "
+                            />
+
+                            {/* ==========================
+                                SIDE DRAWER
+                            ========================== */}
+
+                            <motion.section
+                                initial={{
+                                    x: "100%",
+                                }}
+                                animate={{
+                                    x: 0,
+                                }}
+                                exit={{
+                                    x: "100%",
+                                }}
+                                transition={{
+                                    type: "spring",
+                                    stiffness: 360,
+                                    damping: 34,
+                                }}
+                                className="
+                                    fixed right-0 top-0 z-[110]
+                                    flex h-[100dvh]
+                                    w-[88vw] max-w-[420px]
+                                    flex-col
+                                    overflow-hidden
+                                    border-l border-slate-700/80
+                                    bg-slate-950
+                                    shadow-[-20px_0_60px_rgba(0,0,0,0.55)]
+                                "
                             >
-                                <FaChevronDown className="text-[8px]" />
 
-                                <span>Hide</span>
-                            </button>
-                        </div>
+                                {/* ==========================
+                                    DRAWER HEADER
+                                ========================== */}
 
-                        {/* SHEET CONTENT */}
+                                <div className="
+                                    flex h-14 shrink-0
+                                    items-center justify-between
+                                    border-b border-slate-800/80
+                                    bg-slate-950/95
+                                    px-3
+                                ">
+                                    <div className="flex min-w-0 items-center gap-2">
 
-                        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-                            {mobilePanelContent}
-                        </div>
-                    </section>
-                )}
+                                        <span className="
+                                            h-1.5 w-1.5
+                                            shrink-0
+                                            rounded-full
+                                            bg-emerald-400
+                                        " />
+
+                                        <span className="
+                                            truncate
+                                            text-xs
+                                            font-semibold
+                                            text-white
+                                        ">
+                                            {activePanel ===
+                                                "participants" &&
+                                                "Participants"}
+
+                                            {activePanel ===
+                                                "chat" &&
+                                                "Live Chat"}
+
+                                            {activePanel ===
+                                                "voice" &&
+                                                "Voice"}
+
+                                            {activePanel ===
+                                                "drawing" &&
+                                                "Drawing"}
+                                        </span>
+                                    </div>
+
+                                    {/* CLOSE BUTTON */}
+
+                                    <button
+                                        type="button"
+                                        onClick={
+                                            closeMobilePanel
+                                        }
+                                        className="
+                                            flex h-9 w-9
+                                            shrink-0
+                                            items-center
+                                            justify-center
+                                            rounded-xl
+                                            border
+                                            border-slate-800
+                                            bg-slate-900
+                                            text-slate-400
+                                            transition
+                                            hover:bg-slate-800
+                                            hover:text-white
+                                            active:scale-95
+                                        "
+                                        aria-label="Close communication panel"
+                                    >
+                                        <FaTimes className="text-sm" />
+                                    </button>
+                                </div>
+
+                                {/* ==========================
+                                    DRAWER CONTENT
+                                ========================== */}
+
+                                <div className="
+                                    flex min-h-0
+                                    flex-1 flex-col
+                                    overflow-hidden
+                                ">
+                                    {mobilePanelContent}
+                                </div>
+                            </motion.section>
+                        </>
+                    )}
+                </AnimatePresence>
 
                 {/* =================================================
-                    MOBILE COMMUNICATION DOCK
-
-                    Always stays attached to the bottom.
+                    MOBILE BOTTOM DOCK
                 ================================================== */}
 
-                <div className="mx-auto flex w-full max-w-xl items-stretch gap-1 rounded-2xl border border-slate-700/80 bg-slate-900/98 p-1.5 shadow-2xl shadow-black/40 backdrop-blur-xl">
-                    {/* PARTICIPANTS */}
+                <div
+                    className="
+                        fixed inset-x-0 bottom-0 z-[90]
+                        px-2 pb-2
+                        sm:px-3 sm:pb-3
+                    "
+                >
+                    <div
+                        className="
+                            mx-auto flex w-full max-w-xl
+                            items-stretch gap-1
+                            rounded-2xl
+                            border border-slate-700/80
+                            bg-slate-900/98
+                            p-1.5
+                            shadow-2xl shadow-black/40
+                            backdrop-blur-xl
+                        "
+                    >
 
-                    <button
-                        type="button"
-                        onClick={() =>
-                            handlePanelChange(
+                        {/* PARTICIPANTS */}
+
+                        <button
+                            type="button"
+                            onClick={() =>
+                                handlePanelChange(
+                                    "participants"
+                                )
+                            }
+                            className={panelButtonClass(
                                 "participants"
-                            )
-                        }
-                        className={panelButtonClass(
-                            "participants"
-                        )}
-                        aria-label="Open participants"
-                    >
-                        <FaUsers className="shrink-0 text-[9px]" />
+                            )}
+                            aria-label="Open participants"
+                        >
+                            <FaUsers className="shrink-0 text-[9px]" />
 
-                        <span className="hidden truncate xs:inline sm:inline">
-                            People
-                        </span>
+                            <span className="hidden truncate xs:inline sm:inline">
+                                People
+                            </span>
 
-                        <span className="shrink-0 rounded-full bg-slate-800 px-1.5 py-0.5 text-[8px] leading-none text-slate-500">
-                            {participantsCount}
-                        </span>
-                    </button>
+                            <span className="
+                                shrink-0
+                                rounded-full
+                                bg-slate-800
+                                px-1.5 py-0.5
+                                text-[8px]
+                                leading-none
+                                text-slate-500
+                            ">
+                                {participantsCount}
+                            </span>
+                        </button>
 
-                    {/* CHAT */}
+                        {/* CHAT */}
 
-                    <button
-                        type="button"
-                        onClick={() =>
-                            handlePanelChange("chat")
-                        }
-                        className={panelButtonClass(
-                            "chat"
-                        )}
-                        aria-label="Open chat"
-                    >
-                        <FaComments className="shrink-0 text-[9px]" />
+                        <button
+                            type="button"
+                            onClick={() =>
+                                handlePanelChange(
+                                    "chat"
+                                )
+                            }
+                            className={panelButtonClass(
+                                "chat"
+                            )}
+                            aria-label="Open chat"
+                        >
+                            <FaComments className="shrink-0 text-[9px]" />
 
-                        <span className="hidden truncate xs:inline sm:inline">
-                            Chat
-                        </span>
-                    </button>
+                            <span className="hidden truncate xs:inline sm:inline">
+                                Chat
+                            </span>
+                        </button>
 
-                    {/* VOICE */}
+                        {/* VOICE */}
 
-                    <button
-                        type="button"
-                        onClick={() =>
-                            handlePanelChange("voice")
-                        }
-                        className={panelButtonClass(
-                            "voice"
-                        )}
-                        aria-label="Open voice"
-                    >
-                        <FaMicrophone className="shrink-0 text-[9px]" />
+                        <button
+                            type="button"
+                            onClick={() =>
+                                handlePanelChange(
+                                    "voice"
+                                )
+                            }
+                            className={panelButtonClass(
+                                "voice"
+                            )}
+                            aria-label="Open voice"
+                        >
+                            <FaMicrophone className="shrink-0 text-[9px]" />
 
-                        <span className="hidden truncate xs:inline sm:inline">
-                            Voice
-                        </span>
-                    </button>
+                            <span className="hidden truncate xs:inline sm:inline">
+                                Voice
+                            </span>
+                        </button>
 
-                    {/* DRAWING */}
+                        {/* DRAWING */}
 
-                    <button
-                        type="button"
-                        onClick={() =>
-                            handlePanelChange(
+                        <button
+                            type="button"
+                            onClick={() =>
+                                handlePanelChange(
+                                    "drawing"
+                                )
+                            }
+                            className={panelButtonClass(
                                 "drawing"
-                            )
-                        }
-                        className={panelButtonClass(
-                            "drawing"
-                        )}
-                        aria-label="Open drawing"
-                    >
-                        <FaPen className="shrink-0 text-[9px]" />
+                            )}
+                            aria-label="Open drawing"
+                        >
+                            <FaPen className="shrink-0 text-[9px]" />
 
-                        <span className="hidden truncate xs:inline sm:inline">
-                            Drawing
-                        </span>
-                    </button>
+                            <span className="hidden truncate xs:inline sm:inline">
+                                Drawing
+                            </span>
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -698,10 +813,24 @@ const RoomCommunication = ({
                 DO NOT CHANGE DESKTOP BEHAVIOUR
             ====================================================== */}
 
-            <div className="hidden h-full min-h-0 min-w-0 flex-col overflow-hidden bg-slate-950 lg:flex">
+            <div className="
+                hidden h-full min-h-0 min-w-0
+                flex-col overflow-hidden
+                bg-slate-950
+                lg:flex
+            ">
+
                 {/* DESKTOP TABS */}
 
-                <div className="grid shrink-0 grid-cols-4 gap-px border-b border-slate-800/80 bg-slate-900/95 px-0.5 pt-0.5 shadow-lg shadow-black/10">
+                <div className="
+                    grid shrink-0 grid-cols-4
+                    gap-px
+                    border-b border-slate-800/80
+                    bg-slate-900/95
+                    px-0.5 pt-0.5
+                    shadow-lg shadow-black/10
+                ">
+
                     {/* PARTICIPANTS */}
 
                     <button
@@ -712,10 +841,17 @@ const RoomCommunication = ({
                             )
                         }
                         className={`
-                            flex min-w-0 items-center justify-center gap-1
-                            overflow-hidden rounded-t-lg px-1 py-2.5
-                            text-[10px] font-semibold transition-colors
-                            sm:gap-1.5 sm:px-1.5 sm:py-3 sm:text-[11px]
+                            flex min-w-0 items-center
+                            justify-center gap-1
+                            overflow-hidden
+                            rounded-t-lg
+                            px-1 py-2.5
+                            text-[10px]
+                            font-semibold
+                            transition-colors
+                            sm:gap-1.5
+                            sm:px-1.5 sm:py-3
+                            sm:text-[11px]
                             ${
                                 activePanel ===
                                 "participants"
@@ -724,13 +860,28 @@ const RoomCommunication = ({
                             }
                         `}
                     >
-                        <FaUsers className="shrink-0 text-[10px] sm:text-[11px]" />
+                        <FaUsers className="
+                            shrink-0
+                            text-[10px]
+                            sm:text-[11px]
+                        " />
 
-                        <span className="min-w-0 truncate">
+                        <span className="
+                            min-w-0 truncate
+                        ">
                             Participants
                         </span>
 
-                        <span className="shrink-0 rounded-full bg-slate-800 px-1.5 py-0.5 text-[8px] font-bold leading-none text-slate-500">
+                        <span className="
+                            shrink-0
+                            rounded-full
+                            bg-slate-800
+                            px-1.5 py-0.5
+                            text-[8px]
+                            font-bold
+                            leading-none
+                            text-slate-500
+                        ">
                             {participantsCount}
                         </span>
                     </button>
@@ -743,10 +894,16 @@ const RoomCommunication = ({
                             setActivePanel("chat")
                         }
                         className={`
-                            flex min-w-0 items-center justify-center gap-1.5
-                            overflow-hidden rounded-t-lg px-1 py-2.5
-                            text-[10px] font-semibold transition-colors
-                            sm:px-1.5 sm:py-3 sm:text-[11px]
+                            flex min-w-0 items-center
+                            justify-center gap-1.5
+                            overflow-hidden
+                            rounded-t-lg
+                            px-1 py-2.5
+                            text-[10px]
+                            font-semibold
+                            transition-colors
+                            sm:px-1.5 sm:py-3
+                            sm:text-[11px]
                             ${
                                 activePanel === "chat"
                                     ? "bg-slate-800 text-green-400 shadow-sm"
@@ -754,7 +911,11 @@ const RoomCommunication = ({
                             }
                         `}
                     >
-                        <FaComments className="shrink-0 text-[10px] sm:text-[11px]" />
+                        <FaComments className="
+                            shrink-0
+                            text-[10px]
+                            sm:text-[11px]
+                        " />
 
                         <span className="truncate">
                             Chat
@@ -769,10 +930,16 @@ const RoomCommunication = ({
                             setActivePanel("voice")
                         }
                         className={`
-                            flex min-w-0 items-center justify-center gap-1.5
-                            overflow-hidden rounded-t-lg px-1 py-2.5
-                            text-[10px] font-semibold transition-colors
-                            sm:px-1.5 sm:py-3 sm:text-[11px]
+                            flex min-w-0 items-center
+                            justify-center gap-1.5
+                            overflow-hidden
+                            rounded-t-lg
+                            px-1 py-2.5
+                            text-[10px]
+                            font-semibold
+                            transition-colors
+                            sm:px-1.5 sm:py-3
+                            sm:text-[11px]
                             ${
                                 activePanel === "voice"
                                     ? "bg-slate-800 text-green-400 shadow-sm"
@@ -780,7 +947,11 @@ const RoomCommunication = ({
                             }
                         `}
                     >
-                        <FaMicrophone className="shrink-0 text-[10px] sm:text-[11px]" />
+                        <FaMicrophone className="
+                            shrink-0
+                            text-[10px]
+                            sm:text-[11px]
+                        " />
 
                         <span className="truncate">
                             Voice
@@ -797,10 +968,16 @@ const RoomCommunication = ({
                             )
                         }
                         className={`
-                            flex min-w-0 items-center justify-center gap-1.5
-                            overflow-hidden rounded-t-lg px-1 py-2.5
-                            text-[10px] font-semibold transition-colors
-                            sm:px-1.5 sm:py-3 sm:text-[11px]
+                            flex min-w-0 items-center
+                            justify-center gap-1.5
+                            overflow-hidden
+                            rounded-t-lg
+                            px-1 py-2.5
+                            text-[10px]
+                            font-semibold
+                            transition-colors
+                            sm:px-1.5 sm:py-3
+                            sm:text-[11px]
                             ${
                                 activePanel ===
                                 "drawing"
@@ -809,7 +986,11 @@ const RoomCommunication = ({
                             }
                         `}
                     >
-                        <FaPen className="shrink-0 text-[9px] sm:text-[10px]" />
+                        <FaPen className="
+                            shrink-0
+                            text-[9px]
+                            sm:text-[10px]
+                        " />
 
                         <span className="truncate">
                             Drawing
@@ -819,27 +1000,65 @@ const RoomCommunication = ({
 
                 {/* DESKTOP ACTIVE PANEL */}
 
-                <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-slate-900/70">
+                <div className="
+                    flex min-h-0 min-w-0
+                    flex-1 flex-col
+                    overflow-hidden
+                    bg-slate-900/70
+                ">
+
                     {/* PARTICIPANTS */}
 
                     {activePanel ===
                         "participants" && (
-                        <div className="flex h-full min-h-0 min-w-0 flex-col">
-                            <div className="flex shrink-0 items-center justify-between border-b border-slate-800/70 px-3 py-2.5 sm:px-4 sm:py-3">
-                                <div className="flex min-w-0 items-center gap-2">
-                                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-green-500/10 text-green-400">
+                        <div className="
+                            flex h-full
+                            min-h-0 min-w-0
+                            flex-col
+                        ">
+                            <div className="
+                                flex shrink-0
+                                items-center
+                                justify-between
+                                border-b
+                                border-slate-800/70
+                                px-3 py-2.5
+                                sm:px-4 sm:py-3
+                            ">
+                                <div className="
+                                    flex min-w-0
+                                    items-center gap-2
+                                ">
+                                    <div className="
+                                        flex h-7 w-7
+                                        shrink-0
+                                        items-center
+                                        justify-center
+                                        rounded-lg
+                                        bg-green-500/10
+                                        text-green-400
+                                    ">
                                         <FaUsers className="text-[10px]" />
                                     </div>
 
                                     <div className="min-w-0">
-                                        <p className="truncate text-[10px] font-bold text-white sm:text-[11px]">
+                                        <p className="
+                                            truncate
+                                            text-[10px]
+                                            font-bold
+                                            text-white
+                                            sm:text-[11px]
+                                        ">
                                             Live Participants
                                         </p>
 
-                                        <p className="mt-0.5 truncate text-[8px] text-slate-600">
-                                            {
-                                                participantsCount
-                                            }{" "}
+                                        <p className="
+                                            mt-0.5
+                                            truncate
+                                            text-[8px]
+                                            text-slate-600
+                                        ">
+                                            {participantsCount}{" "}
                                             {participantsCount ===
                                             1
                                                 ? "participant"
@@ -848,21 +1067,51 @@ const RoomCommunication = ({
                                     </div>
                                 </div>
 
-                                <div className="flex shrink-0 items-center gap-1.5 rounded-full border border-emerald-400/10 bg-emerald-500/[0.06] px-2 py-1">
-                                    <span className="relative flex h-1.5 w-1.5">
-                                        <span className="absolute inset-0 rounded-full bg-emerald-400 opacity-40" />
+                                <div className="
+                                    flex shrink-0
+                                    items-center gap-1.5
+                                    rounded-full
+                                    border
+                                    border-emerald-400/10
+                                    bg-emerald-500/[0.06]
+                                    px-2 py-1
+                                ">
+                                    <span className="
+                                        relative
+                                        flex h-1.5 w-1.5
+                                    ">
+                                        <span className="
+                                            absolute inset-0
+                                            rounded-full
+                                            bg-emerald-400
+                                            opacity-40
+                                        " />
 
-                                        <span className="relative h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                                        <span className="
+                                            relative
+                                            h-1.5 w-1.5
+                                            rounded-full
+                                            bg-emerald-400
+                                        " />
                                     </span>
 
-                                    <span className="text-[8px] font-bold text-emerald-400">
-                                        {onlineCount}{" "}
-                                        online
+                                    <span className="
+                                        text-[8px]
+                                        font-bold
+                                        text-emerald-400
+                                    ">
+                                        {onlineCount} online
                                     </span>
                                 </div>
                             </div>
 
-                            <div className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain">
+                            <div className="
+                                min-h-0 min-w-0
+                                flex-1
+                                overflow-y-auto
+                                overflow-x-hidden
+                                overscroll-contain
+                            ">
                                 <Participants
                                     room={room}
                                     roomId={roomId}
@@ -883,7 +1132,12 @@ const RoomCommunication = ({
                     {/* CHAT */}
 
                     {activePanel === "chat" && (
-                        <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+                        <div className="
+                            flex h-full
+                            min-h-0 min-w-0
+                            flex-1 flex-col
+                            overflow-hidden
+                        ">
                             <ChatPanel
                                 roomId={roomId}
                                 isHost={isHost}
@@ -895,7 +1149,12 @@ const RoomCommunication = ({
                     {/* VOICE */}
 
                     {activePanel === "voice" && (
-                        <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+                        <div className="
+                            flex h-full
+                            min-h-0 min-w-0
+                            flex-1 flex-col
+                            overflow-hidden
+                        ">
                             <VoicePanel
                                 roomId={roomId}
                                 currentUser={
