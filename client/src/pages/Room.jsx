@@ -84,7 +84,9 @@ const Room = () => {
     // ===========================
 
     const getUserId = (item) => {
-        if (!item) return null;
+        if (!item) {
+            return null;
+        }
 
         if (typeof item === "object") {
             return (
@@ -97,6 +99,14 @@ const Room = () => {
 
         return item?.toString() || null;
     };
+
+    // ===========================
+    // CURRENT USER ID
+    // ===========================
+
+    const currentUserId = useMemo(() => {
+        return getUserId(user);
+    }, [user]);
 
     // ===========================
     // UNIQUE ONLINE USERS
@@ -112,6 +122,10 @@ const Room = () => {
         return users.filter((onlineUser) => {
             const userId = getUserId(onlineUser);
 
+            /*
+             * Keep users without an identifiable ID so
+             * existing behaviour is not accidentally changed.
+             */
             if (!userId) {
                 return true;
             }
@@ -159,7 +173,9 @@ const Room = () => {
      * communication UI without mutating Redux state.
      */
     const communicationRoom = useMemo(() => {
-        if (!room) return room;
+        if (!room) {
+            return room;
+        }
 
         return {
             ...room,
@@ -177,7 +193,7 @@ const Room = () => {
             : room?.host?.toString();
 
     const isHost =
-        hostId === user?._id?.toString();
+        hostId === currentUserId;
 
     // ===========================
     // MEMBERSHIP
@@ -187,9 +203,7 @@ const Room = () => {
         uniqueRoomMembers.some((member) => {
             const memberId = getUserId(member);
 
-            return (
-                memberId === user?._id?.toString()
-            );
+            return memberId === currentUserId;
         }) || false;
 
     // ===========================
@@ -207,9 +221,30 @@ const Room = () => {
     // ===========================
 
     useEffect(() => {
-        if (!room?._id || !user) {
+        /*
+         * IMPORTANT:
+         *
+         * Do not depend on the entire `user` object or
+         * `isHost` here.
+         *
+         * Redux can recreate the user/room objects after
+         * member updates. If this effect depends on those
+         * object references, React can execute cleanup and
+         * join again unnecessarily.
+         *
+         * The room socket lifecycle should only depend on
+         * the actual room ID and current user ID.
+         */
+        if (!room?._id || !user || !currentUserId) {
             return;
         }
+
+        const roomId = room._id.toString();
+
+        const joinedUser = user;
+
+        const joinedIsHost =
+            hostId === currentUserId;
 
         if (!socket.connected) {
             socket.connect();
@@ -262,7 +297,7 @@ const Room = () => {
         // ===========================
 
         const handleMembersUpdated = () => {
-            dispatch(getRoomThunk(room._id));
+            dispatch(getRoomThunk(roomId));
         };
 
         // ===========================
@@ -286,11 +321,14 @@ const Room = () => {
             roomId: requestRoomId,
             user: requestedUser,
         }) => {
-            if (requestRoomId !== room._id) {
+            if (
+                requestRoomId?.toString() !==
+                roomId
+            ) {
                 return;
             }
 
-            if (!isHost) {
+            if (!joinedIsHost) {
                 return;
             }
 
@@ -303,7 +341,7 @@ const Room = () => {
                 }
             );
 
-            dispatch(getRoomThunk(room._id));
+            dispatch(getRoomThunk(roomId));
         };
 
         // ===========================
@@ -340,7 +378,7 @@ const Room = () => {
         // ===========================
 
         socket.emit("user:register", {
-            userId: user._id,
+            userId: currentUserId,
         });
 
         // ===========================
@@ -348,20 +386,65 @@ const Room = () => {
         // ===========================
 
         socket.emit("room:join", {
-            roomId: room._id,
-            user,
-            isHost,
+            roomId,
+            user: joinedUser,
+            isHost: joinedIsHost,
         });
 
         // ===========================
-        // CLEANUP
+        // CLEANUP / LEAVE ROOM
         // ===========================
 
-        return () => {
+        let hasLeftRoom = false;
+
+        const leaveRoom = () => {
+            /*
+             * Prevent duplicate room:leave events from
+             * cleanup + page lifecycle events.
+             */
+            if (hasLeftRoom) {
+                return;
+            }
+
+            hasLeftRoom = true;
+
             socket.emit("room:leave", {
-                roomId: room._id,
-                user,
+                roomId,
+                user: joinedUser,
             });
+
+            /*
+             * Clear local online state immediately so the
+             * participant UI does not keep showing stale
+             * users while Redux/socket state catches up.
+             */
+            setOnlineUsers([]);
+        };
+
+        /*
+         * Browser back/forward navigation inside the SPA
+         * causes React cleanup, so normal cleanup handles it.
+         *
+         * `pagehide` additionally covers browser-level
+         * navigation/refresh where React cleanup may not be
+         * guaranteed to complete normally.
+         */
+        const handlePageHide = () => {
+            leaveRoom();
+        };
+
+        window.addEventListener(
+            "pagehide",
+            handlePageHide
+        );
+
+        return () => {
+            leaveRoom();
+
+            window.removeEventListener(
+                "pagehide",
+                handlePageHide
+            );
 
             socket.off(
                 "room:online-users",
@@ -390,8 +473,7 @@ const Room = () => {
         };
     }, [
         room?._id,
-        user,
-        isHost,
+        currentUserId,
         dispatch,
         navigate,
     ]);

@@ -16,22 +16,305 @@ const connectedUsers = new Map();
 // socket.id -> active study session
 const activeStudySessions = new Map();
 
+// ============================================================
+// HELPERS
+// ============================================================
+
+const normalizeId = (value) => {
+    if (!value) {
+        return null;
+    }
+
+    if (typeof value === "object") {
+        return (
+            value?._id?.toString() ||
+            value?.id?.toString() ||
+            value?.userId?.toString() ||
+            value?.toString() ||
+            null
+        );
+    }
+
+    return value.toString();
+};
+
+/*
+ * Return unique online users for a room.
+ *
+ * onlineUsers internally tracks socket IDs because a user can
+ * reconnect and receive a new socket ID.
+ *
+ * The UI, however, should always see one user only once.
+ */
+const getUniqueOnlineUsers = (roomId) => {
+    const users = onlineUsers.get(
+        roomId
+    );
+
+    if (!users) {
+        return [];
+    }
+
+    const uniqueUsers = new Map();
+
+    users.forEach((user) => {
+        const userId = normalizeId(
+            user?._id
+        );
+
+        if (!userId) {
+            return;
+        }
+
+        /*
+         * Last valid socket/user entry wins.
+         */
+        uniqueUsers.set(
+            userId,
+            user
+        );
+    });
+
+    return Array.from(
+        uniqueUsers.values()
+    );
+};
+
+/*
+ * Broadcast the current online users.
+ */
+const emitOnlineUsers = (
+    io,
+    roomId
+) => {
+    const users =
+        getUniqueOnlineUsers(roomId);
+
+    io.to(roomId).emit(
+        "room:online-users",
+        {
+            users,
+        }
+    );
+};
+
+/*
+ * Remove a specific socket from a room's
+ * online-user state.
+ */
+const removeSocketFromRoom = (
+    io,
+    roomId,
+    socketId
+) => {
+    if (!roomId || !socketId) {
+        return;
+    }
+
+    const users =
+        onlineUsers.get(roomId);
+
+    if (!users) {
+        return;
+    }
+
+    users.delete(socketId);
+
+    if (users.size === 0) {
+        onlineUsers.delete(roomId);
+    }
+
+    /*
+     * Send the update immediately.
+     *
+     * This is important for browser Back/navigation.
+     */
+    emitOnlineUsers(
+        io,
+        roomId
+    );
+};
+
+/*
+ * Remove every socket belonging to the same
+ * user from this room.
+ *
+ * This prevents duplicate participant entries
+ * when the same user reconnects or opens another
+ * room socket.
+ */
+const removeUserSocketsFromRoom = (
+    io,
+    roomId,
+    userId,
+    exceptSocketId = null
+) => {
+    if (!roomId || !userId) {
+        return;
+    }
+
+    const users =
+        onlineUsers.get(roomId);
+
+    if (!users) {
+        return;
+    }
+
+    const normalizedUserId =
+        normalizeId(userId);
+
+    const socketIdsToRemove = [];
+
+    users.forEach(
+        (roomUser, socketId) => {
+            if (
+                socketId ===
+                exceptSocketId
+            ) {
+                return;
+            }
+
+            if (
+                normalizeId(
+                    roomUser?._id
+                ) === normalizedUserId
+            ) {
+                socketIdsToRemove.push(
+                    socketId
+                );
+            }
+        }
+    );
+
+    socketIdsToRemove.forEach(
+        (socketId) => {
+            users.delete(
+                socketId
+            );
+        }
+    );
+
+    if (users.size === 0) {
+        onlineUsers.delete(
+            roomId
+        );
+    }
+};
+
+/*
+ * Remove a socket from every room where
+ * it is currently tracked.
+ */
+const removeSocketFromAllRooms = (
+    io,
+    socket
+) => {
+    if (!socket) {
+        return;
+    }
+
+    const affectedRooms = [];
+
+    onlineUsers.forEach(
+        (users, roomId) => {
+            if (
+                users.has(
+                    socket.id
+                )
+            ) {
+                users.delete(
+                    socket.id
+                );
+
+                if (users.size === 0) {
+                    onlineUsers.delete(
+                        roomId
+                    );
+                }
+
+                affectedRooms.push(
+                    roomId
+                );
+            }
+        }
+    );
+
+    /*
+     * Notify each affected room only once.
+     */
+    affectedRooms.forEach(
+        (roomId) => {
+            emitOnlineUsers(
+                io,
+                roomId
+            );
+        }
+    );
+};
+
+/*
+ * Remove connectedUsers mapping only when
+ * it still points to this exact socket.
+ */
+const removeConnectedUserSocket = (
+    socket
+) => {
+    const userId =
+        socket?.data?.userId;
+
+    if (!userId) {
+        return;
+    }
+
+    const normalizedUserId =
+        normalizeId(userId);
+
+    if (
+        connectedUsers.get(
+            normalizedUserId
+        ) === socket.id
+    ) {
+        connectedUsers.delete(
+            normalizedUserId
+        );
+    }
+};
+
+// ============================================================
+// MODULE
+// ============================================================
+
 module.exports = (io, socket) => {
     // ===========================
     // Register User Socket
     // ===========================
 
-    socket.on("user:register", ({ userId }) => {
-        if (!userId) return;
+    socket.on(
+        "user:register",
+        ({ userId } = {}) => {
+            if (!userId) {
+                return;
+            }
 
-        socket.data.userId =
-            userId.toString();
+            const normalizedUserId =
+                userId.toString();
 
-        connectedUsers.set(
-            userId.toString(),
-            socket.id
-        );
-    });
+            socket.data =
+                socket.data || {};
+
+            socket.data.userId =
+                normalizedUserId;
+
+            /*
+             * The latest socket becomes the user's
+             * active socket.
+             */
+            connectedUsers.set(
+                normalizedUserId,
+                socket.id
+            );
+        }
+    );
 
     // ===========================
     // Study Session - Start
@@ -46,75 +329,94 @@ module.exports = (io, socket) => {
         }
 
         // Prevent duplicate active sessions
-        if (activeStudySessions.has(socket.id)) {
+        if (
+            activeStudySessions.has(
+                socket.id
+            )
+        ) {
             return;
         }
 
-        activeStudySessions.set(socket.id, {
-            roomId: roomId.toString(),
-            userId: userId.toString(),
-            startedAt: new Date(),
-        });
+        activeStudySessions.set(
+            socket.id,
+            {
+                roomId:
+                    roomId.toString(),
+                userId:
+                    userId.toString(),
+                startedAt:
+                    new Date(),
+            }
+        );
     };
 
     // ===========================
     // Study Session - End
     // ===========================
 
-    const endStudySession = async () => {
-        const session =
-            activeStudySessions.get(
+    const endStudySession =
+        async () => {
+            const session =
+                activeStudySessions.get(
+                    socket.id
+                );
+
+            if (!session) {
+                return;
+            }
+
+            activeStudySessions.delete(
                 socket.id
             );
 
-        if (!session) {
-            return;
-        }
+            const endedAt =
+                new Date();
 
-        activeStudySessions.delete(
-            socket.id
-        );
+            const durationSeconds =
+                Math.max(
+                    0,
+                    Math.floor(
+                        (endedAt.getTime() -
+                            session.startedAt.getTime()) /
+                            1000
+                    )
+                );
 
-        const endedAt = new Date();
+            if (
+                durationSeconds <= 0
+            ) {
+                return;
+            }
 
-        const durationSeconds = Math.max(
-            0,
-            Math.floor(
-                (endedAt.getTime() -
-                    session.startedAt.getTime()) /
-                    1000
-            )
-        );
+            try {
+                await StudySession.create(
+                    {
+                        user:
+                            session.userId,
+                        room:
+                            session.roomId,
+                        startedAt:
+                            session.startedAt,
+                        endedAt,
+                        durationSeconds,
+                    }
+                );
 
-        if (durationSeconds <= 0) {
-            return;
-        }
-
-        try {
-            await StudySession.create({
-                user: session.userId,
-                room: session.roomId,
-                startedAt:
-                    session.startedAt,
-                endedAt,
-                durationSeconds,
-            });
-
-            // Tell profile pages to refresh
-            io.emit(
-                "profile:study-stats-updated",
-                {
-                    userId:
-                        session.userId,
-                }
-            );
-        } catch (error) {
-            console.error(
-                "Study session save error:",
-                error
-            );
-        }
-    };
+                // Tell profile pages to refresh
+                io.emit(
+                    "profile:study-stats-updated",
+                    {
+                        userId:
+                            session.userId,
+                    }
+                );
+            } catch (error) {
+                console.error(
+                    "Study session save error:",
+                    error
+                );
+            }
+        };
 
     // ===========================
     // Study Statistics
@@ -132,21 +434,23 @@ module.exports = (io, socket) => {
                 }
 
                 const totalResult =
-                    await StudySession.aggregate([
-                        {
-                            $match: {
-                                user: userId,
-                            },
-                        },
-                        {
-                            $group: {
-                                _id: null,
-                                totalSeconds: {
-                                    $sum: "$durationSeconds",
+                    await StudySession.aggregate(
+                        [
+                            {
+                                $match: {
+                                    user: userId,
                                 },
                             },
-                        },
-                    ]);
+                            {
+                                $group: {
+                                    _id: null,
+                                    totalSeconds: {
+                                        $sum: "$durationSeconds",
+                                    },
+                                },
+                            },
+                        ]
+                    );
 
                 // Last 400 days are enough for
                 // streak/calendar display.
@@ -158,12 +462,14 @@ module.exports = (io, socket) => {
                 );
 
                 const sessions =
-                    await StudySession.find({
-                        user: userId,
-                        startedAt: {
-                            $gte: since,
-                        },
-                    })
+                    await StudySession.find(
+                        {
+                            user: userId,
+                            startedAt: {
+                                $gte: since,
+                            },
+                        }
+                    )
                         .select(
                             "startedAt endedAt durationSeconds"
                         )
@@ -193,7 +499,8 @@ module.exports = (io, socket) => {
                     "study:stats",
                     {
                         userId:
-                            socket.data.userId,
+                            socket.data
+                                .userId,
                         totalSeconds: 0,
                         sessions: [],
                     }
@@ -208,9 +515,16 @@ module.exports = (io, socket) => {
 
     socket.on(
         "room:join",
-        async ({ roomId, user, isHost }) => {
+        async ({
+            roomId,
+            user,
+            isHost,
+        } = {}) => {
             try {
-                if (!roomId || !user?._id) {
+                if (
+                    !roomId ||
+                    !user?._id
+                ) {
                     return;
                 }
 
@@ -295,6 +609,35 @@ module.exports = (io, socket) => {
                 // ===========================
 
                 socket.join(roomId);
+
+                socket.data =
+                    socket.data || {};
+
+                socket.data.userId =
+                    userId;
+
+                /*
+                 * =================================================
+                 * IMPORTANT PRESENCE FIX
+                 * =================================================
+                 *
+                 * Before registering this socket, remove any older
+                 * socket belonging to the same user in this room.
+                 *
+                 * This prevents:
+                 *
+                 * User A
+                 * User A
+                 *
+                 * appearing as two online participants after
+                 * reconnect/navigation.
+                 */
+                removeUserSocketsFromRoom(
+                    io,
+                    roomId,
+                    userId,
+                    socket.id
+                );
 
                 connectedUsers.set(
                     userId,
@@ -386,15 +729,9 @@ module.exports = (io, socket) => {
                 // Online users
                 // ===========================
 
-                io.to(roomId).emit(
-                    "room:online-users",
-                    {
-                        users: Array.from(
-                            onlineUsers
-                                .get(roomId)
-                                .values()
-                        ),
-                    }
+                emitOnlineUsers(
+                    io,
+                    roomId
                 );
 
                 // ===========================
@@ -445,7 +782,7 @@ module.exports = (io, socket) => {
         async ({
             roomId,
             memberId,
-        }) => {
+        } = {}) => {
             try {
                 if (
                     !roomId ||
@@ -532,11 +869,13 @@ module.exports = (io, socket) => {
                     );
 
                 if (!alreadyRemoved) {
-                    room.removedMembers.push({
-                        user: memberId,
-                        removedAt:
-                            new Date(),
-                    });
+                    room.removedMembers.push(
+                        {
+                            user: memberId,
+                            removedAt:
+                                new Date(),
+                        }
+                    );
                 }
 
                 await room.save();
@@ -550,7 +889,8 @@ module.exports = (io, socket) => {
                         roomId
                     );
 
-                const removedSockets = [];
+                const removedSockets =
+                    [];
 
                 if (roomUsers) {
                     roomUsers.forEach(
@@ -571,110 +911,124 @@ module.exports = (io, socket) => {
                     );
                 }
 
-                removedSockets.forEach(
-                    async (socketId) => {
-                        const targetSocket =
-                            io.sockets.sockets.get(
+                for (
+                    const socketId of
+                        removedSockets
+                ) {
+                    const targetSocket =
+                        io.sockets.sockets.get(
+                            socketId
+                        );
+
+                    if (
+                        targetSocket
+                    ) {
+                        targetSocket.emit(
+                            "room:removed",
+                            {
+                                roomId,
+                                message:
+                                    "You have been removed from this room by the host.",
+                            }
+                        );
+
+                        // End study session
+                        const activeSession =
+                            activeStudySessions.get(
                                 socketId
                             );
 
                         if (
-                            targetSocket
+                            activeSession
                         ) {
-                            targetSocket.emit(
-                                "room:removed",
-                                {
-                                    roomId,
-                                    message:
-                                        "You have been removed from this room by the host.",
-                                }
+                            activeStudySessions.delete(
+                                socketId
                             );
 
-                            // End study session
-                            const activeSession =
-                                activeStudySessions.get(
-                                    socketId
+                            const endedAt =
+                                new Date();
+
+                            const durationSeconds =
+                                Math.max(
+                                    0,
+                                    Math.floor(
+                                        (endedAt.getTime() -
+                                            activeSession.startedAt.getTime()) /
+                                            1000
+                                    )
                                 );
 
                             if (
-                                activeSession
+                                durationSeconds >
+                                0
                             ) {
-                                activeStudySessions.delete(
-                                    socketId
-                                );
-
-                                const endedAt =
-                                    new Date();
-
-                                const durationSeconds =
-                                    Math.max(
-                                        0,
-                                        Math.floor(
-                                            (endedAt.getTime() -
-                                                activeSession.startedAt.getTime()) /
-                                                1000
-                                        )
+                                try {
+                                    await StudySession.create(
+                                        {
+                                            user:
+                                                activeSession.userId,
+                                            room:
+                                                activeSession.roomId,
+                                            startedAt:
+                                                activeSession.startedAt,
+                                            endedAt,
+                                            durationSeconds,
+                                        }
                                     );
 
-                                if (
-                                    durationSeconds >
-                                    0
-                                ) {
-                                    try {
-                                        await StudySession.create(
-                                            {
-                                                user:
-                                                    activeSession.userId,
-                                                room:
-                                                    activeSession.roomId,
-                                                startedAt:
-                                                    activeSession.startedAt,
-                                                endedAt,
-                                                durationSeconds,
-                                            }
-                                        );
-
-                                        io.emit(
-                                            "profile:study-stats-updated",
-                                            {
-                                                userId:
-                                                    activeSession.userId,
-                                            }
-                                        );
-                                    } catch (error) {
-                                        console.error(
-                                            "Removed member study session error:",
-                                            error
-                                        );
-                                    }
+                                    io.emit(
+                                        "profile:study-stats-updated",
+                                        {
+                                            userId:
+                                                activeSession.userId,
+                                        }
+                                    );
+                                } catch (error) {
+                                    console.error(
+                                        "Removed member study session error:",
+                                        error
+                                    );
                                 }
                             }
-
-                            targetSocket.leave(
-                                roomId
-                            );
                         }
 
-                        roomUsers?.delete(
-                            socketId
+                        targetSocket.leave(
+                            roomId
                         );
                     }
-                );
+
+                    roomUsers?.delete(
+                        socketId
+                    );
+                }
+
+                /*
+                 * Remove connected-user mapping if it points
+                 * to one of the removed sockets.
+                 */
+                const connectedSocketId =
+                    connectedUsers.get(
+                        memberId.toString()
+                    );
+
+                if (
+                    removedSockets.includes(
+                        connectedSocketId
+                    )
+                ) {
+                    connectedUsers.delete(
+                        memberId.toString()
+                    );
+                }
 
                 // ===========================
                 // Update online users
                 // ===========================
 
-                if (roomUsers) {
-                    io.to(roomId).emit(
-                        "room:online-users",
-                        {
-                            users: Array.from(
-                                roomUsers.values()
-                            ),
-                        }
-                    );
-                }
+                emitOnlineUsers(
+                    io,
+                    roomId
+                );
 
                 // ===========================
                 // Update members
@@ -706,12 +1060,51 @@ module.exports = (io, socket) => {
 
     socket.on(
         "room:leave",
-        async ({ roomId, user }) => {
-            // End study session FIRST
-            await endStudySession();
+        async ({
+            roomId,
+            user,
+        } = {}) => {
+            if (!roomId) {
+                return;
+            }
 
-            socket.leave(roomId);
+            /*
+             * =================================================
+             * IMPORTANT
+             * =================================================
+             *
+             * Remove the socket from presence FIRST.
+             *
+             * Previously study-session saving happened before
+             * presence cleanup, which could delay the online-user
+             * update.
+             *
+             * Browser Back/navigation should update immediately.
+             */
 
+            const roomUsers =
+                onlineUsers.get(
+                    roomId
+                );
+
+            const leavingUser =
+                roomUsers?.get(
+                    socket.id
+                );
+
+            /*
+             * Remove socket from online presence.
+             */
+            removeSocketFromRoom(
+                io,
+                roomId,
+                socket.id
+            );
+
+            /*
+             * Remove host socket if this exact
+             * socket was the host connection.
+             */
             if (
                 hostSocketId.get(
                     roomId
@@ -722,44 +1115,38 @@ module.exports = (io, socket) => {
                 );
             }
 
+            /*
+             * Remove Socket.IO room membership.
+             */
+            socket.leave(roomId);
+
+            /*
+             * Notify remaining room members.
+             */
             if (
-                onlineUsers.has(roomId)
+                user ||
+                leavingUser
             ) {
-                const users =
-                    onlineUsers.get(
-                        roomId
-                    );
+                const leavingUserData =
+                    user ||
+                    leavingUser;
 
-                users.delete(
-                    socket.id
-                );
-
-                if (users.size === 0) {
-                    onlineUsers.delete(
-                        roomId
-                    );
-                } else {
-                    io.to(roomId).emit(
-                        "room:online-users",
-                        {
-                            users: Array.from(
-                                users.values()
-                            ),
-                        }
-                    );
-                }
-            }
-
-            if (user) {
                 io.to(roomId).emit(
                     "room:user-left",
                     {
-                        user,
+                        user:
+                            leavingUserData,
                         message:
-                            `${user.name} left the room.`,
+                            `${leavingUserData.name} left the room.`,
                     }
                 );
             }
+
+            /*
+             * End study session AFTER presence has already
+             * been updated.
+             */
+            await endStudySession();
         }
     );
 
@@ -769,9 +1156,15 @@ module.exports = (io, socket) => {
 
     socket.on(
         "pdf:updated",
-        async ({ roomId, pdfUrl }) => {
+        async ({
+            roomId,
+            pdfUrl,
+        } = {}) => {
             try {
-                if (!roomId || !pdfUrl) {
+                if (
+                    !roomId ||
+                    !pdfUrl
+                ) {
                     return;
                 }
 
@@ -824,16 +1217,22 @@ module.exports = (io, socket) => {
 
     socket.on(
         "pdf:deleted",
-        async ({ roomId }) => {
+        async ({
+            roomId,
+        } = {}) => {
             try {
-                if (!roomId) return;
+                if (!roomId) {
+                    return;
+                }
 
                 const room =
                     await Room.findById(
                         roomId
                     );
 
-                if (!room) return;
+                if (!room) {
+                    return;
+                }
 
                 const hostUserId =
                     getUserIdFromSocket(
@@ -881,8 +1280,10 @@ module.exports = (io, socket) => {
             roomId,
             pageNumber,
             isHost,
-        }) => {
-            if (!isHost) return;
+        } = {}) => {
+            if (!isHost) {
+                return;
+            }
 
             currentPdfPages.set(
                 roomId,
@@ -906,7 +1307,7 @@ module.exports = (io, socket) => {
 
     socket.on(
         "pdf:request-current-page",
-        ({ roomId }) => {
+        ({ roomId } = {}) => {
             const currentPage =
                 currentPdfPages.get(
                     roomId
@@ -932,8 +1333,10 @@ module.exports = (io, socket) => {
             roomId,
             scrollPercent,
             isHost,
-        }) => {
-            if (!isHost) return;
+        } = {}) => {
+            if (!isHost) {
+                return;
+            }
 
             if (
                 typeof scrollPercent !==
@@ -963,7 +1366,7 @@ module.exports = (io, socket) => {
             roomId,
             mode,
             allowedUsers = [],
-        }) => {
+        } = {}) => {
             if (!roomId) {
                 return;
             }
@@ -1025,7 +1428,7 @@ module.exports = (io, socket) => {
         async ({
             roomId,
             userId,
-        }) => {
+        } = {}) => {
             try {
                 if (
                     !roomId ||
@@ -1093,7 +1496,7 @@ module.exports = (io, socket) => {
         async ({
             roomId,
             userId,
-        }) => {
+        } = {}) => {
             try {
                 if (
                     !roomId ||
@@ -1170,42 +1573,34 @@ module.exports = (io, socket) => {
     );
 
     // ===========================
-    // Disconnect
+    // Disconnecting
     // ===========================
 
     socket.on(
         "disconnecting",
         async () => {
-            // End active study session
-            await endStudySession();
+            /*
+             * =================================================
+             * IMPORTANT PRESENCE CLEANUP
+             * =================================================
+             *
+             * Socket.IO's `disconnecting` event fires while
+             * socket.rooms still contains the joined rooms.
+             *
+             * Remove presence immediately so other participants
+             * see the user go offline without waiting for the
+             * study-session database operation.
+             */
 
-            // Remove this socket from
-            // connectedUsers only if it is
-            // still the user's active socket.
-            for (const [
-                userId,
-                socketId,
-            ] of connectedUsers.entries()) {
-                if (
-                    socketId === socket.id
-                ) {
-                    connectedUsers.delete(
-                        userId
-                    );
+            const rooms = Array.from(
+                socket.rooms
+            ).filter(
+                (roomId) =>
+                    roomId !== socket.id
+            );
 
-                    break;
-                }
-            }
-
-            socket.rooms.forEach(
+            rooms.forEach(
                 (roomId) => {
-                    if (
-                        roomId ===
-                        socket.id
-                    ) {
-                        return;
-                    }
-
                     if (
                         hostSocketId.get(
                             roomId
@@ -1216,49 +1611,34 @@ module.exports = (io, socket) => {
                         );
                     }
 
-                    if (
-                        onlineUsers.has(
-                            roomId
-                        )
-                    ) {
-                        const users =
-                            onlineUsers.get(
-                                roomId
-                            );
-
-                        users.delete(
-                            socket.id
-                        );
-
-                        if (
-                            users.size ===
-                            0
-                        ) {
-                            onlineUsers.delete(
-                                roomId
-                            );
-                        } else {
-                            io.to(
-                                roomId
-                            ).emit(
-                                "room:online-users",
-                                {
-                                    users: Array.from(
-                                        users.values()
-                                    ),
-                                }
-                            );
-                        }
-                    }
+                    removeSocketFromRoom(
+                        io,
+                        roomId,
+                        socket.id
+                    );
                 }
             );
+
+            /*
+             * Remove global user -> socket mapping only
+             * when this socket is still the active socket.
+             */
+            removeConnectedUserSocket(
+                socket
+            );
+
+            /*
+             * End active study session after
+             * presence cleanup.
+             */
+            await endStudySession();
         }
     );
 };
 
-// ===========================
+// ============================================================
 // Helper
-// ===========================
+// ============================================================
 
 const getUserIdFromSocket = (
     roomId,
