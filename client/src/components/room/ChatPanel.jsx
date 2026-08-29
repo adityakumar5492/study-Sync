@@ -500,6 +500,15 @@ const MessageList = memo(function MessageList({
                                             msg._id
                                         )
                                     }
+                                    status={
+                                        msg.status
+                                    }
+                                    deliveredTo={
+                                        msg.deliveredTo
+                                    }
+                                    seenBy={
+                                        msg.seenBy
+                                    }
                                 />
                             </div>
                         );
@@ -1401,6 +1410,114 @@ const ChatPanel = ({
             };
 
         /* --------------------------------------------------------
+           MESSAGE STATUS (SEEN)
+
+           The server emits this event:
+
+           1. When ChatPanel opens and previously unread
+              messages become seen (Scenario 3).
+           2. Immediately, when the receiver already has
+              ChatPanel open at send time (Scenario 4).
+
+           This is the piece that was previously missing:
+           without it, the sender's UI never learns that a
+           message became Seen after the initial render.
+
+           We merge the seen userId into that message's
+           seenBy (and deliveredTo, since seen implies
+           delivered) arrays, guarding against duplicates the
+           same way the backend does.
+        -------------------------------------------------------- */
+
+        const handleMessageStatus = ({
+            messageId,
+            userId,
+            status,
+        } = {}) => {
+            if (
+                !active ||
+                !messageId ||
+                !userId ||
+                status !== "seen"
+            ) {
+                return;
+            }
+
+            const normalizedUserId =
+                userId.toString();
+
+            setMessages((previous) =>
+                previous.map((message) => {
+                    if (
+                        message._id !==
+                        messageId
+                    ) {
+                        return message;
+                    }
+
+                    const seenBy =
+                        message.seenBy || [];
+
+                    const alreadySeen =
+                        seenBy.some(
+                            (entry) =>
+                                (
+                                    entry?.user
+                                        ?._id ||
+                                    entry?.user
+                                )?.toString() ===
+                                normalizedUserId
+                        );
+
+                    if (alreadySeen) {
+                        return message;
+                    }
+
+                    const deliveredTo =
+                        message.deliveredTo ||
+                        [];
+
+                    const alreadyDelivered =
+                        deliveredTo.some(
+                            (entry) =>
+                                (
+                                    entry?.user
+                                        ?._id ||
+                                    entry?.user
+                                )?.toString() ===
+                                normalizedUserId
+                        );
+
+                    const now =
+                        new Date().toISOString();
+
+                    return {
+                        ...message,
+
+                        deliveredTo:
+                            alreadyDelivered
+                                ? deliveredTo
+                                : [
+                                      ...deliveredTo,
+                                      {
+                                          user: normalizedUserId,
+                                          at: now,
+                                      },
+                                  ],
+
+                        seenBy: [
+                            ...seenBy,
+                            {
+                                user: normalizedUserId,
+                                at: now,
+                            },
+                        ],
+                    };
+                })
+            );
+        };
+
+        /* --------------------------------------------------------
            TYPING
         -------------------------------------------------------- */
 
@@ -1472,6 +1589,11 @@ const ChatPanel = ({
         );
 
         socket.on(
+            "chat:message-status",
+            handleMessageStatus
+        );
+
+        socket.on(
             "chat:user-typing",
             handleUserTyping
         );
@@ -1498,6 +1620,11 @@ const ChatPanel = ({
             socket.off(
                 "chat:message-deleted",
                 handleMessageDeleted
+            );
+
+            socket.off(
+                "chat:message-status",
+                handleMessageStatus
             );
 
             socket.off(
