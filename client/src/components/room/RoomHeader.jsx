@@ -662,7 +662,7 @@ const RoomHeader = ({
                                             {room.maxMembers
                                                 ? `/${room.maxMembers}`
                                                 : ""}{" "}
-                                            students
+                                            participants
                                         </span>
                                     </span>
 

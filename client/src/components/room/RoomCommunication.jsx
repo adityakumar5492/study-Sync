@@ -863,7 +863,7 @@ const RoomCommunication = ({
                                 <FaUsers className="shrink-0 text-[10px]" />
 
                                 <span className="hidden truncate xs:inline sm:inline">
-                                    People
+                                    participants
                                 </span>
 
                                 <span className="shrink-0 rounded-full bg-slate-800 px-1.5 py-0.5 text-[8px] leading-none text-slate-500">
@@ -926,7 +926,7 @@ const RoomCommunication = ({
                                 <FaPen className="shrink-0 text-[10px]" />
 
                                 <span className="hidden truncate xs:inline sm:inline">
-                                    Drawing
+                                    Drawing Access
                                 </span>
                             </button>
                         </div>
