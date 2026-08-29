@@ -2,7 +2,10 @@ const Message = require("../models/message.model");
 const Room = require("../models/room.model");
 
 module.exports = (io, socket) => {
+    // =========================================================
     // Send Message
+    // =========================================================
+
     socket.on("chat:send-message", async (data) => {
         try {
             const {
@@ -35,12 +38,11 @@ module.exports = (io, socket) => {
                 return;
             }
 
-            const savedMessage =
-                await Message.create({
-                    room: roomId,
-                    sender: senderId,
-                    message: message.trim(),
-                });
+            const savedMessage = await Message.create({
+                room: roomId,
+                sender: senderId,
+                message: message.trim(),
+            });
 
             const populatedMessage =
                 await Message.findById(
@@ -49,6 +51,10 @@ module.exports = (io, socket) => {
                     "sender",
                     "name avatar"
                 );
+
+            if (!populatedMessage?.sender) {
+                return;
+            }
 
             io.to(roomId).emit(
                 "chat:new-message",
@@ -64,6 +70,10 @@ module.exports = (io, socket) => {
                         populatedMessage.message,
                     createdAt:
                         populatedMessage.createdAt,
+                    deliveredTo:
+                        populatedMessage.deliveredTo || [],
+                    seenBy:
+                        populatedMessage.seenBy || [],
                 }
             );
         } catch (error) {
@@ -74,7 +84,219 @@ module.exports = (io, socket) => {
         }
     });
 
+    // =========================================================
+    // Message Delivered
+    // =========================================================
+
+    socket.on(
+        "chat:message-delivered",
+        async (data) => {
+            try {
+                const {
+                    roomId,
+                    messageId,
+                    userId,
+                } = data;
+
+                if (
+                    !roomId ||
+                    !messageId ||
+                    !userId
+                ) {
+                    return;
+                }
+
+                const room =
+                    await Room.findById(roomId);
+
+                if (!room) {
+                    return;
+                }
+
+                const isMember = room.members.some(
+                    (member) =>
+                        member.toString() ===
+                        userId.toString()
+                );
+
+                const isHost =
+                    room.host.toString() ===
+                    userId.toString();
+
+                if (!isMember && !isHost) {
+                    return;
+                }
+
+                const message =
+                    await Message.findOne({
+                        _id: messageId,
+                        room: roomId,
+                    });
+
+                if (!message) {
+                    return;
+                }
+
+                // Sender does not need delivery status
+                // for their own message.
+                if (
+                    message.sender.toString() ===
+                    userId.toString()
+                ) {
+                    return;
+                }
+
+                const alreadyDelivered =
+                    message.deliveredTo.some(
+                        (entry) =>
+                            entry.user.toString() ===
+                            userId.toString()
+                    );
+
+                if (!alreadyDelivered) {
+                    message.deliveredTo.push({
+                        user: userId,
+                        at: new Date(),
+                    });
+
+                    await message.save();
+                }
+
+                io.to(roomId).emit(
+                    "chat:message-status",
+                    {
+                        messageId,
+                        userId,
+                        status: "delivered",
+                    }
+                );
+            } catch (error) {
+                console.error(
+                    "Message delivery status error:",
+                    error
+                );
+            }
+        }
+    );
+
+    // =========================================================
+    // Message Seen
+    // =========================================================
+
+    socket.on(
+        "chat:message-seen",
+        async (data) => {
+            try {
+                const {
+                    roomId,
+                    messageId,
+                    userId,
+                } = data;
+
+                if (
+                    !roomId ||
+                    !messageId ||
+                    !userId
+                ) {
+                    return;
+                }
+
+                const room =
+                    await Room.findById(roomId);
+
+                if (!room) {
+                    return;
+                }
+
+                const isMember = room.members.some(
+                    (member) =>
+                        member.toString() ===
+                        userId.toString()
+                );
+
+                const isHost =
+                    room.host.toString() ===
+                    userId.toString();
+
+                if (!isMember && !isHost) {
+                    return;
+                }
+
+                const message =
+                    await Message.findOne({
+                        _id: messageId,
+                        room: roomId,
+                    });
+
+                if (!message) {
+                    return;
+                }
+
+                // Sender cannot mark their own message as seen.
+                if (
+                    message.sender.toString() ===
+                    userId.toString()
+                ) {
+                    return;
+                }
+
+                const now = new Date();
+
+                // If the message has not been delivered
+                // yet, mark it delivered as well.
+                const alreadyDelivered =
+                    message.deliveredTo.some(
+                        (entry) =>
+                            entry.user.toString() ===
+                            userId.toString()
+                    );
+
+                if (!alreadyDelivered) {
+                    message.deliveredTo.push({
+                        user: userId,
+                        at: now,
+                    });
+                }
+
+                const alreadySeen =
+                    message.seenBy.some(
+                        (entry) =>
+                            entry.user.toString() ===
+                            userId.toString()
+                    );
+
+                if (!alreadySeen) {
+                    message.seenBy.push({
+                        user: userId,
+                        at: now,
+                    });
+
+                    await message.save();
+                } else if (!alreadyDelivered) {
+                    await message.save();
+                }
+
+                io.to(roomId).emit(
+                    "chat:message-status",
+                    {
+                        messageId,
+                        userId,
+                        status: "seen",
+                    }
+                );
+            } catch (error) {
+                console.error(
+                    "Message seen status error:",
+                    error
+                );
+            }
+        }
+    );
+
+    // =========================================================
     // Delete Message
+    // =========================================================
+
     socket.on(
         "chat:delete-message",
         async (data) => {
@@ -93,7 +315,6 @@ module.exports = (io, socket) => {
                     return;
                 }
 
-                // Find room
                 const room =
                     await Room.findById(roomId);
 
@@ -101,7 +322,6 @@ module.exports = (io, socket) => {
                     return;
                 }
 
-                // Find message
                 const message =
                     await Message.findById(
                         messageId
@@ -111,8 +331,6 @@ module.exports = (io, socket) => {
                     return;
                 }
 
-                // Make sure the message
-                // actually belongs to this room
                 if (
                     message.room.toString() !==
                     roomId.toString()
@@ -120,26 +338,20 @@ module.exports = (io, socket) => {
                     return;
                 }
 
-                // Check whether requester is host
                 const isHost =
                     room.host.toString() ===
                     senderId.toString();
 
-                // Check whether requester is
-                // currently a room member
                 const isMember = room.members.some(
                     (member) =>
                         member.toString() ===
                         senderId.toString()
                 );
 
-                // Requester must be host or member
                 if (!isHost && !isMember) {
                     return;
                 }
 
-                // Member can only delete
-                // their own message.
                 const isMessageOwner =
                     message.sender.toString() ===
                     senderId.toString();
@@ -148,13 +360,10 @@ module.exports = (io, socket) => {
                     return;
                 }
 
-                // Delete message from database
                 await Message.findByIdAndDelete(
                     messageId
                 );
 
-                // Tell everyone in the room
-                // that this message was deleted
                 io.to(roomId).emit(
                     "chat:message-deleted",
                     {
@@ -170,26 +379,34 @@ module.exports = (io, socket) => {
         }
     );
 
+    // =========================================================
     // Typing Started
+    // =========================================================
+
     socket.on(
         "chat:typing",
-        ({ roomId, user }) => {
+        ({ roomId, user, userId }) => {
             socket
                 .to(roomId)
                 .emit("chat:user-typing", {
                     user,
+                    userId,
                 });
         }
     );
 
+    // =========================================================
     // Typing Stopped
+    // =========================================================
+
     socket.on(
         "chat:stop-typing",
-        ({ roomId, user }) => {
+        ({ roomId, user, userId }) => {
             socket
                 .to(roomId)
                 .emit("chat:user-stop-typing", {
                     user,
+                    userId,
                 });
         }
     );

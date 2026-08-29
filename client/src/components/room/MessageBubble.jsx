@@ -3,8 +3,72 @@ import {
     FaUserCircle,
     FaCheck,
     FaCheckDouble,
+    FaClock,
 } from "react-icons/fa";
 import { motion } from "framer-motion";
+
+const getMessageStatus = ({
+    status,
+    deliveredTo,
+    seenBy,
+}) => {
+    if (status === "sending") {
+        return "sending";
+    }
+
+    if (Array.isArray(seenBy) && seenBy.length > 0) {
+        return "seen";
+    }
+
+    if (
+        Array.isArray(deliveredTo) &&
+        deliveredTo.length > 0
+    ) {
+        return "delivered";
+    }
+
+    return "sent";
+};
+
+const MessageStatus = ({
+    status,
+}) => {
+    if (status === "sending") {
+        return (
+            <div className="flex items-center gap-1">
+                <FaClock className="text-[7px] text-zinc-500" />
+                <span>Sending</span>
+            </div>
+        );
+    }
+
+    if (status === "seen") {
+        return (
+            <div className="flex items-center gap-1">
+                <FaCheckDouble className="text-[8px] text-cyan-300" />
+                <span className="text-cyan-300/80">
+                    Seen
+                </span>
+            </div>
+        );
+    }
+
+    if (status === "delivered") {
+        return (
+            <div className="flex items-center gap-1">
+                <FaCheckDouble className="text-[8px] text-violet-300/80" />
+                <span>Delivered</span>
+            </div>
+        );
+    }
+
+    return (
+        <div className="flex items-center gap-1">
+            <FaCheck className="text-[7px] text-violet-400/70" />
+            <span>Sent</span>
+        </div>
+    );
+};
 
 const MessageBubble = ({
     sender,
@@ -14,12 +78,23 @@ const MessageBubble = ({
     avatar,
     canDelete = false,
     onDelete,
+
+    // Message status fields
+    status,
+    deliveredTo = [],
+    seenBy = [],
 }) => {
     const avatarUrl = avatar
         ? avatar.startsWith("http")
             ? avatar
             : `${import.meta.env.VITE_API_URL}${avatar}`
         : null;
+
+    const resolvedStatus = getMessageStatus({
+        status,
+        deliveredTo,
+        seenBy,
+    });
 
     return (
         <motion.div
@@ -59,7 +134,6 @@ const MessageBubble = ({
                 }}
                 className="relative mt-1 h-10 w-10 flex-shrink-0"
             >
-                {/* Avatar glow */}
                 <motion.div
                     animate={{
                         opacity: [0.15, 0.35, 0.15],
@@ -101,7 +175,6 @@ const MessageBubble = ({
                     </div>
                 )}
 
-                {/* Online indicator */}
                 <motion.span
                     animate={{
                         opacity: [0.6, 1, 0.6],
@@ -126,6 +199,7 @@ const MessageBubble = ({
                 }`}
             >
                 {/* Sender + time + delete */}
+
                 <div
                     className={`mb-1.5 flex items-center gap-2 ${
                         isOwn
@@ -150,7 +224,6 @@ const MessageBubble = ({
                         {time || ""}
                     </span>
 
-                    {/* Delete */}
                     {canDelete && (
                         <motion.button
                             type="button"
@@ -165,7 +238,8 @@ const MessageBubble = ({
                                 scale: 0.9,
                             }}
                             onClick={onDelete}
-                            className="ml-1 flex h-6 w-6 items-center justify-center rounded-lg border border-transparent text-zinc-500 transition-all duration-200 hover:border-red-400/10 hover:bg-red-500/10 hover:text-red-400"                            aria-label="Delete message"
+                            className="ml-1 flex h-6 w-6 items-center justify-center rounded-lg border border-transparent text-zinc-500 transition-all duration-200 hover:border-red-400/10 hover:bg-red-500/10 hover:text-red-400"
+                            aria-label="Delete message"
                         >
                             <FaTrash size={9} />
                         </motion.button>
@@ -191,7 +265,6 @@ const MessageBubble = ({
                             : "rounded-tl-md border border-white/[0.07] bg-white/[0.045] text-zinc-200 shadow-black/20 backdrop-blur-xl"
                     }`}
                 >
-                    {/* Animated shine on own messages */}
                     {isOwn && (
                         <motion.div
                             animate={{
@@ -210,7 +283,6 @@ const MessageBubble = ({
                         />
                     )}
 
-                    {/* Subtle incoming message glow */}
                     {!isOwn && (
                         <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/[0.025] to-transparent" />
                     )}
@@ -221,7 +293,7 @@ const MessageBubble = ({
                 </motion.div>
 
                 {/* ==========================================
-                    MESSAGE META
+                    MESSAGE STATUS
                 ========================================== */}
 
                 {isOwn && (
@@ -237,19 +309,12 @@ const MessageBubble = ({
                         }}
                         className="mt-1.5 flex items-center gap-1 text-[8px] text-zinc-700"
                     >
-                        <span>Sent</span>
-                        <FaCheck className="text-[7px] text-violet-400/70" />
+                        <MessageStatus
+                            status={resolvedStatus}
+                        />
                     </motion.div>
                 )}
-
-                {!isOwn && (
-                    <div className="mt-1.5 flex items-center gap-1 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
-                        <FaCheckDouble className="text-[7px] text-zinc-700" />
-                        <span className="text-[8px] text-zinc-700">
-                            seen
-                        </span>
-                    </div>
-                )}
+                
             </div>
         </motion.div>
     );

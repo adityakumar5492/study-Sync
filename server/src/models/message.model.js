@@ -1,5 +1,23 @@
 const mongoose = require("mongoose");
 
+const messageStatusSchema = new mongoose.Schema(
+    {
+        user: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User",
+            required: true,
+        },
+
+        at: {
+            type: Date,
+            default: Date.now,
+        },
+    },
+    {
+        _id: false,
+    }
+);
+
 const messageSchema = new mongoose.Schema(
     {
         room: {
@@ -19,6 +37,18 @@ const messageSchema = new mongoose.Schema(
             required: true,
             trim: true,
             maxlength: 1000,
+        },
+
+        // Users whose socket has received this message.
+        deliveredTo: {
+            type: [messageStatusSchema],
+            default: [],
+        },
+
+        // Users who have actually opened/read this message.
+        seenBy: {
+            type: [messageStatusSchema],
+            default: [],
         },
     },
     {
