@@ -7,6 +7,7 @@ import { motion } from "framer-motion";
 
 const VoiceControls = ({
     isJoined,
+    isJoining = false,
     isMuted,
     onJoin,
     onLeave,
@@ -17,26 +18,48 @@ const VoiceControls = ({
             <motion.button
                 type="button"
                 onClick={onJoin}
-                whileHover={{ y: -1 }}
-                whileTap={{ scale: 0.98 }}
-                className="group relative flex w-full items-center justify-center gap-2.5 overflow-hidden rounded-2xl border border-emerald-400/20 bg-emerald-400/[0.08] px-4 py-3 text-sm font-semibold text-emerald-300 shadow-[0_0_25px_rgba(52,211,153,0.06)] transition-all duration-300 hover:border-emerald-400/40 hover:bg-emerald-400/[0.13]"
+                disabled={isJoining}
+                whileHover={
+                    !isJoining
+                        ? { y: -1 }
+                        : undefined
+                }
+                whileTap={
+                    !isJoining
+                        ? { scale: 0.98 }
+                        : undefined
+                }
+                className={`group relative flex w-full items-center justify-center gap-2.5 overflow-hidden rounded-2xl border px-4 py-3 text-sm font-semibold shadow-[0_0_25px_rgba(52,211,153,0.06)] transition-all duration-300 ${
+                    isJoining
+                        ? "cursor-wait border-emerald-400/10 bg-emerald-400/[0.05] text-emerald-300/60"
+                        : "border-emerald-400/20 bg-emerald-400/[0.08] text-emerald-300 hover:border-emerald-400/40 hover:bg-emerald-400/[0.13]"
+                }`}
             >
-                <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/[0.06] to-transparent transition-transform duration-700 group-hover:translate-x-full" />
+                {!isJoining && (
+                    <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/[0.06] to-transparent transition-transform duration-700 group-hover:translate-x-full" />
+                )}
 
                 <span className="relative flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-400/10">
-                    <FaMicrophone size={13} />
+                    <FaMicrophone
+                        size={13}
+                    />
                 </span>
 
                 <span className="relative">
-                    Join Voice
+                    {isJoining
+                        ? "Joining voice..."
+                        : "Join Voice"}
                 </span>
 
-                <span className="relative ml-auto flex items-center gap-1">
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,.8)]" />
-                    <span className="text-[9px] font-medium uppercase tracking-wider text-emerald-400/60">
-                        Live
+                {!isJoining && (
+                    <span className="relative ml-auto flex items-center gap-1">
+                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,.8)]" />
+
+                        <span className="text-[9px] font-medium uppercase tracking-wider text-emerald-400/60">
+                            Live
+                        </span>
                     </span>
-                </span>
+                )}
             </motion.button>
         );
     }
@@ -47,9 +70,15 @@ const VoiceControls = ({
                 {/* Mute */}
                 <motion.button
                     type="button"
-                    onClick={onToggleMute}
-                    whileHover={{ y: -1 }}
-                    whileTap={{ scale: 0.96 }}
+                    onClick={
+                        onToggleMute
+                    }
+                    whileHover={{
+                        y: -1,
+                    }}
+                    whileTap={{
+                        scale: 0.96,
+                    }}
                     className={`group relative flex h-12 flex-1 items-center justify-center gap-2.5 overflow-hidden rounded-xl border transition-all duration-300 ${
                         isMuted
                             ? "border-red-400/20 bg-red-400/[0.08] text-red-300 hover:bg-red-400/[0.13]"
@@ -64,14 +93,20 @@ const VoiceControls = ({
                         }`}
                     >
                         {isMuted ? (
-                            <FaMicrophoneSlash size={12} />
+                            <FaMicrophoneSlash
+                                size={12}
+                            />
                         ) : (
-                            <FaMicrophone size={12} />
+                            <FaMicrophone
+                                size={12}
+                            />
                         )}
                     </span>
 
                     <span className="text-xs font-semibold">
-                        {isMuted ? "Unmute" : "Mute"}
+                        {isMuted
+                            ? "Unmute"
+                            : "Mute"}
                     </span>
 
                     {!isMuted && (
@@ -83,13 +118,19 @@ const VoiceControls = ({
                 <motion.button
                     type="button"
                     onClick={onLeave}
-                    whileHover={{ y: -1 }}
-                    whileTap={{ scale: 0.96 }}
+                    whileHover={{
+                        y: -1,
+                    }}
+                    whileTap={{
+                        scale: 0.96,
+                    }}
                     className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-red-400/10 bg-red-400/[0.07] text-red-400 transition-all duration-300 hover:border-red-400/25 hover:bg-red-400/[0.13]"
                     title="Leave voice"
                     aria-label="Leave voice"
                 >
-                    <FaPhoneSlash size={13} />
+                    <FaPhoneSlash
+                        size={13}
+                    />
                 </motion.button>
             </div>
 
@@ -97,8 +138,16 @@ const VoiceControls = ({
             <div className="mt-2 flex items-center justify-center gap-2">
                 <motion.span
                     animate={{
-                        opacity: [0.4, 1, 0.4],
-                        scale: [0.9, 1, 0.9],
+                        opacity: [
+                            0.4,
+                            1,
+                            0.4,
+                        ],
+                        scale: [
+                            0.9,
+                            1,
+                            0.9,
+                        ],
                     }}
                     transition={{
                         duration: 1.8,

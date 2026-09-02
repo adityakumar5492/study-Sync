@@ -7,62 +7,107 @@ module.exports = (io, socket) => {
     // ===========================
 
     socket.on(
-    "voice:join",
-    ({ roomId, user }) => {
-        if (!roomId || !user?._id) {
-            return;
-        }
-
-        const userId =
-            user._id.toString();
-
-        if (!voiceParticipants.has(roomId)) {
-            voiceParticipants.set(
-                roomId,
-                new Map()
-            );
-        }
-
-        const participants =
-            voiceParticipants.get(roomId);
-
-        participants.set(userId, {
-            _id: userId,
-            name: user.name,
-            avatar: user.avatar,
-            socketId: socket.id,
-            muted: false,
-        });
-
-        // Send updated participant list to EVERYONE
-        io.to(roomId).emit(
-            "voice:participants",
-            {
-                participants: Array.from(
-                    participants.values()
-                ).map((participant) => ({
-                    _id: participant._id,
-                    name: participant.name,
-                    avatar: participant.avatar,
-                    muted: participant.muted,
-                })),
+        "voice:join",
+        ({ roomId, user }) => {
+            if (!roomId || !user?._id) {
+                return;
             }
-        );
 
-        // Tell existing participants to start WebRTC connection
-        socket.to(roomId).emit(
-            "voice:user-joined",
-            {
+            const userId =
+                user._id.toString();
+
+            if (
+                !voiceParticipants.has(
+                    roomId
+                )
+            ) {
+                voiceParticipants.set(
+                    roomId,
+                    new Map()
+                );
+            }
+
+            const participants =
+                voiceParticipants.get(
+                    roomId
+                );
+
+            const existingParticipant =
+                participants.get(
+                    userId
+                );
+
+            // Handle reconnect / duplicate join.
+            if (
+                existingParticipant &&
+                existingParticipant.socketId !==
+                    socket.id
+            ) {
+                const oldSocket =
+                    io.sockets.sockets.get(
+                        existingParticipant.socketId
+                    );
+
+                if (oldSocket) {
+                    oldSocket.leave(
+                        roomId
+                    );
+                }
+            }
+
+            participants.set(
                 userId,
-                user: {
+                {
                     _id: userId,
                     name: user.name,
                     avatar: user.avatar,
-                },
-            }
-        );
-    }
-);
+                    socketId: socket.id,
+                    muted:
+                        existingParticipant?.muted ??
+                        false,
+                }
+            );
+
+            io.to(roomId).emit(
+                "voice:participants",
+                {
+                    participants:
+                        Array.from(
+                            participants.values()
+                        ).map(
+                            (
+                                participant
+                            ) => ({
+                                _id:
+                                    participant._id,
+                                name:
+                                    participant.name,
+                                avatar:
+                                    participant.avatar,
+                                muted:
+                                    participant.muted,
+                            })
+                        ),
+                }
+            );
+
+            socket
+                .to(roomId)
+                .emit(
+                    "voice:user-joined",
+                    {
+                        userId,
+                        user: {
+                            _id: userId,
+                            name:
+                                user.name,
+                            avatar:
+                                user.avatar,
+                        },
+                    }
+                );
+        }
+    );
 
     // ===========================
     // WebRTC Offer
@@ -83,6 +128,16 @@ module.exports = (io, socket) => {
                 return;
             }
 
+            const senderUserId =
+                getSocketUserId(
+                    socket,
+                    roomId
+                );
+
+            if (!senderUserId) {
+                return;
+            }
+
             const targetSocket =
                 findUserSocket(
                     io,
@@ -98,10 +153,7 @@ module.exports = (io, socket) => {
                 "voice:offer",
                 {
                     userId:
-                        getSocketUserId(
-                            socket,
-                            roomId
-                        ),
+                        senderUserId,
                     offer,
                 }
             );
@@ -127,6 +179,16 @@ module.exports = (io, socket) => {
                 return;
             }
 
+            const senderUserId =
+                getSocketUserId(
+                    socket,
+                    roomId
+                );
+
+            if (!senderUserId) {
+                return;
+            }
+
             const targetSocket =
                 findUserSocket(
                     io,
@@ -142,10 +204,7 @@ module.exports = (io, socket) => {
                 "voice:answer",
                 {
                     userId:
-                        getSocketUserId(
-                            socket,
-                            roomId
-                        ),
+                        senderUserId,
                     answer,
                 }
             );
@@ -171,6 +230,16 @@ module.exports = (io, socket) => {
                 return;
             }
 
+            const senderUserId =
+                getSocketUserId(
+                    socket,
+                    roomId
+                );
+
+            if (!senderUserId) {
+                return;
+            }
+
             const targetSocket =
                 findUserSocket(
                     io,
@@ -186,10 +255,7 @@ module.exports = (io, socket) => {
                 "voice:ice-candidate",
                 {
                     userId:
-                        getSocketUserId(
-                            socket,
-                            roomId
-                        ),
+                        senderUserId,
                     candidate,
                 }
             );
@@ -201,44 +267,66 @@ module.exports = (io, socket) => {
     // ===========================
 
     socket.on(
-    "voice:mute",
-    ({
-        roomId,
-        userId,
-        muted,
-    }) => {
-        if (
-            !roomId ||
-            !userId
-        ) {
-            return;
-        }
+        "voice:mute",
+        ({
+            roomId,
+            userId,
+            muted,
+        }) => {
+            if (
+                !roomId ||
+                !userId
+            ) {
+                return;
+            }
 
-        const participants =
-            voiceParticipants.get(
-                roomId
-            );
+            const participants =
+                voiceParticipants.get(
+                    roomId
+                );
 
-        const participant =
-            participants?.get(
-                userId.toString()
-            );
+            const socketUserId =
+                getSocketUserId(
+                    socket,
+                    roomId
+                );
 
-        if (participant) {
+            const normalizedUserId =
+                userId.toString();
+
+            // Only the actual socket owner
+            // can modify its own mute state.
+            if (
+                !socketUserId ||
+                socketUserId !==
+                    normalizedUserId
+            ) {
+                return;
+            }
+
+            const participant =
+                participants?.get(
+                    normalizedUserId
+                );
+
+            if (!participant) {
+                return;
+            }
+
             participant.muted =
                 Boolean(muted);
-        }
 
-        socket.to(roomId).emit(
-            "voice:user-muted",
-            {
-                userId:
-                    userId.toString(),
-                muted: Boolean(muted),
-            }
-        );
-    }
-);
+            io.to(roomId).emit(
+                "voice:user-muted",
+                {
+                    userId:
+                        normalizedUserId,
+                    muted:
+                        participant.muted,
+                }
+            );
+        }
+    );
 
     // ===========================
     // Leave Voice
@@ -250,11 +338,35 @@ module.exports = (io, socket) => {
             roomId,
             userId,
         }) => {
+            if (
+                !roomId ||
+                !userId
+            ) {
+                return;
+            }
+
+            const socketUserId =
+                getSocketUserId(
+                    socket,
+                    roomId
+                );
+
+            const normalizedUserId =
+                userId.toString();
+
+            if (
+                !socketUserId ||
+                socketUserId !==
+                    normalizedUserId
+            ) {
+                return;
+            }
+
             removeVoiceParticipant(
                 io,
                 socket,
                 roomId,
-                userId
+                normalizedUserId
             );
         }
     );
@@ -267,7 +379,10 @@ module.exports = (io, socket) => {
         "disconnecting",
         () => {
             voiceParticipants.forEach(
-                (participants, roomId) => {
+                (
+                    participants,
+                    roomId
+                ) => {
                     const userId =
                         Array.from(
                             participants.entries()
@@ -285,12 +400,14 @@ module.exports = (io, socket) => {
                         userId
                     );
 
-                    socket.to(roomId).emit(
-                        "voice:user-left",
-                        {
-                            userId,
-                        }
-                    );
+                    socket
+                        .to(roomId)
+                        .emit(
+                            "voice:user-left",
+                            {
+                                userId,
+                            }
+                        );
 
                     if (
                         participants.size ===
@@ -299,7 +416,32 @@ module.exports = (io, socket) => {
                         voiceParticipants.delete(
                             roomId
                         );
+
+                        return;
                     }
+
+                    io.to(roomId).emit(
+                        "voice:participants",
+                        {
+                            participants:
+                                Array.from(
+                                    participants.values()
+                                ).map(
+                                    (
+                                        participant
+                                    ) => ({
+                                        _id:
+                                            participant._id,
+                                        name:
+                                            participant.name,
+                                        avatar:
+                                            participant.avatar,
+                                        muted:
+                                            participant.muted,
+                                    })
+                                ),
+                        }
+                    );
                 }
             );
         }
@@ -316,7 +458,9 @@ const findUserSocket = (
     userId
 ) => {
     const participants =
-        voiceParticipants.get(roomId);
+        voiceParticipants.get(
+            roomId
+        );
 
     if (!participants) {
         return null;
@@ -347,7 +491,9 @@ const getSocketUserId = (
     roomId
 ) => {
     const participants =
-        voiceParticipants.get(roomId);
+        voiceParticipants.get(
+            roomId
+        );
 
     if (!participants) {
         return null;
@@ -378,12 +524,10 @@ const removeVoiceParticipant = (
     roomId,
     userId
 ) => {
-    if (!roomId || !userId) {
-        return;
-    }
-
     const participants =
-        voiceParticipants.get(roomId);
+        voiceParticipants.get(
+            roomId
+        );
 
     if (!participants) {
         return;
@@ -392,21 +536,64 @@ const removeVoiceParticipant = (
     const normalizedUserId =
         userId.toString();
 
+    const participant =
+        participants.get(
+            normalizedUserId
+        );
+
+    if (
+        !participant ||
+        participant.socketId !==
+            socket.id
+    ) {
+        return;
+    }
+
     participants.delete(
         normalizedUserId
     );
 
-    socket.to(roomId).emit(
-        "voice:user-left",
-        {
-            userId:
-                normalizedUserId,
-        }
-    );
+    socket
+        .to(roomId)
+        .emit(
+            "voice:user-left",
+            {
+                userId:
+                    normalizedUserId,
+            }
+        );
 
-    if (participants.size === 0) {
+    if (
+        participants.size ===
+        0
+    ) {
         voiceParticipants.delete(
             roomId
         );
+
+        return;
     }
+
+    io.to(roomId).emit(
+        "voice:participants",
+        {
+            participants:
+                Array.from(
+                    participants.values()
+                ).map(
+                    (
+                        currentParticipant
+                    ) => ({
+                        _id:
+                            currentParticipant._id,
+                        name:
+                            currentParticipant.name,
+                        avatar:
+                            currentParticipant.avatar,
+                        muted:
+                            currentParticipant.muted,
+                    })
+                ),
+        }
+    );
 };

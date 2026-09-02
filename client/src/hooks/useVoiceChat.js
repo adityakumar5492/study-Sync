@@ -8,50 +8,36 @@ import {
 import socket from "../socket/socket";
 import toast from "react-hot-toast";
 
-const useVoiceChat = ({
-    roomId,
-    user,
-}) => {
-    const [isJoined, setIsJoined] =
+const ICE_SERVERS = [
+    {
+        urls: "stun:stun.l.google.com:19302",
+    },
+];
+
+const useVoiceChat = ({ roomId, user }) => {
+    const [isJoined, setIsJoined] = useState(false);
+    const [isJoining, setIsJoining] = useState(false);
+    const [isMuted, setIsMuted] = useState(false);
+    const [participants, setParticipants] = useState([]);
+    const [speakingUsers, setSpeakingUsers] = useState({});
+    const [connectionStates, setConnectionStates] = useState({});
+    const [audioPlaybackBlocked, setAudioPlaybackBlocked] =
         useState(false);
 
-    const [isMuted, setIsMuted] =
-        useState(false);
+    const localStreamRef = useRef(null);
+    const peerConnectionsRef = useRef(new Map());
+    const remoteAudioRefs = useRef(new Map());
+    const pendingIceCandidatesRef = useRef(new Map());
 
-    const [participants, setParticipants] =
-        useState([]);
+    const audioAnalyserRefs = useRef(new Map());
+    const speakingAnimationRefs = useRef(new Map());
+    const audioContextRef = useRef(null);
 
-    // NEW: tracks users who are currently speaking
-    const [speakingUsers, setSpeakingUsers] =
-        useState({});
+    const isJoinedRef = useRef(false);
+    const isJoiningRef = useRef(false);
 
-    const localStreamRef =
-        useRef(null);
-
-    const peerConnectionsRef =
-        useRef(new Map());
-
-    const remoteAudioRefs =
-        useRef(new Map());
-
-    // NEW: audio analysers
-    const audioAnalyserRefs =
-        useRef(new Map());
-
-    const speakingAnimationRefs =
-        useRef(new Map());
-
-    const audioContextRef =
-        useRef(null);
-
-    const isJoinedRef =
-        useRef(false);
-
-    const roomIdRef =
-        useRef(roomId);
-
-    const userRef =
-        useRef(user);
+    const roomIdRef = useRef(roomId);
+    const userRef = useRef(user);
 
     useEffect(() => {
         roomIdRef.current = roomId;
@@ -59,53 +45,118 @@ const useVoiceChat = ({
     }, [roomId, user]);
 
     // ===========================
-    // Audio Speaking Detection
+    // Connection State
     // ===========================
 
-    const stopSpeakingDetection = useCallback(
-        (userId) => {
-            const animation =
-                speakingAnimationRefs.current.get(
-                    userId
-                );
+    const setConnectionState = useCallback((userId, state) => {
+        const normalizedId = userId?.toString();
 
-            if (animation) {
-                cancelAnimationFrame(animation);
-                speakingAnimationRefs.current.delete(
-                    userId
-                );
+        if (!normalizedId) {
+            return;
+        }
+
+        setConnectionStates((current) => {
+            if (current[normalizedId] === state) {
+                return current;
             }
 
-            audioAnalyserRefs.current.delete(
-                userId
+            return {
+                ...current,
+                [normalizedId]: state,
+            };
+        });
+    }, []);
+
+    const clearConnectionState = useCallback((userId) => {
+        const normalizedId = userId?.toString();
+
+        if (!normalizedId) {
+            return;
+        }
+
+        setConnectionStates((current) => {
+            if (!current[normalizedId]) {
+                return current;
+            }
+
+            const next = {
+                ...current,
+            };
+
+            delete next[normalizedId];
+
+            return next;
+        });
+    }, []);
+
+    // ===========================
+    // Speaking Detection
+    // ===========================
+
+    const stopSpeakingDetection = useCallback((userId) => {
+        const normalizedId = userId?.toString();
+
+        if (!normalizedId) {
+            return;
+        }
+
+        const animation =
+            speakingAnimationRefs.current.get(
+                normalizedId
             );
 
-            setSpeakingUsers((current) => {
-                if (!current[userId]) {
-                    return current;
-                }
+        if (animation) {
+            cancelAnimationFrame(animation);
 
-                const next = {
-                    ...current,
-                };
+            speakingAnimationRefs.current.delete(
+                normalizedId
+            );
+        }
 
-                delete next[userId];
+        const analyserData =
+            audioAnalyserRefs.current.get(
+                normalizedId
+            );
 
-                return next;
-            });
-        },
-        []
-    );
+        if (analyserData?.source) {
+            try {
+                analyserData.source.disconnect();
+            } catch {
+                // Already disconnected.
+            }
+        }
+
+        audioAnalyserRefs.current.delete(
+            normalizedId
+        );
+
+        setSpeakingUsers((current) => {
+            if (!current[normalizedId]) {
+                return current;
+            }
+
+            const next = {
+                ...current,
+            };
+
+            delete next[normalizedId];
+
+            return next;
+        });
+    }, []);
 
     const startSpeakingDetection = useCallback(
         (userId, stream) => {
-            if (!stream) {
+            const normalizedId =
+                userId?.toString();
+
+            if (!normalizedId || !stream) {
                 return;
             }
 
             if (
                 audioAnalyserRefs.current.has(
-                    userId
+                    normalizedId
                 )
             ) {
                 return;
@@ -113,11 +164,16 @@ const useVoiceChat = ({
 
             try {
                 if (!audioContextRef.current) {
+                    const AudioContext =
+                        window.AudioContext ||
+                        window.webkitAudioContext;
+
+                    if (!AudioContext) {
+                        return;
+                    }
+
                     audioContextRef.current =
-                        new (
-                            window.AudioContext ||
-                            window.webkitAudioContext
-                        )();
+                        new AudioContext();
                 }
 
                 const audioContext =
@@ -127,9 +183,9 @@ const useVoiceChat = ({
                     audioContext.state ===
                     "suspended"
                 ) {
-                    audioContext.resume().catch(
-                        () => {}
-                    );
+                    audioContext
+                        .resume()
+                        .catch(() => {});
                 }
 
                 const analyser =
@@ -151,7 +207,7 @@ const useVoiceChat = ({
                     );
 
                 audioAnalyserRefs.current.set(
-                    userId,
+                    normalizedId,
                     {
                         analyser,
                         source,
@@ -162,7 +218,7 @@ const useVoiceChat = ({
                 const detect = () => {
                     const analyserData =
                         audioAnalyserRefs.current.get(
-                            userId
+                            normalizedId
                         );
 
                     if (!analyserData) {
@@ -183,7 +239,7 @@ const useVoiceChat = ({
                     for (
                         let i = 0;
                         i < dataArray.length;
-                        i++
+                        i += 1
                     ) {
                         const normalized =
                             (dataArray[i] - 128) /
@@ -198,22 +254,22 @@ const useVoiceChat = ({
                         sum / dataArray.length
                     );
 
-                    // Speaking threshold.
-                    // Small background noise is ignored.
                     const speaking =
                         rms > 0.035;
 
                     setSpeakingUsers((current) => {
                         if (
-                            current[userId] ===
-                            speaking
+                            current[
+                                normalizedId
+                            ] === speaking
                         ) {
                             return current;
                         }
 
                         return {
                             ...current,
-                            [userId]: speaking,
+                            [normalizedId]:
+                                speaking,
                         };
                     });
 
@@ -223,7 +279,7 @@ const useVoiceChat = ({
                         );
 
                     speakingAnimationRefs.current.set(
-                        userId,
+                        normalizedId,
                         animationFrame
                     );
                 };
@@ -240,29 +296,178 @@ const useVoiceChat = ({
     );
 
     // ===========================
+    // Pending ICE Candidates
+    // ===========================
+
+    const flushPendingIceCandidates =
+        useCallback(
+            async (
+                userId,
+                peerConnection
+            ) => {
+                const normalizedId =
+                    userId?.toString();
+
+                if (
+                    !normalizedId ||
+                    !peerConnection.remoteDescription
+                ) {
+                    return;
+                }
+
+                const pending =
+                    pendingIceCandidatesRef.current.get(
+                        normalizedId
+                    );
+
+                if (!pending?.length) {
+                    return;
+                }
+
+                pendingIceCandidatesRef.current.delete(
+                    normalizedId
+                );
+
+                for (const candidate of pending) {
+                    try {
+                        await peerConnection.addIceCandidate(
+                            candidate
+                        );
+                    } catch (error) {
+                        console.error(
+                            "Pending ICE candidate error:",
+                            error
+                        );
+                    }
+                }
+            },
+            []
+        );
+
+    // ===========================
+    // Remote Audio
+    // ===========================
+
+    const removeRemoteAudio = useCallback(
+        (userId) => {
+            const normalizedId =
+                userId?.toString();
+
+            if (!normalizedId) {
+                return;
+            }
+
+            const audio =
+                remoteAudioRefs.current.get(
+                    normalizedId
+                );
+
+            if (audio) {
+                audio.pause();
+                audio.srcObject = null;
+                audio.remove();
+
+                remoteAudioRefs.current.delete(
+                    normalizedId
+                );
+            }
+        },
+        []
+    );
+
+    // ===========================
+    // Close Peer Connection
+    // ===========================
+
+    const closePeerConnection =
+        useCallback(
+            (userId) => {
+                const normalizedId =
+                    userId?.toString();
+
+                if (!normalizedId) {
+                    return;
+                }
+
+                const peerConnection =
+                    peerConnectionsRef.current.get(
+                        normalizedId
+                    );
+
+                if (peerConnection) {
+                    peerConnection.ontrack =
+                        null;
+
+                    peerConnection.onicecandidate =
+                        null;
+
+                    peerConnection.onconnectionstatechange =
+                        null;
+
+                    peerConnection.oniceconnectionstatechange =
+                        null;
+
+                    peerConnection.close();
+
+                    peerConnectionsRef.current.delete(
+                        normalizedId
+                    );
+                }
+
+                pendingIceCandidatesRef.current.delete(
+                    normalizedId
+                );
+
+                removeRemoteAudio(
+                    normalizedId
+                );
+
+                stopSpeakingDetection(
+                    normalizedId
+                );
+
+                clearConnectionState(
+                    normalizedId
+                );
+            },
+            [
+                clearConnectionState,
+                removeRemoteAudio,
+                stopSpeakingDetection,
+            ]
+        );
+
+    // ===========================
     // Create Peer Connection
     // ===========================
 
     const createPeerConnection =
         useCallback(
             (userId) => {
+                const normalizedId =
+                    userId?.toString();
+
+                if (!normalizedId) {
+                    return null;
+                }
+
                 const existing =
                     peerConnectionsRef.current.get(
-                        userId
+                        normalizedId
                     );
 
-                if (existing) {
+                if (
+                    existing &&
+                    existing.connectionState !==
+                        "closed"
+                ) {
                     return existing;
                 }
 
                 const peerConnection =
                     new RTCPeerConnection({
-                        iceServers: [
-                            {
-                                urls:
-                                    "stun:stun.l.google.com:19302",
-                            },
-                        ],
+                        iceServers:
+                            ICE_SERVERS,
                     });
 
                 // Local audio
@@ -279,6 +484,60 @@ const useVoiceChat = ({
                         });
                 }
 
+                // Connection state
+                peerConnection.onconnectionstatechange =
+                    () => {
+                        const state =
+                            peerConnection.connectionState;
+
+                        if (
+                            state ===
+                            "connected"
+                        ) {
+                            setConnectionState(
+                                normalizedId,
+                                "connected"
+                            );
+                        } else if (
+                            state ===
+                            "connecting"
+                        ) {
+                            setConnectionState(
+                                normalizedId,
+                                "connecting"
+                            );
+                        } else if (
+                            state ===
+                            "failed"
+                        ) {
+                            setConnectionState(
+                                normalizedId,
+                                "failed"
+                            );
+                        } else if (
+                            state ===
+                            "disconnected"
+                        ) {
+                            setConnectionState(
+                                normalizedId,
+                                "disconnected"
+                            );
+                        }
+                    };
+
+                peerConnection.oniceconnectionstatechange =
+                    () => {
+                        if (
+                            peerConnection.iceConnectionState ===
+                            "failed"
+                        ) {
+                            setConnectionState(
+                                normalizedId,
+                                "failed"
+                            );
+                        }
+                    };
+
                 // Remote audio
                 peerConnection.ontrack = (
                     event
@@ -292,7 +551,7 @@ const useVoiceChat = ({
 
                     let audio =
                         remoteAudioRefs.current.get(
-                            userId
+                            normalizedId
                         );
 
                     if (!audio) {
@@ -303,13 +562,24 @@ const useVoiceChat = ({
 
                         audio.autoplay = true;
                         audio.playsInline = true;
+                        audio.controls = false;
+                        audio.setAttribute(
+                            "aria-hidden",
+                            "true"
+                        );
+
+                        audio.className =
+                            "hidden";
+
+                        audio.dataset.voiceParticipantId =
+                            normalizedId;
 
                         document.body.appendChild(
                             audio
                         );
 
                         remoteAudioRefs.current.set(
-                            userId,
+                            normalizedId,
                             audio
                         );
                     }
@@ -317,45 +587,190 @@ const useVoiceChat = ({
                     audio.srcObject =
                         remoteStream;
 
-                    audio.play().catch(() => {});
+                    const playRemoteAudio =
+                        async () => {
+                            try {
+                                await audio.play();
 
-                    // NEW: detect remote speaking
+                                setAudioPlaybackBlocked(
+                                    false
+                                );
+                            } catch (error) {
+                                console.warn(
+                                    "Remote audio playback was blocked:",
+                                    error
+                                );
+
+                                setAudioPlaybackBlocked(
+                                    true
+                                );
+                            }
+                        };
+
+                    playRemoteAudio();
+
                     startSpeakingDetection(
-                        userId,
+                        normalizedId,
                         remoteStream
                     );
                 };
 
                 // ICE
-                peerConnection.onicecandidate = (
-                    event
-                ) => {
-                    if (!event.candidate) {
-                        return;
-                    }
-
-                    socket.emit(
-                        "voice:ice-candidate",
-                        {
-                            roomId:
-                                roomIdRef.current,
-                            targetUserId:
-                                userId,
-                            candidate:
-                                event.candidate,
+                peerConnection.onicecandidate =
+                    (event) => {
+                        if (
+                            !event.candidate
+                        ) {
+                            return;
                         }
-                    );
-                };
+
+                        socket.emit(
+                            "voice:ice-candidate",
+                            {
+                                roomId:
+                                    roomIdRef.current,
+                                targetUserId:
+                                    normalizedId,
+                                candidate:
+                                    event.candidate,
+                            }
+                        );
+                    };
 
                 peerConnectionsRef.current.set(
-                    userId,
+                    normalizedId,
                     peerConnection
+                );
+
+                setConnectionState(
+                    normalizedId,
+                    "connecting"
                 );
 
                 return peerConnection;
             },
-            [startSpeakingDetection]
+            [
+                setConnectionState,
+                startSpeakingDetection,
+            ]
         );
+
+    // ===========================
+    // Cleanup
+    // ===========================
+
+    const cleanupVoice = useCallback(
+        ({ notifyServer = true } = {}) => {
+            const currentRoomId =
+                roomIdRef.current;
+
+            const currentUser =
+                userRef.current;
+
+            if (
+                notifyServer &&
+                currentRoomId &&
+                currentUser?._id &&
+                isJoinedRef.current
+            ) {
+                socket.emit(
+                    "voice:leave",
+                    {
+                        roomId:
+                            currentRoomId,
+                        userId:
+                            currentUser._id,
+                    }
+                );
+            }
+
+            peerConnectionsRef.current.forEach(
+                (peerConnection) => {
+                    peerConnection.ontrack =
+                        null;
+
+                    peerConnection.onicecandidate =
+                        null;
+
+                    peerConnection.onconnectionstatechange =
+                        null;
+
+                    peerConnection.oniceconnectionstatechange =
+                        null;
+
+                    peerConnection.close();
+                }
+            );
+
+            peerConnectionsRef.current.clear();
+
+            pendingIceCandidatesRef.current.clear();
+
+            remoteAudioRefs.current.forEach(
+                (audio) => {
+                    audio.pause();
+                    audio.srcObject = null;
+                    audio.remove();
+                }
+            );
+
+            remoteAudioRefs.current.clear();
+
+            speakingAnimationRefs.current.forEach(
+                (animation) => {
+                    cancelAnimationFrame(
+                        animation
+                    );
+                }
+            );
+
+            speakingAnimationRefs.current.clear();
+
+            audioAnalyserRefs.current.forEach(
+                ({ source }) => {
+                    try {
+                        source.disconnect();
+                    } catch {
+                        // Already disconnected.
+                    }
+                }
+            );
+
+            audioAnalyserRefs.current.clear();
+
+            if (audioContextRef.current) {
+                audioContextRef.current
+                    .close()
+                    .catch(() => {});
+
+                audioContextRef.current =
+                    null;
+            }
+
+            if (localStreamRef.current) {
+                localStreamRef.current
+                    .getTracks()
+                    .forEach((track) => {
+                        track.stop();
+                    });
+
+                localStreamRef.current =
+                    null;
+            }
+
+            isJoinedRef.current = false;
+            isJoiningRef.current = false;
+
+            setIsJoined(false);
+            setIsJoining(false);
+            setIsMuted(false);
+            setParticipants([]);
+            setSpeakingUsers({});
+            setConnectionStates({});
+            setAudioPlaybackBlocked(false);
+        },
+        []
+    );
 
     // ===========================
     // Join Voice
@@ -372,53 +787,98 @@ const useVoiceChat = ({
             if (
                 !currentRoomId ||
                 !currentUser?._id ||
-                isJoinedRef.current
+                isJoinedRef.current ||
+                isJoiningRef.current
             ) {
                 return;
             }
 
+            isJoiningRef.current = true;
+            setIsJoining(true);
+
             try {
                 if (
-                    !localStreamRef.current
+                    !navigator.mediaDevices
+                        ?.getUserMedia
                 ) {
-                    const stream =
-                        await navigator.mediaDevices.getUserMedia(
-                            {
-                                audio: true,
-                                video: false,
-                            }
-                        );
-
-                    localStreamRef.current =
-                        stream;
-
-                    // NEW: detect local speaking
-                    startSpeakingDetection(
-                        currentUser._id.toString(),
-                        stream
+                    throw new Error(
+                        "MEDIA_DEVICES_UNAVAILABLE"
                     );
                 }
 
-                isJoinedRef.current = true;
+                const stream =
+                    await navigator.mediaDevices.getUserMedia(
+                        {
+                            audio: {
+                                echoCancellation:
+                                    true,
+                                noiseSuppression:
+                                    true,
+                                autoGainControl:
+                                    true,
+                            },
+                            video: false,
+                        }
+                    );
+
+                localStreamRef.current =
+                    stream;
+
+                const audioTrack =
+                    stream.getAudioTracks()[0];
+
+                if (!audioTrack) {
+                    throw new Error(
+                        "NO_AUDIO_TRACK"
+                    );
+                }
+
+                audioTrack.enabled = true;
+
+                startSpeakingDetection(
+                    currentUser._id.toString(),
+                    stream
+                );
+
+                isJoinedRef.current =
+                    true;
 
                 setIsJoined(true);
+                setIsMuted(false);
 
-                socket.emit("voice:join", {
-                    roomId: currentRoomId,
-                    user: {
-                        _id:
-                            currentUser._id,
-                        name:
-                            currentUser.name,
-                        avatar:
-                            currentUser.avatar,
-                    },
-                });
+                socket.emit(
+                    "voice:join",
+                    {
+                        roomId:
+                            currentRoomId,
+                        user: {
+                            _id:
+                                currentUser._id,
+                            name:
+                                currentUser.name,
+                            avatar:
+                                currentUser.avatar,
+                        },
+                    }
+                );
             } catch (error) {
                 console.error(
                     "Microphone access error:",
                     error
                 );
+
+                if (
+                    localStreamRef.current
+                ) {
+                    localStreamRef.current
+                        .getTracks()
+                        .forEach((track) => {
+                            track.stop();
+                        });
+
+                    localStreamRef.current =
+                        null;
+                }
 
                 if (
                     error?.name ===
@@ -434,11 +894,23 @@ const useVoiceChat = ({
                     toast.error(
                         "No microphone was found."
                     );
+                } else if (
+                    error?.message ===
+                    "MEDIA_DEVICES_UNAVAILABLE"
+                ) {
+                    toast.error(
+                        "Voice is not supported in this browser."
+                    );
                 } else {
                     toast.error(
                         "Unable to access microphone."
                     );
                 }
+            } finally {
+                isJoiningRef.current =
+                    false;
+
+                setIsJoining(false);
             }
         },
         [startSpeakingDetection]
@@ -449,80 +921,14 @@ const useVoiceChat = ({
     // ===========================
 
     const leaveVoice = useCallback(() => {
-        const currentRoomId =
-            roomIdRef.current;
-
-        const currentUser =
-            userRef.current;
-
-        if (
-            !currentRoomId ||
-            !currentUser?._id ||
-            !isJoinedRef.current
-        ) {
+        if (!isJoinedRef.current) {
             return;
         }
 
-        socket.emit("voice:leave", {
-            roomId: currentRoomId,
-            userId: currentUser._id,
+        cleanupVoice({
+            notifyServer: true,
         });
-
-        peerConnectionsRef.current.forEach(
-            (peerConnection) => {
-                peerConnection.close();
-            }
-        );
-
-        peerConnectionsRef.current.clear();
-
-        remoteAudioRefs.current.forEach(
-            (audio) => {
-                audio.pause();
-                audio.srcObject = null;
-                audio.remove();
-            }
-        );
-
-        remoteAudioRefs.current.clear();
-
-        // NEW: stop all speaking detection
-        speakingAnimationRefs.current.forEach(
-            (animation) => {
-                cancelAnimationFrame(animation);
-            }
-        );
-
-        speakingAnimationRefs.current.clear();
-
-        audioAnalyserRefs.current.clear();
-
-        setSpeakingUsers({});
-
-        if (localStreamRef.current) {
-            localStreamRef.current
-                .getTracks()
-                .forEach((track) => {
-                    track.stop();
-                });
-
-            localStreamRef.current = null;
-        }
-
-        if (audioContextRef.current) {
-            audioContextRef.current
-                .close()
-                .catch(() => {});
-
-            audioContextRef.current = null;
-        }
-
-        isJoinedRef.current = false;
-
-        setIsJoined(false);
-        setIsMuted(false);
-        setParticipants([]);
-    }, []);
+    }, [cleanupVoice]);
 
     // ===========================
     // Toggle Mute
@@ -540,7 +946,8 @@ const useVoiceChat = ({
 
         if (
             !stream ||
-            !currentUser?._id
+            !currentUser?._id ||
+            !isJoinedRef.current
         ) {
             return;
         }
@@ -560,24 +967,18 @@ const useVoiceChat = ({
 
         setIsMuted(muted);
 
-        if (muted) {
-            setSpeakingUsers((current) => ({
-                ...current,
-                [currentUser._id.toString()]:
-                    false,
-            }));
-        }
+        const currentUserId =
+            currentUser._id.toString();
 
-        socket.emit("voice:mute", {
-            roomId: currentRoomId,
-            userId: currentUser._id,
-            muted,
-        });
+        setSpeakingUsers((current) => ({
+            ...current,
+            [currentUserId]: false,
+        }));
 
         setParticipants((current) =>
             current.map((participant) =>
                 participant._id?.toString() ===
-                currentUser._id?.toString()
+                currentUserId
                     ? {
                           ...participant,
                           muted,
@@ -585,179 +986,308 @@ const useVoiceChat = ({
                     : participant
             )
         );
+
+        socket.emit(
+            "voice:mute",
+            {
+                roomId:
+                    currentRoomId,
+                userId:
+                    currentUser._id,
+                muted,
+            }
+        );
     }, []);
+
+    // ===========================
+    // Resume Remote Audio
+    // ===========================
+
+    const resumeRemoteAudio =
+        useCallback(async () => {
+            let blocked = false;
+
+            for (const audio of remoteAudioRefs.current.values()) {
+                try {
+                    await audio.play();
+                } catch (error) {
+                    blocked = true;
+
+                    console.warn(
+                        "Unable to resume remote audio:",
+                        error
+                    );
+                }
+            }
+
+            if (!blocked) {
+                setAudioPlaybackBlocked(
+                    false
+                );
+            }
+        }, []);
 
     // ===========================
     // Socket Events
     // ===========================
 
     useEffect(() => {
-        if (
-            !roomId ||
-            !user?._id
-        ) {
-            return;
+        if (!roomId || !user?._id) {
+            return undefined;
         }
 
         const handleParticipants = ({
-            participants,
+            participants:
+                nextParticipants,
         }) => {
             setParticipants(
-                participants || []
+                nextParticipants || []
             );
         };
 
         const handleUserJoined = async ({
             userId,
         }) => {
+            const normalizedId =
+                userId?.toString();
+
             if (
                 !isJoinedRef.current ||
-                userId?.toString() ===
+                !normalizedId ||
+                normalizedId ===
                     userRef.current?._id?.toString()
             ) {
                 return;
             }
 
-            const peerConnection =
-                createPeerConnection(
-                    userId
+            try {
+                const peerConnection =
+                    createPeerConnection(
+                        normalizedId
+                    );
+
+                if (!peerConnection) {
+                    return;
+                }
+
+                const offer =
+                    await peerConnection.createOffer();
+
+                await peerConnection.setLocalDescription(
+                    offer
                 );
 
-            const offer =
-                await peerConnection.createOffer();
+                socket.emit(
+                    "voice:offer",
+                    {
+                        roomId:
+                            roomIdRef.current,
+                        targetUserId:
+                            normalizedId,
+                        offer,
+                    }
+                );
+            } catch (error) {
+                console.error(
+                    "Voice offer error:",
+                    error
+                );
 
-            await peerConnection.setLocalDescription(
-                offer
-            );
-
-            socket.emit("voice:offer", {
-                roomId:
-                    roomIdRef.current,
-                targetUserId:
-                    userId,
-                offer,
-            });
+                setConnectionState(
+                    normalizedId,
+                    "failed"
+                );
+            }
         };
 
         const handleOffer = async ({
             userId,
             offer,
         }) => {
+            const normalizedId =
+                userId?.toString();
+
             if (
-                !isJoinedRef.current
+                !isJoinedRef.current ||
+                !normalizedId ||
+                !offer
             ) {
                 return;
             }
 
-            const peerConnection =
-                createPeerConnection(
-                    userId
+            try {
+                const peerConnection =
+                    createPeerConnection(
+                        normalizedId
+                    );
+
+                if (!peerConnection) {
+                    return;
+                }
+
+                await peerConnection.setRemoteDescription(
+                    new RTCSessionDescription(
+                        offer
+                    )
                 );
 
-            await peerConnection.setRemoteDescription(
-                new RTCSessionDescription(
-                    offer
-                )
-            );
+                await flushPendingIceCandidates(
+                    normalizedId,
+                    peerConnection
+                );
 
-            const answer =
-                await peerConnection.createAnswer();
+                const answer =
+                    await peerConnection.createAnswer();
 
-            await peerConnection.setLocalDescription(
-                answer
-            );
+                await peerConnection.setLocalDescription(
+                    answer
+                );
 
-            socket.emit("voice:answer", {
-                roomId:
-                    roomIdRef.current,
-                targetUserId:
-                    userId,
-                answer,
-            });
+                socket.emit(
+                    "voice:answer",
+                    {
+                        roomId:
+                            roomIdRef.current,
+                        targetUserId:
+                            normalizedId,
+                        answer,
+                    }
+                );
+            } catch (error) {
+                console.error(
+                    "Voice answer error:",
+                    error
+                );
+
+                setConnectionState(
+                    normalizedId,
+                    "failed"
+                );
+            }
         };
 
         const handleAnswer = async ({
             userId,
             answer,
         }) => {
+            const normalizedId =
+                userId?.toString();
+
             const peerConnection =
                 peerConnectionsRef.current.get(
-                    userId
-                );
-
-            if (!peerConnection) {
-                return;
-            }
-
-            await peerConnection.setRemoteDescription(
-                new RTCSessionDescription(
-                    answer
-                )
-            );
-        };
-
-        const handleIceCandidate = async ({
-            userId,
-            candidate,
-        }) => {
-            const peerConnection =
-                peerConnectionsRef.current.get(
-                    userId
+                    normalizedId
                 );
 
             if (
                 !peerConnection ||
-                !candidate
+                !answer
             ) {
                 return;
             }
 
             try {
-                await peerConnection.addIceCandidate(
-                    new RTCIceCandidate(
-                        candidate
+                await peerConnection.setRemoteDescription(
+                    new RTCSessionDescription(
+                        answer
                     )
+                );
+
+                await flushPendingIceCandidates(
+                    normalizedId,
+                    peerConnection
                 );
             } catch (error) {
                 console.error(
-                    "ICE candidate error:",
+                    "Voice remote description error:",
                     error
+                );
+
+                setConnectionState(
+                    normalizedId,
+                    "failed"
                 );
             }
         };
 
+        const handleIceCandidate =
+            async ({
+                userId,
+                candidate,
+            }) => {
+                const normalizedId =
+                    userId?.toString();
+
+                if (
+                    !normalizedId ||
+                    !candidate
+                ) {
+                    return;
+                }
+
+                const peerConnection =
+                    peerConnectionsRef.current.get(
+                        normalizedId
+                    );
+
+                const iceCandidate =
+                    new RTCIceCandidate(
+                        candidate
+                    );
+
+                if (!peerConnection) {
+                    const pending =
+                        pendingIceCandidatesRef.current.get(
+                            normalizedId
+                        ) || [];
+
+                    pending.push(
+                        iceCandidate
+                    );
+
+                    pendingIceCandidatesRef.current.set(
+                        normalizedId,
+                        pending
+                    );
+
+                    return;
+                }
+
+                if (
+                    !peerConnection.remoteDescription
+                ) {
+                    const pending =
+                        pendingIceCandidatesRef.current.get(
+                            normalizedId
+                        ) || [];
+
+                    pending.push(
+                        iceCandidate
+                    );
+
+                    pendingIceCandidatesRef.current.set(
+                        normalizedId,
+                        pending
+                    );
+
+                    return;
+                }
+
+                try {
+                    await peerConnection.addIceCandidate(
+                        iceCandidate
+                    );
+                } catch (error) {
+                    console.error(
+                        "ICE candidate error:",
+                        error
+                    );
+                }
+            };
+
         const handleUserLeft = ({
             userId,
         }) => {
-            const peerConnection =
-                peerConnectionsRef.current.get(
-                    userId
-                );
-
-            if (peerConnection) {
-                peerConnection.close();
-
-                peerConnectionsRef.current.delete(
-                    userId
-                );
-            }
-
-            const audio =
-                remoteAudioRefs.current.get(
-                    userId
-                );
-
-            if (audio) {
-                audio.pause();
-                audio.srcObject = null;
-                audio.remove();
-
-                remoteAudioRefs.current.delete(
-                    userId
-                );
-            }
-
-            stopSpeakingDetection(
+            closePeerConnection(
                 userId
             );
 
@@ -774,20 +1304,25 @@ const useVoiceChat = ({
             userId,
             muted,
         }) => {
+            const normalizedId =
+                userId?.toString();
+
             setParticipants((current) =>
                 current.map((participant) =>
                     participant._id?.toString() ===
-                    userId?.toString()
+                    normalizedId
                         ? {
                               ...participant,
-                              muted,
+                              muted: Boolean(
+                                  muted
+                              ),
                           }
                         : participant
                 )
             );
 
             if (
-                userId?.toString() ===
+                normalizedId ===
                 userRef.current?._id?.toString()
             ) {
                 setIsMuted(
@@ -798,7 +1333,7 @@ const useVoiceChat = ({
                     setSpeakingUsers(
                         (current) => ({
                             ...current,
-                            [userId.toString()]:
+                            [normalizedId]:
                                 false,
                         })
                     );
@@ -880,8 +1415,10 @@ const useVoiceChat = ({
     }, [
         roomId,
         user?._id,
+        closePeerConnection,
         createPeerConnection,
-        stopSpeakingDetection,
+        flushPendingIceCandidates,
+        setConnectionState,
     ]);
 
     // ===========================
@@ -891,23 +1428,43 @@ const useVoiceChat = ({
     useEffect(() => {
         const handleReconnect = () => {
             if (
-                isJoinedRef.current &&
-                roomIdRef.current &&
-                userRef.current?._id
+                !isJoinedRef.current ||
+                !roomIdRef.current ||
+                !userRef.current?._id
             ) {
-                socket.emit("voice:join", {
+                return;
+            }
+
+            peerConnectionsRef.current.forEach(
+                (peerConnection) => {
+                    peerConnection.close();
+                }
+            );
+
+            peerConnectionsRef.current.clear();
+
+            pendingIceCandidatesRef.current.clear();
+
+            setConnectionStates({});
+
+            socket.emit(
+                "voice:join",
+                {
                     roomId:
                         roomIdRef.current,
                     user: {
                         _id:
-                            userRef.current._id,
+                            userRef.current
+                                ._id,
                         name:
-                            userRef.current.name,
+                            userRef.current
+                                .name,
                         avatar:
-                            userRef.current.avatar,
+                            userRef.current
+                                .avatar,
                     },
-                });
-            }
+                }
+            );
         };
 
         socket.on(
@@ -929,91 +1486,25 @@ const useVoiceChat = ({
 
     useEffect(() => {
         return () => {
-            if (
-                isJoinedRef.current
-            ) {
-                const currentRoomId =
-                    roomIdRef.current;
-
-                const currentUser =
-                    userRef.current;
-
-                socket.emit("voice:leave", {
-                    roomId:
-                        currentRoomId,
-                    userId:
-                        currentUser?._id,
-                });
-
-                peerConnectionsRef.current.forEach(
-                    (peerConnection) => {
-                        peerConnection.close();
-                    }
-                );
-
-                peerConnectionsRef.current.clear();
-
-                remoteAudioRefs.current.forEach(
-                    (audio) => {
-                        audio.pause();
-                        audio.srcObject =
-                            null;
-                        audio.remove();
-                    }
-                );
-
-                remoteAudioRefs.current.clear();
-
-                speakingAnimationRefs.current.forEach(
-                    (animation) => {
-                        cancelAnimationFrame(
-                            animation
-                        );
-                    }
-                );
-
-                speakingAnimationRefs.current.clear();
-
-                audioAnalyserRefs.current.clear();
-
-                if (
-                    audioContextRef.current
-                ) {
-                    audioContextRef.current
-                        .close()
-                        .catch(() => {});
-
-                    audioContextRef.current = null;
-                }
-
-                if (
-                    localStreamRef.current
-                ) {
-                    localStreamRef.current
-                        .getTracks()
-                        .forEach(
-                            (track) =>
-                                track.stop()
-                        );
-
-                    localStreamRef.current =
-                        null;
-                }
-
-                isJoinedRef.current =
-                    false;
-            }
+            cleanupVoice({
+                notifyServer:
+                    isJoinedRef.current,
+            });
         };
-    }, []);
+    }, [cleanupVoice]);
 
     return {
         isJoined,
+        isJoining,
         isMuted,
         participants,
         speakingUsers,
+        connectionStates,
+        audioPlaybackBlocked,
         joinVoice,
         leaveVoice,
         toggleMute,
+        resumeRemoteAudio,
     };
 };
 

@@ -8,16 +8,31 @@ const VoiceParticipant = ({
     participant,
     currentUser,
     isSpeaking = false,
+    connectionState = "connected",
 }) => {
     const isCurrentUser =
         participant._id?.toString() ===
         currentUser?._id?.toString();
 
-    const avatarUrl = participant.avatar
-        ? participant.avatar.startsWith("http")
-            ? participant.avatar
-            : `${import.meta.env.VITE_API_URL}${participant.avatar}`
-        : null;
+    const avatarUrl =
+        participant.avatar
+            ? participant.avatar.startsWith(
+                  "http"
+              )
+                ? participant.avatar
+                : `${import.meta.env.VITE_API_URL}${participant.avatar}`
+            : null;
+
+    const isConnecting =
+        !isCurrentUser &&
+        [
+            "connecting",
+            "disconnected",
+        ].includes(connectionState);
+
+    const isConnectionFailed =
+        !isCurrentUser &&
+        connectionState === "failed";
 
     return (
         <motion.div
@@ -38,6 +53,8 @@ const VoiceParticipant = ({
             className={`relative overflow-hidden rounded-2xl border p-3 transition-all duration-300 ${
                 isSpeaking
                     ? "border-emerald-400/40 bg-emerald-400/[0.08] shadow-[0_0_30px_rgba(52,211,153,0.12)]"
+                    : isConnectionFailed
+                    ? "border-red-400/20 bg-red-400/[0.05]"
                     : "border-white/[0.06] bg-white/[0.035] hover:bg-white/[0.055]"
             }`}
         >
@@ -48,7 +65,11 @@ const VoiceParticipant = ({
                         opacity: 0,
                     }}
                     animate={{
-                        opacity: [0.15, 0.35, 0.15],
+                        opacity: [
+                            0.15,
+                            0.35,
+                            0.15,
+                        ],
                     }}
                     transition={{
                         duration: 1.5,
@@ -65,8 +86,16 @@ const VoiceParticipant = ({
                         <>
                             <motion.div
                                 animate={{
-                                    scale: [1, 1.18, 1],
-                                    opacity: [0.7, 0, 0.7],
+                                    scale: [
+                                        1,
+                                        1.18,
+                                        1,
+                                    ],
+                                    opacity: [
+                                        0.7,
+                                        0,
+                                        0.7,
+                                    ],
                                 }}
                                 transition={{
                                     duration: 1.5,
@@ -78,8 +107,16 @@ const VoiceParticipant = ({
 
                             <motion.div
                                 animate={{
-                                    scale: [1, 1.3, 1],
-                                    opacity: [0.25, 0, 0.25],
+                                    scale: [
+                                        1,
+                                        1.3,
+                                        1,
+                                    ],
+                                    opacity: [
+                                        0.25,
+                                        0,
+                                        0.25,
+                                    ],
                                 }}
                                 transition={{
                                     duration: 1.5,
@@ -101,23 +138,29 @@ const VoiceParticipant = ({
                         {avatarUrl ? (
                             <img
                                 src={avatarUrl}
-                                alt={participant.name}
+                                alt={
+                                    participant.name
+                                }
                                 className="h-full w-full object-cover"
                             />
                         ) : (
                             <span className="text-sm font-semibold text-white">
                                 {participant.name
-                                    ?.charAt(0)
-                                    ?.toUpperCase() || "U"}
+                                    ?.charAt(
+                                        0
+                                    )
+                                    ?.toUpperCase() ||
+                                    "U"}
                             </span>
                         )}
                     </div>
 
-                    {/* Online dot */}
                     <span
                         className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-slate-900 ${
                             isSpeaking
                                 ? "bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,.9)]"
+                                : isConnectionFailed
+                                ? "bg-red-400"
                                 : "bg-emerald-500"
                         }`}
                     />
@@ -140,9 +183,22 @@ const VoiceParticipant = ({
                     </div>
 
                     <div className="mt-1 flex items-center gap-2">
-                        {isSpeaking ? (
+                        {isCurrentUser &&
+                        participant.muted ? (
+                            <span className="text-[10px] font-medium text-red-400">
+                                Muted
+                            </span>
+                        ) : isSpeaking ? (
                             <span className="text-[10px] font-medium text-emerald-400">
                                 Speaking
+                            </span>
+                        ) : isConnectionFailed ? (
+                            <span className="text-[10px] font-medium text-red-400">
+                                Connection failed
+                            </span>
+                        ) : isConnecting ? (
+                            <span className="text-[10px] font-medium text-amber-400">
+                                Connecting...
                             </span>
                         ) : participant.muted ? (
                             <span className="text-[10px] text-zinc-500">
@@ -159,34 +215,48 @@ const VoiceParticipant = ({
                 {/* Voice visualizer */}
                 {isSpeaking && (
                     <div className="flex h-8 items-center gap-[3px]">
-                        {[0, 1, 2, 3, 4, 5, 6].map(
-                            (bar) => (
-                                <motion.span
-                                    key={bar}
-                                    animate={{
-                                        height: [
-                                            5,
-                                            12 + (bar % 3) * 5,
-                                            7,
-                                            16 - (bar % 2) * 4,
-                                            5,
-                                        ],
-                                    }}
-                                    transition={{
-                                        duration:
-                                            0.7 +
-                                            bar * 0.06,
-                                        repeat: Infinity,
-                                        repeatType:
-                                            "mirror",
-                                        ease: "easeInOut",
-                                        delay:
-                                            bar * 0.05,
-                                    }}
-                                    className="w-[3px] rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,.55)]"
-                                />
-                            )
-                        )}
+                        {[
+                            0,
+                            1,
+                            2,
+                            3,
+                            4,
+                            5,
+                            6,
+                        ].map((bar) => (
+                            <motion.span
+                                key={bar}
+                                animate={{
+                                    height: [
+                                        5,
+                                        12 +
+                                            (bar %
+                                                3) *
+                                                5,
+                                        7,
+                                        16 -
+                                            (bar %
+                                                2) *
+                                                4,
+                                        5,
+                                    ],
+                                }}
+                                transition={{
+                                    duration:
+                                        0.7 +
+                                        bar *
+                                            0.06,
+                                    repeat: Infinity,
+                                    repeatType:
+                                        "mirror",
+                                    ease: "easeInOut",
+                                    delay:
+                                        bar *
+                                        0.05,
+                                }}
+                                className="w-[3px] rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,.55)]"
+                            />
+                        ))}
                     </div>
                 )}
 
@@ -201,9 +271,13 @@ const VoiceParticipant = ({
                     }`}
                 >
                     {participant.muted ? (
-                        <FaMicrophoneSlash size={11} />
+                        <FaMicrophoneSlash
+                            size={11}
+                        />
                     ) : (
-                        <FaMicrophone size={11} />
+                        <FaMicrophone
+                            size={11}
+                        />
                     )}
                 </div>
             </div>
