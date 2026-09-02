@@ -93,45 +93,23 @@ const useVoiceChat = ({ roomId, user }) => {
     // Speaking Detection
     // ===========================
 
-    const stopSpeakingDetection = useCallback((userId) => {
-        const normalizedId = userId?.toString();
+const speakingStateRefs = useRef(new Map());
 
-        if (!normalizedId) {
-            return;
-        }
-
+const stopSpeakingDetection = useCallback(
+    (userId) => {
         const animation =
-            speakingAnimationRefs.current.get(
-                normalizedId
-            );
+            speakingAnimationRefs.current.get(userId);
 
         if (animation) {
             cancelAnimationFrame(animation);
-
-            speakingAnimationRefs.current.delete(
-                normalizedId
-            );
+            speakingAnimationRefs.current.delete(userId);
         }
 
-        const analyserData =
-            audioAnalyserRefs.current.get(
-                normalizedId
-            );
-
-        if (analyserData?.source) {
-            try {
-                analyserData.source.disconnect();
-            } catch {
-                // Already disconnected.
-            }
-        }
-
-        audioAnalyserRefs.current.delete(
-            normalizedId
-        );
+        audioAnalyserRefs.current.delete(userId);
+        speakingStateRefs.current.delete(userId);
 
         setSpeakingUsers((current) => {
-            if (!current[normalizedId]) {
+            if (!current[userId]) {
                 return current;
             }
 
@@ -139,161 +117,262 @@ const useVoiceChat = ({ roomId, user }) => {
                 ...current,
             };
 
-            delete next[normalizedId];
+            delete next[userId];
 
             return next;
         });
-    }, []);
+    },
+    []
+);
 
-    const startSpeakingDetection = useCallback(
-        (userId, stream) => {
-            const normalizedId =
-                userId?.toString();
+const startSpeakingDetection = useCallback(
+    (userId, stream) => {
+        if (!stream) {
+            return;
+        }
 
-            if (!normalizedId || !stream) {
-                return;
+        if (
+            audioAnalyserRefs.current.has(userId)
+        ) {
+            return;
+        }
+
+        try {
+            if (!audioContextRef.current) {
+                audioContextRef.current =
+                    new (
+                        window.AudioContext ||
+                        window.webkitAudioContext
+                    )();
             }
+
+            const audioContext =
+                audioContextRef.current;
 
             if (
-                audioAnalyserRefs.current.has(
-                    normalizedId
-                )
+                audioContext.state === "suspended"
             ) {
-                return;
+                audioContext.resume().catch(
+                    () => {}
+                );
             }
 
-            try {
-                if (!audioContextRef.current) {
-                    const AudioContext =
-                        window.AudioContext ||
-                        window.webkitAudioContext;
+            const analyser =
+                audioContext.createAnalyser();
 
-                    if (!AudioContext) {
-                        return;
-                    }
+            analyser.fftSize = 256;
 
-                    audioContextRef.current =
-                        new AudioContext();
+            // More stable than reacting directly to
+            // every tiny microphone fluctuation.
+            analyser.smoothingTimeConstant = 0.85;
+
+            const source =
+                audioContext.createMediaStreamSource(
+                    stream
+                );
+
+            source.connect(analyser);
+
+            const dataArray =
+                new Uint8Array(
+                    analyser.fftSize
+                );
+
+            audioAnalyserRefs.current.set(
+                userId,
+                {
+                    analyser,
+                    source,
+                    dataArray,
                 }
+            );
 
-                const audioContext =
-                    audioContextRef.current;
+            speakingStateRefs.current.set(
+                userId,
+                {
+                    speaking: false,
+                    aboveSince: 0,
+                    belowSince: 0,
+                }
+            );
+
+            const detect = () => {
+                const analyserData =
+                    audioAnalyserRefs.current.get(
+                        userId
+                    );
+
+                const speakingState =
+                    speakingStateRefs.current.get(
+                        userId
+                    );
 
                 if (
-                    audioContext.state ===
-                    "suspended"
+                    !analyserData ||
+                    !speakingState
                 ) {
-                    audioContext
-                        .resume()
-                        .catch(() => {});
+                    return;
                 }
 
-                const analyser =
-                    audioContext.createAnalyser();
+                const {
+                    analyser,
+                    dataArray,
+                } = analyserData;
 
-                analyser.fftSize = 256;
-                analyser.smoothingTimeConstant = 0.75;
-
-                const source =
-                    audioContext.createMediaStreamSource(
-                        stream
-                    );
-
-                source.connect(analyser);
-
-                const dataArray =
-                    new Uint8Array(
-                        analyser.frequencyBinCount
-                    );
-
-                audioAnalyserRefs.current.set(
-                    normalizedId,
-                    {
-                        analyser,
-                        source,
-                        dataArray,
-                    }
+                analyser.getByteTimeDomainData(
+                    dataArray
                 );
 
-                const detect = () => {
-                    const analyserData =
-                        audioAnalyserRefs.current.get(
-                            normalizedId
-                        );
+                let sum = 0;
 
-                    if (!analyserData) {
-                        return;
-                    }
+                for (
+                    let i = 0;
+                    i < dataArray.length;
+                    i++
+                ) {
+                    const normalized =
+                        (dataArray[i] - 128) /
+                        128;
 
-                    const {
-                        analyser,
-                        dataArray,
-                    } = analyserData;
+                    sum +=
+                        normalized *
+                        normalized;
+                }
 
-                    analyser.getByteTimeDomainData(
-                        dataArray
-                    );
+                const rms = Math.sqrt(
+                    sum / dataArray.length
+                );
 
-                    let sum = 0;
+                /*
+                 * Hysteresis:
+                 *
+                 * Start speaking at a higher level.
+                 * Stop speaking at a lower level.
+                 *
+                 * This prevents rapid true/false switching
+                 * around one threshold.
+                 */
+                const SPEAKING_THRESHOLD = 0.055;
+                const SILENCE_THRESHOLD = 0.028;
 
-                    for (
-                        let i = 0;
-                        i < dataArray.length;
-                        i += 1
+                const SPEAKING_HOLD_MS = 100;
+                const SILENCE_HOLD_MS = 350;
+
+                const now = performance.now();
+
+                if (
+                    !speakingState.speaking
+                ) {
+                    if (
+                        rms >=
+                        SPEAKING_THRESHOLD
                     ) {
-                        const normalized =
-                            (dataArray[i] - 128) /
-                            128;
-
-                        sum +=
-                            normalized *
-                            normalized;
-                    }
-
-                    const rms = Math.sqrt(
-                        sum / dataArray.length
-                    );
-
-                    const speaking =
-                        rms > 0.035;
-
-                    setSpeakingUsers((current) => {
                         if (
-                            current[
-                                normalizedId
-                            ] === speaking
+                            !speakingState.aboveSince
                         ) {
-                            return current;
+                            speakingState.aboveSince =
+                                now;
                         }
 
-                        return {
-                            ...current,
-                            [normalizedId]:
-                                speaking,
-                        };
-                    });
+                        speakingState.belowSince = 0;
 
-                    const animationFrame =
-                        requestAnimationFrame(
-                            detect
-                        );
+                        if (
+                            now -
+                                speakingState.aboveSince >=
+                            SPEAKING_HOLD_MS
+                        ) {
+                            speakingState.speaking =
+                                true;
 
-                    speakingAnimationRefs.current.set(
-                        normalizedId,
-                        animationFrame
+                            speakingState.aboveSince = 0;
+
+                            setSpeakingUsers(
+                                (current) => {
+                                    if (
+                                        current[userId] ===
+                                        true
+                                    ) {
+                                        return current;
+                                    }
+
+                                    return {
+                                        ...current,
+                                        [userId]: true,
+                                    };
+                                }
+                            );
+                        }
+                    } else {
+                        speakingState.aboveSince = 0;
+                    }
+                } else {
+                    if (
+                        rms <=
+                        SILENCE_THRESHOLD
+                    ) {
+                        if (
+                            !speakingState.belowSince
+                        ) {
+                            speakingState.belowSince =
+                                now;
+                        }
+
+                        speakingState.aboveSince = 0;
+
+                        if (
+                            now -
+                                speakingState.belowSince >=
+                            SILENCE_HOLD_MS
+                        ) {
+                            speakingState.speaking =
+                                false;
+
+                            speakingState.belowSince = 0;
+
+                            setSpeakingUsers(
+                                (current) => {
+                                    if (
+                                        !current[userId]
+                                    ) {
+                                        return current;
+                                    }
+
+                                    const next = {
+                                        ...current,
+                                    };
+
+                                    delete next[userId];
+
+                                    return next;
+                                }
+                            );
+                        }
+                    } else {
+                        speakingState.belowSince = 0;
+                    }
+                }
+
+                const animationFrame =
+                    requestAnimationFrame(
+                        detect
                     );
-                };
 
-                detect();
-            } catch (error) {
-                console.error(
-                    "Speaking detection error:",
-                    error
+                speakingAnimationRefs.current.set(
+                    userId,
+                    animationFrame
                 );
-            }
-        },
-        []
-    );
+            };
+
+            detect();
+        } catch (error) {
+            console.error(
+                "Speaking detection error:",
+                error
+            );
+        }
+    },
+    []
+);
 
     // ===========================
     // Pending ICE Candidates
