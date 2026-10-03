@@ -15,6 +15,7 @@ const StatsSection = () => {
     const shouldReduceMotion = useReducedMotion();
 
     const calendarRef = useRef(null);
+    const calendarPopupRef = useRef(null);
 
     const { rooms } = useAppSelector(
         (state) => state.room
@@ -27,12 +28,6 @@ const StatsSection = () => {
 
     const [showCalendar, setShowCalendar] =
         useState(false);
-
-    const [calendarPosition, setCalendarPosition] =
-        useState({
-            top: 0,
-            left: 0,
-        });
 
     // =========================================
     // STUDY STATS
@@ -82,155 +77,40 @@ const StatsSection = () => {
     }, []);
 
     // =========================================
-    // CALENDAR POSITION
-    // =========================================
-
-    const updateCalendarPosition = () => {
-        if (!calendarRef.current) return;
-
-        const rect =
-            calendarRef.current.getBoundingClientRect();
-
-        const calendarWidth = 380;
-        const gap = 14;
-        const viewportPadding = 12;
-
-        let left = rect.left - calendarWidth - gap;
-
-        /*
-         * Normally the calendar opens on the LEFT
-         * side of the Study Activity card.
-         */
-        if (left < viewportPadding) {
-            left = rect.right + gap;
-        }
-
-        /*
-         * If there isn't enough space on either side,
-         * keep it inside the viewport.
-         */
-        if (
-            left + calendarWidth >
-            window.innerWidth - viewportPadding
-        ) {
-            left =
-                window.innerWidth -
-                calendarWidth -
-                viewportPadding;
-        }
-
-        left = Math.max(
-            viewportPadding,
-            left
-        );
-
-        const calendarHeight = 620;
-
-        let top = rect.top;
-
-        if (
-            top + calendarHeight >
-            window.innerHeight - viewportPadding
-        ) {
-            top =
-                window.innerHeight -
-                calendarHeight -
-                viewportPadding;
-        }
-
-        top = Math.max(
-            viewportPadding,
-            top
-        );
-
-        setCalendarPosition({
-            top,
-            left,
-        });
-    };
-
-    // =========================================
     // OPEN / CLOSE CALENDAR
     // =========================================
 
     const toggleCalendar = () => {
-        if (!showCalendar) {
-            requestAnimationFrame(() => {
-                updateCalendarPosition();
-            });
-        }
-
         setShowCalendar(
             (previous) => !previous
         );
     };
 
     // =========================================
-    // KEEP CALENDAR POSITIONED CORRECTLY
-    // =========================================
-
-    useEffect(() => {
-        if (!showCalendar) return;
-
-        updateCalendarPosition();
-
-        const handleResize = () => {
-            updateCalendarPosition();
-        };
-
-        const handleScroll = () => {
-            updateCalendarPosition();
-        };
-
-        window.addEventListener(
-            "resize",
-            handleResize
-        );
-
-        /*
-         * Capture scroll from dashboard containers too,
-         * not only window scrolling.
-         */
-        window.addEventListener(
-            "scroll",
-            handleScroll,
-            true
-        );
-
-        return () => {
-            window.removeEventListener(
-                "resize",
-                handleResize
-            );
-
-            window.removeEventListener(
-                "scroll",
-                handleScroll,
-                true
-            );
-        };
-    }, [showCalendar]);
-
-    // =========================================
     // CLICK OUTSIDE
     // =========================================
 
     useEffect(() => {
-        if (!showCalendar) return;
+        if (!showCalendar) {
+            return undefined;
+        }
 
         const handlePointerDown = (event) => {
-            if (
-                calendarRef.current &&
-                !calendarRef.current.contains(
+            const clickedCard =
+                calendarRef.current?.contains(
                     event.target
-                )
+                );
+
+            const clickedCalendar =
+                calendarPopupRef.current?.contains(
+                    event.target
+                );
+
+            if (
+                !clickedCard &&
+                !clickedCalendar
             ) {
-                /*
-                 * Calendar itself is rendered inside the
-                 * activity wrapper, so clicks inside it
-                 * are ignored by this check.
-                 */
-                return;
+                setShowCalendar(false);
             }
         };
 
@@ -239,9 +119,19 @@ const StatsSection = () => {
             handlePointerDown
         );
 
+        document.addEventListener(
+            "touchstart",
+            handlePointerDown
+        );
+
         return () => {
             document.removeEventListener(
                 "mousedown",
+                handlePointerDown
+            );
+
+            document.removeEventListener(
+                "touchstart",
                 handlePointerDown
             );
         };
@@ -252,7 +142,9 @@ const StatsSection = () => {
     // =========================================
 
     useEffect(() => {
-        if (!showCalendar) return;
+        if (!showCalendar) {
+            return undefined;
+        }
 
         const handleKeyDown = (event) => {
             if (event.key === "Escape") {
@@ -289,19 +181,24 @@ const StatsSection = () => {
         const sessions =
             studyStats.sessions || [];
 
-        if (!sessions.length) return 0;
+        if (!sessions.length) {
+            return 0;
+        }
 
         const studyDays = new Set();
 
         sessions.forEach((session) => {
-            if (!session?.startedAt) return;
+            if (!session?.startedAt) {
+                return;
+            }
 
             const date = new Date(
                 session.startedAt
             );
 
-            if (Number.isNaN(date.getTime()))
+            if (Number.isNaN(date.getTime())) {
                 return;
+            }
 
             const key = [
                 date.getFullYear(),
@@ -316,7 +213,9 @@ const StatsSection = () => {
             studyDays.add(key);
         });
 
-        if (!studyDays.size) return 0;
+        if (!studyDays.size) {
+            return 0;
+        }
 
         const currentDate = new Date();
 
@@ -702,11 +601,6 @@ const StatsSection = () => {
 
                                     <div className="relative mt-5">
                                         {isActivity ? (
-                                            /*
-                                             * Intentionally empty.
-                                             * Study Activity does NOT show
-                                             * active-day count on the card.
-                                             */
                                             <div className="h-[29px] sm:h-[34px]" />
                                         ) : (
                                             <motion.div
@@ -774,34 +668,49 @@ const StatsSection = () => {
                                     CALENDAR POPUP
                                 ================================= */}
 
-{isActivity && (
-    <div
-        className={`
-            ${
-                showCalendar
-                    ? "pointer-events-auto"
-                    : "pointer-events-none"
-            }
+                                {isActivity && (
+                                    <div
+                                        ref={
+                                            calendarPopupRef
+                                        }
+                                        className={`
+                                            ${
+                                                showCalendar
+                                                    ? "pointer-events-auto"
+                                                    : "pointer-events-none"
+                                            }
 
-            max-sm:fixed
-            max-sm:left-3
-            max-sm:right-3
-            max-sm:top-16
-            max-sm:z-[100]
+                                            absolute
+                                            left-1/2
+                                            top-full
+                                            z-[100]
+                                            mt-3
+                                            -translate-x-1/2
 
-            sm:absolute
-            sm:right-0
-            sm:top-full
-            sm:mt-3
-        `}
-    >
-        <StudyStreakCalendar
-            isOpen={showCalendar}
-            onClose={() => setShowCalendar(false)}
-            sessions={studyStats.sessions}
-        />
-    </div>
-)}
+                                            sm:left-auto
+                                            sm:right-0
+                                            sm:translate-x-0
+
+                                            lg:right-0
+
+                                            max-w-[calc(100vw-24px)]
+                                        `}
+                                    >
+                                        <StudyStreakCalendar
+                                            isOpen={
+                                                showCalendar
+                                            }
+                                            onClose={() =>
+                                                setShowCalendar(
+                                                    false
+                                                )
+                                            }
+                                            sessions={
+                                                studyStats.sessions
+                                            }
+                                        />
+                                    </div>
+                                )}
                             </div>
                         );
                     }

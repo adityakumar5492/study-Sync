@@ -56,7 +56,7 @@ const Dashboard = () => {
     };
 
     return (
-        <div className="relative min-h-screen overflow-hidden bg-[#060a10] text-white">
+        <div className="relative min-h-screen bg-[#060a10] text-white">
             {/* =========================================
                 BACKGROUND ATMOSPHERE
             ========================================= */}
@@ -75,7 +75,7 @@ const Dashboard = () => {
                 MAIN
             ========================================= */}
 
-            <main className="relative min-w-0 overflow-y-auto">
+            <main className="relative min-w-0">
                 <div className="mx-auto w-full max-w-[1600px] px-3 py-4 sm:px-5 sm:py-6 md:px-6 lg:px-8">
                     {/* =====================================
                         TOPBAR
@@ -113,7 +113,9 @@ const Dashboard = () => {
                         <QuickActions
                             onCreateRoom={handleCreateRoom}
                             onJoinRoom={handleJoinRoom}
-                            onUploadMaterial={handleUploadMaterial}
+                            onUploadMaterial={
+                                handleUploadMaterial
+                            }
                         />
                     </motion.section>
 
@@ -126,7 +128,9 @@ const Dashboard = () => {
                         initial="hidden"
                         animate="visible"
                         transition={{
-                            delay: shouldReduceMotion ? 0 : 0.06,
+                            delay: shouldReduceMotion
+                                ? 0
+                                : 0.06,
                         }}
                         className="mb-7 sm:mb-8"
                     >
@@ -142,7 +146,9 @@ const Dashboard = () => {
                         initial="hidden"
                         animate="visible"
                         transition={{
-                            delay: shouldReduceMotion ? 0 : 0.12,
+                            delay: shouldReduceMotion
+                                ? 0
+                                : 0.12,
                         }}
                     >
                         <RecentRooms />
