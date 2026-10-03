@@ -1,6 +1,9 @@
 const Room = require("../models/room.model");
 
 const StudySession = require("../models/studySession.model");
+const {
+    isRoomExpired,
+} = require("../services/room.service");
 
 const {
     hostSocketId,
@@ -537,6 +540,14 @@ module.exports = (io, socket) => {
                     socket.emit(
                         "room:error",
                         "Room not found."
+                    );
+
+                    return;
+                }
+                if (isRoomExpired(room)) {
+                    socket.emit(
+                        "room:error",
+                        "This room has expired."
                     );
 
                     return;

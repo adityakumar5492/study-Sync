@@ -5,12 +5,47 @@ const Message = require("../models/message.model");
 
 const {
     createActivity,
+    getSocketIO,
 } = require("./activity.service");
 
 const cloudinary = require("../config/cloudinary");
 
+const ROOM_LIFETIME_MS =
+    24 * 60 * 60 * 1000;
+
 const generateInviteCode = () => {
     return crypto.randomBytes(4).toString("hex").toUpperCase();
+};
+
+/**
+ * Check whether a room has expired.
+ *
+ * Rooms live for 24 hours from createdAt.
+ */
+const isRoomExpired = (room) => {
+    if (!room?.createdAt) {
+        return false;
+    }
+
+    const expiresAt =
+        new Date(room.createdAt).getTime() +
+        ROOM_LIFETIME_MS;
+
+    return Date.now() >= expiresAt;
+};
+
+/**
+ * Get room expiration time.
+ */
+const getRoomExpirationTime = (room) => {
+    if (!room?.createdAt) {
+        return null;
+    }
+
+    return new Date(
+        new Date(room.createdAt).getTime() +
+            ROOM_LIFETIME_MS
+    );
 };
 
 /**
@@ -126,14 +161,22 @@ const createRoom = async (userId, data) => {
  * Get All Rooms
  *
  * IMPORTANT:
- * Every active room is visible to everyone.
+ * Every active and non-expired room
+ * is visible to everyone.
  *
- * Leaving a room does NOT remove it
- * from the room list.
+ * Expired rooms are excluded even if
+ * the background cleanup has not run yet.
  */
 const getAllRooms = async (userId) => {
+    const expirationDate = new Date(
+        Date.now() - ROOM_LIFETIME_MS
+    );
+
     const rooms = await Room.find({
         isActive: true,
+        createdAt: {
+            $gt: expirationDate,
+        },
     })
         .populate(
             "host",
@@ -193,6 +236,15 @@ const getRoomById = async (
     }
 
     /**
+     * Expired rooms are no longer accessible.
+     */
+    if (isRoomExpired(room)) {
+        throw new Error(
+            "This room has expired."
+        );
+    }
+
+    /**
      * PUBLIC ROOM
      *
      * Anyone can access.
@@ -247,9 +299,6 @@ const getRoomById = async (
      * User can see this room in
      * getAllRooms(), but cannot
      * directly enter it.
-     *
-     * They must use the invite code
-     * through joinRoom().
      */
     throw new Error(
         "You must join this private room first."
@@ -284,6 +333,15 @@ const joinRoom = async (
     if (!room) {
         throw new Error(
             "Invalid invite code."
+        );
+    }
+
+    /**
+     * Expired rooms cannot be joined.
+     */
+    if (isRoomExpired(room)) {
+        throw new Error(
+            "This room has expired."
         );
     }
 
@@ -368,12 +426,6 @@ const joinRoom = async (
 
 /**
  * Leave Room
- *
- * IMPORTANT:
- * Room remains visible in the
- * user's room list because
- * getAllRooms() returns every
- * active room.
  */
 const leaveRoom = async (
     userId,
@@ -385,6 +437,12 @@ const leaveRoom = async (
     if (!room) {
         throw new Error(
             "Room not found."
+        );
+    }
+
+    if (isRoomExpired(room)) {
+        throw new Error(
+            "This room has expired."
         );
     }
 
@@ -418,14 +476,6 @@ const leaveRoom = async (
 
     /**
      * Remove user from members.
-     *
-     * IMPORTANT:
-     * Do NOT add the user to
-     * removedMembers here.
-     *
-     * Leaving voluntarily is
-     * different from being removed
-     * by the host.
      */
     room.members =
         room.members.filter(
@@ -511,6 +561,129 @@ const deleteRoom = async (
     return true;
 };
 
+
+/**
+ * Automatically expire one room.
+ *
+ * Used by the backend expiration
+ * scheduler.
+ */
+const expireRoom = async (room) => {
+    if (!room) {
+        return false;
+    }
+
+    /**
+     * Check that the room still exists.
+     */
+    const existingRoom =
+        await Room.findById(room._id);
+
+    if (!existingRoom) {
+        return false;
+    }
+
+    /**
+     * Only expire rooms that have
+     * actually crossed 24 hours.
+     */
+    if (!isRoomExpired(existingRoom)) {
+        return false;
+    }
+
+    /**
+     * Save the room ID before deleting it.
+     */
+    const roomId =
+        existingRoom._id.toString();
+
+    /**
+     * Delete PDF from Cloudinary.
+     *
+     * Cloudinary failure should not prevent
+     * the expired room from being removed.
+     */
+    if (existingRoom.pdfPublicId) {
+        try {
+            await deletePdfFromCloudinary(
+                existingRoom.pdfPublicId
+            );
+        } catch (error) {
+            console.error(
+                `Failed to delete expired room PDF (${roomId}):`,
+                error
+            );
+        }
+    }
+
+    /**
+     * Delete the room from MongoDB.
+     */
+    await Room.findByIdAndDelete(
+        existingRoom._id
+    );
+
+    /**
+     * Notify all connected clients.
+     */
+    const io = getSocketIO();
+
+    if (io) {
+        io.emit(
+            "room:deleted",
+            {
+                roomId,
+            }
+        );
+    }
+
+    console.log(
+        `🗑️ Room expired and deleted: ${roomId}`
+    );
+
+    return true;
+};
+
+/**
+ * Find and expire all rooms that
+ * have crossed their 24-hour lifetime.
+ *
+ * This function will be called by
+ * the backend scheduler.
+ */
+const expireExpiredRooms = async () => {
+    const expirationDate = new Date(
+        Date.now() - ROOM_LIFETIME_MS
+    );
+
+    const expiredRooms =
+        await Room.find({
+            createdAt: {
+                $lte: expirationDate,
+            },
+        });
+
+    let expiredCount = 0;
+
+    for (const room of expiredRooms) {
+        try {
+            const expired =
+                await expireRoom(room);
+
+            if (expired) {
+                expiredCount += 1;
+            }
+        } catch (error) {
+            console.error(
+                `Failed to expire room ${room._id}:`,
+                error
+            );
+        }
+    }
+
+    return expiredCount;
+};
+
 /**
  * Update Room
  */
@@ -525,6 +698,12 @@ const updateRoom = async (
     if (!room) {
         throw new Error(
             "Room not found."
+        );
+    }
+
+    if (isRoomExpired(room)) {
+        throw new Error(
+            "This room has expired."
         );
     }
 
@@ -608,6 +787,12 @@ const uploadRoomPdf = async (
         );
     }
 
+    if (isRoomExpired(room)) {
+        throw new Error(
+            "This room has expired."
+        );
+    }
+
     if (
         room.host.toString() !==
         userId.toString()
@@ -669,7 +854,7 @@ const uploadRoomPdf = async (
             );
         } catch (error) {
             console.error(
-                "Failed to delete old PDF:",
+                "Failed to delete old PDF from Cloudinary:",
                 error
             );
         }
@@ -709,6 +894,12 @@ const deleteRoomPdf = async (
     if (!room) {
         throw new Error(
             "Room not found."
+        );
+    }
+
+    if (isRoomExpired(room)) {
+        throw new Error(
+            "This room has expired."
         );
     }
 
@@ -785,6 +976,12 @@ const getRoomMessages = async (
         );
     }
 
+    if (isRoomExpired(room)) {
+        throw new Error(
+            "This room has expired."
+        );
+    }
+
     const isHost =
         room.host.toString() ===
         userId.toString();
@@ -820,9 +1017,6 @@ const getRoomMessages = async (
 
 /**
  * Request Rejoin
- *
- * Used ONLY for users who
- * were removed by the host.
  */
 const requestRejoin = async (
     userId,
@@ -834,6 +1028,12 @@ const requestRejoin = async (
     if (!room) {
         throw new Error(
             "Room not found."
+        );
+    }
+
+    if (isRoomExpired(room)) {
+        throw new Error(
+            "This room has expired."
         );
     }
 
@@ -902,6 +1102,12 @@ const approveRejoinRequest = async (
     if (!room) {
         throw new Error(
             "Room not found."
+        );
+    }
+
+    if (isRoomExpired(room)) {
+        throw new Error(
+            "This room has expired."
         );
     }
 
@@ -980,6 +1186,12 @@ const rejectRejoinRequest = async (
         );
     }
 
+    if (isRoomExpired(room)) {
+        throw new Error(
+            "This room has expired."
+        );
+    }
+
     if (
         room.host.toString() !==
         hostId.toString()
@@ -1019,6 +1231,10 @@ module.exports = {
     joinRoom,
     leaveRoom,
     deleteRoom,
+    expireRoom,
+    expireExpiredRooms,
+    isRoomExpired,
+    getRoomExpirationTime,
     updateRoom,
     uploadRoomPdf,
     deleteRoomPdf,

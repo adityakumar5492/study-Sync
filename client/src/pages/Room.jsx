@@ -314,6 +314,27 @@ const Room = () => {
         };
 
         // ===========================
+        // ROOM EXPIRED / DELETED
+        // ===========================
+
+        const handleRoomDeleted = ({
+            roomId: deletedRoomId,
+        } = {}) => {
+            if (
+                deletedRoomId?.toString() !==
+                roomId
+            ) {
+                return;
+            }
+
+            toast.error(
+                "This room has expired and is no longer available."
+            );
+
+            navigate("/rooms");
+        };
+
+        // ===========================
         // REJOIN REQUEST
         // ===========================
 
@@ -366,6 +387,11 @@ const Room = () => {
         socket.on(
             "room:removed",
             handleRoomRemoved
+        );
+
+        socket.on(
+            "room:deleted",
+            handleRoomDeleted
         );
 
         socket.on(
@@ -464,6 +490,11 @@ const Room = () => {
             socket.off(
                 "room:removed",
                 handleRoomRemoved
+            );
+
+            socket.off(
+                "room:deleted",
+                handleRoomDeleted
             );
 
             socket.off(

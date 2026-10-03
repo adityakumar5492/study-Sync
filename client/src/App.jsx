@@ -8,6 +8,8 @@ import {
     clearNotifications,
 } from "./redux/notification/notificationSlice";
 
+import { removeRoom } from "./redux/room/roomSlice";
+
 import socket from "./socket/socket";
 import AppRoutes from "./routes/AppRoutes";
 
@@ -70,8 +72,19 @@ function App() {
             );
         };
 
+        const handleRoomDeleted = ({
+            roomId,
+        } = {}) => {
+            if (!roomId) {
+                return;
+            }
+
+            dispatch(removeRoom(roomId.toString()));
+        };
+
         socket.on("connect", registerUser);
         socket.on("room:created", handleRoomCreated);
+        socket.on("room:deleted", handleRoomDeleted);
 
         if (!socket.connected) {
             socket.connect();
@@ -82,6 +95,7 @@ function App() {
         return () => {
             socket.off("connect", registerUser);
             socket.off("room:created", handleRoomCreated);
+            socket.off("room:deleted", handleRoomDeleted);
         };
     }, [
         dispatch,
