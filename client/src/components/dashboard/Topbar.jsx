@@ -5,6 +5,8 @@ import {
   FaUserCircle,
   FaSignOutAlt,
   FaBars,
+  FaClock,
+  FaCheck,
 } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import {
@@ -18,8 +20,48 @@ import {
   useAppSelector,
 } from "../../redux/hooks";
 import { logout } from "../../redux/auth/authSlice";
+import {
+  markNotificationRead,
+  markAllNotificationsRead,
+  clearNotifications,
+} from "../../redux/notification/notificationSlice";
+import socket from "../../socket/socket";
 
 const API_URL = import.meta.env.VITE_API_URL;
+
+const CountdownText = ({ expiresAt }) => {
+  const [remaining, setRemaining] = useState(() =>
+    Math.max(0, new Date(expiresAt).getTime() - Date.now())
+  );
+
+  useEffect(() => {
+    const update = () => {
+      setRemaining(
+        Math.max(0, new Date(expiresAt).getTime() - Date.now())
+      );
+    };
+
+    update();
+    const intervalId = window.setInterval(update, 1000);
+
+    return () => window.clearInterval(intervalId);
+  }, [expiresAt]);
+
+  const totalSeconds = Math.floor(remaining / 1000);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+
+  if (remaining <= 0) {
+    return <span>24-hour limit reached</span>;
+  }
+
+  return (
+    <span>
+      {hours}h {minutes}m {seconds}s remaining
+    </span>
+  );
+};
 
 const Topbar = ({ onMenuClick }) => {
   const navigate = useNavigate();
@@ -33,7 +75,19 @@ const Topbar = ({ onMenuClick }) => {
   const [profileOpen, setProfileOpen] =
     useState(false);
 
+  const [notificationsOpen, setNotificationsOpen] =
+    useState(false);
+
   const profileRef = useRef(null);
+  const notificationRef = useRef(null);
+
+  const notifications = useAppSelector(
+    (state) => state.notification.items
+  );
+
+  const unreadNotificationCount = useAppSelector(
+    (state) => state.notification.unreadCount
+  );
 
   const today = new Date().toLocaleDateString(
     "en-US",
@@ -57,6 +111,13 @@ const Topbar = ({ onMenuClick }) => {
       ) {
         setProfileOpen(false);
       }
+
+      if (
+        notificationRef.current &&
+        !notificationRef.current.contains(event.target)
+      ) {
+        setNotificationsOpen(false);
+      }
     };
 
     document.addEventListener(
@@ -77,11 +138,12 @@ const Topbar = ({ onMenuClick }) => {
   ========================================= */
 
   useEffect(() => {
-    if (!profileOpen) return;
+    if (!profileOpen && !notificationsOpen) return;
 
     const handleEscape = (event) => {
       if (event.key === "Escape") {
         setProfileOpen(false);
+        setNotificationsOpen(false);
       }
     };
 
@@ -106,6 +168,11 @@ const Topbar = ({ onMenuClick }) => {
     setProfileOpen(false);
 
     dispatch(logout());
+    dispatch(clearNotifications());
+
+    if (socket.connected) {
+      socket.disconnect();
+    }
 
     navigate("/login");
   };
@@ -123,6 +190,30 @@ const Topbar = ({ onMenuClick }) => {
             : "/"
         }${user.avatar}`
     : null;
+
+  const getNotificationText = (notification) => {
+    if (notification.isOwnRoom) {
+      return (
+        <>
+          Your room <span className="font-semibold text-white">
+            {notification.roomName}
+          </span>{" "}
+          will be automatically deleted within 24 hours.
+        </>
+      );
+    }
+
+    return (
+      <>
+        <span className="font-semibold text-white">
+          {notification.creatorName || "Someone"}
+        </span>{" "}
+        created room <span className="font-semibold text-white">
+          {notification.roomName}
+        </span>.
+      </>
+    );
+  };
 
   /* =========================================
       MOTION VARIANTS
@@ -454,132 +545,193 @@ const Topbar = ({ onMenuClick }) => {
             NOTIFICATIONS
         ===================================== */}
 
-        <motion.button
-          type="button"
-          whileHover={
-            shouldReduceMotion
-              ? undefined
-              : {
-                  y: -2,
-                }
-          }
-          whileTap={
-            shouldReduceMotion
-              ? undefined
-              : {
-                  scale: 0.93,
-                }
-          }
-          className="
-            group
-            relative
-            flex
-            h-10
-            w-10
-            shrink-0
-            items-center
-            justify-center
-            rounded-xl
-            border
-            border-slate-800/90
-            bg-slate-900/70
-            text-slate-400
-            shadow-[0_8px_30px_rgba(0,0,0,0.16)]
-            backdrop-blur-md
-            transition-all
-            duration-200
-
-            hover:border-slate-700
-            hover:bg-slate-800
-            hover:text-white
-
-            focus:outline-none
-            focus-visible:ring-2
-            focus-visible:ring-indigo-500/70
-            focus-visible:ring-offset-2
-            focus-visible:ring-offset-slate-950
-
-            sm:h-11
-            sm:w-11
-          "
-          aria-label="Notifications"
+        <div
+          ref={notificationRef}
+          className="relative"
         >
-          <FaBell
-            className="
-              text-[13px]
-              transition-transform
-              duration-200
-              group-hover:-rotate-12
-              sm:text-sm
-            "
-          />
-
-          <motion.span
-            initial={
+          <motion.button
+            type="button"
+            onClick={() => {
+              setNotificationsOpen((prev) => !prev);
+              setProfileOpen(false);
+            }}
+            whileHover={
               shouldReduceMotion
-                ? false
-                : {
-                    scale: 0,
-                  }
+                ? undefined
+                : { y: -2 }
             }
-            animate={{
-              scale: 1,
-            }}
-            transition={{
-              type: "spring",
-              stiffness: 500,
-              damping: 20,
-              delay: 0.25,
-            }}
+            whileTap={
+              shouldReduceMotion
+                ? undefined
+                : { scale: 0.93 }
+            }
             className="
-              absolute
-              -right-1
-              -top-1
-              flex
-              h-[18px]
-              min-w-[18px]
-              items-center
-              justify-center
-              rounded-full
-              border-2
-              border-slate-950
-              bg-gradient-to-br
-              from-indigo-500
-              to-violet-500
-              px-1
-              text-[9px]
-              font-bold
-              leading-none
-              text-white
-              shadow-[0_0_14px_rgba(99,102,241,0.55)]
-              sm:h-5
-              sm:min-w-5
-              sm:text-[10px]
+              group relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl
+              border border-slate-800/90 bg-slate-900/70 text-slate-400
+              shadow-[0_8px_30px_rgba(0,0,0,0.16)] backdrop-blur-md transition-all duration-200
+              hover:border-slate-700 hover:bg-slate-800 hover:text-white
+              focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/70
+              focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950
+              sm:h-11 sm:w-11
             "
+            aria-label="Notifications"
+            aria-expanded={notificationsOpen}
           >
-            3
+            <FaBell
+              className="
+                text-[13px] transition-transform duration-200 group-hover:-rotate-12 sm:text-sm
+              "
+            />
 
-            {!shouldReduceMotion && (
+            {unreadNotificationCount > 0 && (
               <motion.span
-                className="
-                  absolute
-                  inset-0
-                  rounded-full
-                  bg-indigo-400/40
-                "
-                animate={{
-                  scale: [1, 1.6],
-                  opacity: [0.6, 0],
-                }}
+                initial={
+                  shouldReduceMotion ? false : { scale: 0 }
+                }
+                animate={{ scale: 1 }}
                 transition={{
-                  duration: 1.8,
-                  repeat: Infinity,
-                  ease: "easeOut",
+                  type: "spring",
+                  stiffness: 500,
+                  damping: 20,
                 }}
-              />
+                className="
+                  absolute -right-1 -top-1 flex h-[18px] min-w-[18px] items-center justify-center
+                  rounded-full border-2 border-slate-950 bg-gradient-to-br from-indigo-500 to-violet-500
+                  px-1 text-[9px] font-bold leading-none text-white shadow-[0_0_14px_rgba(99,102,241,0.55)]
+                  sm:h-5 sm:min-w-5 sm:text-[10px]
+                "
+              >
+                {unreadNotificationCount > 99
+                  ? "99+"
+                  : unreadNotificationCount}
+              </motion.span>
             )}
-          </motion.span>
-        </motion.button>
+          </motion.button>
+
+          <AnimatePresence>
+            {notificationsOpen && (
+              <motion.div
+                initial="hidden"
+                animate="visible"
+                exit="exit"
+                variants={dropdownVariants}
+                className="
+                  absolute right-0 top-full z-[110] mt-2.5 w-[calc(100vw-1.5rem)] max-w-[380px]
+                  overflow-hidden rounded-2xl border border-slate-800/90 bg-slate-950/95
+                  shadow-[0_28px_80px_rgba(0,0,0,0.6)] backdrop-blur-2xl
+                "
+              >
+                <div className="flex items-center justify-between border-b border-slate-800/80 px-4 py-3.5">
+                  <div>
+                    <p className="text-sm font-semibold text-white">Notifications</p>
+                    <p className="mt-0.5 text-[10px] text-slate-500">
+                      Study room updates
+                    </p>
+                  </div>
+
+                  {unreadNotificationCount > 0 && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        dispatch(markAllNotificationsRead())
+                      }
+                      className="flex items-center gap-1.5 text-[10px] font-medium text-indigo-400 transition-colors hover:text-indigo-300"
+                    >
+                      <FaCheck className="text-[9px]" />
+                      Mark all read
+                    </button>
+                  )}
+                </div>
+
+                <div className="max-h-[430px] overflow-y-auto p-2">
+                  {notifications.length === 0 ? (
+                    <div className="px-4 py-10 text-center">
+                      <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-xl bg-slate-900 text-slate-600">
+                        <FaBell />
+                      </div>
+                      <p className="mt-3 text-sm font-medium text-slate-300">
+                        No notifications
+                      </p>
+                      <p className="mt-1 text-xs text-slate-600">
+                        New study room updates will appear here.
+                      </p>
+                    </div>
+                  ) : (
+                    notifications.map((notification) => (
+                      <button
+                        key={notification.id}
+                        type="button"
+                        onClick={() => {
+                          dispatch(
+                            markNotificationRead(notification.id)
+                          );
+
+                          if (notification.roomId) {
+                            setNotificationsOpen(false);
+
+                            // The creator can open their room directly.
+                            // Other users may not be members of a private room,
+                            // so send them to the room list instead.
+                            if (notification.isOwnRoom) {
+                              navigate(`/room/${notification.roomId}`);
+                            } else {
+                              navigate("/rooms");
+                            }
+                          }
+                        }}
+                        className={`mb-1 w-full rounded-xl border px-3 py-3 text-left transition-all duration-200 ${
+                          notification.read
+                            ? "border-transparent bg-transparent hover:border-slate-800 hover:bg-slate-900/70"
+                            : "border-indigo-500/10 bg-indigo-500/[0.06] hover:bg-indigo-500/[0.09]"
+                        }`}
+                      >
+                        <div className="flex gap-3">
+                          <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-indigo-500/10 text-indigo-400">
+                            {notification.isOwnRoom ? (
+                              <FaClock className="text-sm" />
+                            ) : (
+                              <FaBell className="text-sm" />
+                            )}
+                          </div>
+
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-start justify-between gap-2">
+                              <p className="text-xs font-semibold text-slate-200">
+                                {notification.isOwnRoom
+                                  ? "Room expiry"
+                                  : "New study room"}
+                              </p>
+                              {!notification.read && (
+                                <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-indigo-400" />
+                              )}
+                            </div>
+
+                            <p className="mt-1 text-[11px] leading-5 text-slate-500">
+                              {getNotificationText(notification)}
+                            </p>
+
+                            {notification.isOwnRoom && (
+                              <div className="mt-2 flex items-center gap-1.5 text-[10px] font-medium text-amber-400">
+                                <FaClock className="text-[9px]" />
+                                <CountdownText
+                                  expiresAt={notification.expiresAt}
+                                />
+                              </div>
+                            )}
+
+                            <p className="mt-2 text-[9px] text-slate-700">
+                              {new Date(notification.createdAt).toLocaleString()}
+                            </p>
+                          </div>
+                        </div>
+                      </button>
+                    ))
+                  )}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
 
         {/* =====================================
             PROFILE

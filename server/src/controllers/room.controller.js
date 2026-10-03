@@ -23,6 +23,28 @@ const createStudyRoom = async (req, res) => {
     try {
         const room = await createRoom(req.user._id, req.body);
 
+        const io = getSocketIO();
+
+        if (io) {
+            const createdAt = new Date(room.createdAt);
+            const expiresAt = new Date(
+                createdAt.getTime() + 24 * 60 * 60 * 1000
+            );
+
+            const creatorId =
+                room.host?._id?.toString() ||
+                req.user._id.toString();
+
+            io.emit("room:created", {
+                roomId: room._id.toString(),
+                roomName: room.name,
+                creatorId,
+                creatorName: room.host?.name || "Someone",
+                createdAt: createdAt.toISOString(),
+                expiresAt: expiresAt.toISOString(),
+            });
+        }
+
         res.status(201).json({
             success: true,
             message: "Room created successfully.",
@@ -242,7 +264,6 @@ const requestRoomRejoin = async (req, res) => {
     }
 };
 
-
 const approveRoomRejoin = async (req, res) => {
     try {
         await approveRejoinRequest(
@@ -263,7 +284,6 @@ const approveRoomRejoin = async (req, res) => {
         });
     }
 };
-
 
 const rejectRoomRejoin = async (req, res) => {
     try {
