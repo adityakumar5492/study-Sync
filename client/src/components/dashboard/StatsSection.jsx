@@ -681,26 +681,30 @@ const StatsSection = () => {
                                             fixed
                                             left-3
                                             right-3
-                                            top-16
+                                            top-3
+                                            bottom-3
                                             z-[100]
 
                                             flex
+                                            items-start
                                             justify-center
 
                                             sm:absolute
                                             sm:left-auto
                                             sm:right-0
                                             sm:top-full
+                                            sm:bottom-auto
                                             sm:mt-3
+
                                             sm:block
 
                                             lg:right-full
-                                            lg:top-0
+                                            lg:top-1/2
+                                            lg:bottom-auto
                                             lg:mr-3
                                             lg:mt-0
 
-                                            lg:flex
-                                            lg:justify-end
+                                            lg:-translate-y-1/2
                                         `}
                                     >
                                         <StudyStreakCalendar
