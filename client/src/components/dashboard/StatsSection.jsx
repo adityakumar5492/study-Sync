@@ -670,9 +670,7 @@ const StatsSection = () => {
 
                                 {isActivity && (
                                     <div
-                                        ref={
-                                            calendarPopupRef
-                                        }
+                                        ref={calendarPopupRef}
                                         className={`
                                             ${
                                                 showCalendar
@@ -680,34 +678,37 @@ const StatsSection = () => {
                                                     : "pointer-events-none"
                                             }
 
-                                            absolute
-                                            left-1/2
-                                            top-full
+                                            fixed
+                                            left-3
+                                            right-3
+                                            top-16
                                             z-[100]
-                                            mt-3
-                                            -translate-x-1/2
 
+                                            flex
+                                            justify-center
+
+                                            sm:absolute
                                             sm:left-auto
                                             sm:right-0
-                                            sm:translate-x-0
+                                            sm:top-full
+                                            sm:mt-3
+                                            sm:block
 
-                                            lg:right-0
+                                            lg:right-full
+                                            lg:top-0
+                                            lg:mr-3
+                                            lg:mt-0
 
-                                            max-w-[calc(100vw-24px)]
+                                            lg:flex
+                                            lg:justify-end
                                         `}
                                     >
                                         <StudyStreakCalendar
-                                            isOpen={
-                                                showCalendar
-                                            }
+                                            isOpen={showCalendar}
                                             onClose={() =>
-                                                setShowCalendar(
-                                                    false
-                                                )
+                                                setShowCalendar(false)
                                             }
-                                            sessions={
-                                                studyStats.sessions
-                                            }
+                                            sessions={studyStats.sessions}
                                         />
                                     </div>
                                 )}
